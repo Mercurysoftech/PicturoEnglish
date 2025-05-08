@@ -1,0 +1,2 @@
+C:/Users/Prabhu/Documents/GitHub/Picturo_English/android/app/.cxx/RelWithDebInfo/56484v1i/x86/CMakeFiles/edit_cache.dir
+C:/Users/Prabhu/Documents/GitHub/Picturo_English/android/app/.cxx/RelWithDebInfo/56484v1i/x86/CMakeFiles/rebuild_cache.dir
