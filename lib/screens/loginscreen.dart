@@ -68,6 +68,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
+    print("inside login");
     setState(() {
       _isLoading = true;
     });
@@ -83,7 +84,7 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    // try {
+    try {
       final response = await apiService.login(email, password, context);
 
       if (response["success"] == true) {
@@ -139,13 +140,13 @@ class _LoginScreenState extends State<LoginScreen> {
       } else {
         _showMessage(response["error"] ?? "Login failed. Please try again.");
       }
-    // } catch (e) {
-    //   _showMessage("An error occurred. Please try again.");
-    // } finally {
-    //   setState(() {
-    //     _isLoading = false;
-    //   });
-    // }
+    } catch (e) {
+      _showMessage("An error occurred. Please try again.");
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   void _showMessage(String message) {

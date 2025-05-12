@@ -500,7 +500,7 @@ void dispose() {
     socket.dispose();
   _typingTimer?.cancel();
   _messageController.dispose();
-  _socketService.dispose();
+  // _socketService.dispose();
   super.dispose();
 }
 
@@ -723,7 +723,7 @@ Future<void> _blockUser() async {
   try {
     // Implement your block user API call here
     // Example:
-    // await _apiService.blockUser(widget.userId);
+    await _apiService.blockUser(widget.userId);
     
     // Show a success message
     ScaffoldMessenger.of(context).showSnackBar(
