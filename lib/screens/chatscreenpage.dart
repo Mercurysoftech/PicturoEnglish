@@ -88,7 +88,6 @@ class _ChatScreenState extends State<ChatScreen> {
     socket.connect();
 
     socket.onConnect((_) {
-      print('_____________ ____________ connected ${userId}');
       socket.emit('register', userId);
     });
 
@@ -113,7 +112,27 @@ class _ChatScreenState extends State<ChatScreen> {
     socket.onError((handler){
       print('_____________ ____________ Erroer ${handler.toString()}');
     });
+    socket.on('userOnline', (data) {
+      _handleOnlineStatus({'user_id': data['user_id'], 'is_online': true});
+    });
 
+    socket.on('userOffline', (data) {
+      _handleOnlineStatus({'user_id': data['user_id'], 'is_online': false});
+    });
+
+    socket.on('userTyping', (data) {
+      _handleTypingStatus({
+        'sender_id': data['sender_id'],
+        'is_typing': true,
+      });
+    });
+
+    socket.on('stopTyping', (data) {
+      _handleTypingStatus({
+        'sender_id': data['sender_id'],
+        'is_typing': false,
+      });
+    });
     socket.on('offer', handleOffer);
     socket.on('answer', handleAnswer);
     socket.on('ice-candidate', handleIceCandidate);
@@ -122,7 +141,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
 
   void sendMessage(String senderId, String receiverId, String message) {
-    print("ldkcslkcmsd Emited ${socket.connected}");
+
 
     socket.emit('sendMessage', {
       'sender_id': senderId,
@@ -313,53 +332,24 @@ class _ChatScreenState extends State<ChatScreen> {
 
 
 
-  Future<void> _initSocket() async {
-  try {
-    final prefs = await SharedPreferences.getInstance();
-    final currentUserId = prefs.getString('user_id');
-    
-    if (currentUserId == null || currentUserId.isEmpty) {
-      print('No user_id found in SharedPreferences');
-      return;
-    }
-
-    setState(() => _isSocketReady = false);
-    
-    await _socketService.initialize(
-      currentUserId,
-      messageHandler: _handleIncomingMessage,
-    );
-    
-    print('current userId: $currentUserId');
-
-    _socketService.listenForTypingStatus(_handleTypingStatus);
-    _socketService.listenForOnlineStatus(_handleOnlineStatus);
-
-    // Request initial online status
-    // _socketService.sendMessage({
-    //   'type': 'userOnline',
-    //   'user_id': widget.userId.toString(),
-    // });
-
-    setState(() => _isSocketReady = true);
-  } catch (e) {
-    print('Error initializing socket: $e');
-  }
-}
-
   void _setupTypingListener() {
-  _messageController.addListener(() {
-    if (_messageController.text.isNotEmpty && !_isTyping) {
-      _isTyping = true;
-      _socketService.sendTypingStatus(widget.userId.toString(), true);
-      _startTypingTimer();
-    } else if (_messageController.text.isEmpty && _isTyping) {
-      _isTyping = false;
-      _socketService.sendTypingStatus(widget.userId.toString(), false);
-      _typingTimer?.cancel();
-    }
-  });
-}
+    _messageController.addListener(() {
+      if (_messageController.text.isNotEmpty) {
+        socket.emit('typing', {
+          'sender_id': _userId,
+          'receiver_id': widget.userId.toString(),
+        });
+
+        _typingTimer?.cancel();
+        _typingTimer = Timer(const Duration(seconds: 1), () {
+          socket.emit('stopTyping', {
+            'sender_id': _userId,
+            'receiver_id': widget.userId.toString(),
+          });
+        });
+      }
+    });
+  }
 
 void _startTypingTimer() {
   _typingTimer?.cancel();
@@ -407,7 +397,6 @@ void _handleOnlineStatus(dynamic data) {
     if (userId == widget.userId.toString()) {
       setState(() {
         _isOnline = isOnline;
-        // Reset typing status if user goes offline
         if (!isOnline) {
           _isUserTyping = false;
         }
@@ -482,17 +471,7 @@ void _handleOnlineStatus(dynamic data) {
   _messageController.clear();
 }
 
-  ImageProvider _getAvatarImage() {
-    if (_avatarUrl != null && _avatarUrl!.isNotEmpty) {
-      print('Avatar Url: $_avatarUrl');
-      return CachedNetworkImageProvider(_avatarUrl!);
-    } else if(widget.profileId == 0) {
-      return AssetImage('assets/avatar2.png'); // Fallback if URL is not valid
-    }
-    else {
-      return AssetImage('assets/avatar2.png'); // Fallback if URL is not valid
-    }
-  }
+
   String _formatTimeTo12Hour(String? timestamp) {
   if (timestamp == null) return '';
   
@@ -561,11 +540,11 @@ void dispose() {
                       ),
                     ),
                     Text(
-  _isUserTyping 
-      ? 'Typing...'
-      : _isOnline 
-          ? 'Online'
-          : 'Offline',
+                      _isUserTyping
+                          ? 'Typing...'
+                          : _isOnline
+                          ? 'Online'
+                          : 'Offline',
   style: TextStyle(
     color: _isUserTyping 
         ? Colors.green 
@@ -576,7 +555,6 @@ void dispose() {
     fontFamily: 'Poppins Regular'
   ),
 )
-
                   ],
                 ),
               ],
