@@ -44,17 +44,17 @@ class SocketService with ChangeNotifier {
   print('Initializing socket for user: $userId');
 
   // // Validate pinned certificate before connecting
-   final isCertValid = await validatePinnedCertificate(
-    'picturoenglish.com',
-     2025,
-   );
+  //  final isCertValid = await validatePinnedCertificate(
+  //   'picturoenglish.com',
+  //    2025,
+  //  );
+  //
+  // if (!isCertValid) {
+  //   print('Certificate validation failed. Aborting socket connection.');
+  //   return;
+  // }
 
-  if (!isCertValid) {
-    print('Certificate validation failed. Aborting socket connection.');
-    return;
-  }
-
-  try {
+  // try {
     // if (_securityContext == null) {
     //   await _initializeSecurityContext();
     // }
@@ -69,11 +69,18 @@ class SocketService with ChangeNotifier {
         .setExtraHeaders({'Accept': 'application/json'})
         .setReconnectionDelayMax(5000)
         .build(),
-    );
+    ).connect();
 
-    if (messageHandler != null) {
-      listenForMessages(messageHandler);
-    }
+    print("kajckjcnskdjcscskcjksj ${_socket}");
+    _socket!.onConnect((handler){
+      print("sldkcmslkcmsc Connect :: ${handler.toString()}");
+    });
+    _socket!.onError((handler){
+      print("sldkcmslkcmsc Error :: ${handler.toString()}");
+    });
+    // if (messageHandler != null) {
+    //   listenForMessages(messageHandler);
+    // }
 
     // await Future(() {
     //   _socket!.connect();
@@ -86,10 +93,10 @@ class SocketService with ChangeNotifier {
 
     _setupEventListeners();
     print('Socket initialization completed');
-  } catch (e) {
-    print('Socket initialization failed: $e');
-    rethrow;
-  }
+  // } catch (e) {
+  //   print('Socket initialization failed: $e');
+  //   rethrow;
+  // }
 }
 
 

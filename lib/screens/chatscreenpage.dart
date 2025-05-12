@@ -1,17 +1,20 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:intl/intl.dart';
 import 'package:picturo_app/classes/svgfiles.dart';
-import 'package:picturo_app/providers/userprovider.dart';
 import 'package:picturo_app/screens/chatmessagelayout.dart';
 import 'package:picturo_app/screens/voicecallscreen.dart';
 import 'package:picturo_app/services/api_service.dart';
 import 'package:picturo_app/socket/socketservice.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 enum ChatMenuAction { //enum class for menu option like "block user"...etc
   block,
@@ -20,12 +23,14 @@ enum ChatMenuAction { //enum class for menu option like "block user"...etc
 class ChatScreen extends StatefulWidget {
   final int profileId;
   final String userName;
+  final Widget avatarWidget;
   final int userId;
   
   const ChatScreen({
     super.key, 
     required this.profileId,
     required this.userName,
+    required this.avatarWidget,
     required this.userId,
   });
 
@@ -51,15 +56,181 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isOnline = false;
   Timer? _typingTimer;
   bool _isUserTyping = false;
-
+  String? _userId;
   @override
   void initState() {
     super.initState();
     _initializeApiService();
-    _initSocket();
+    // _initSocket();
+    initSocket();
     _setupTypingListener();
     _loadAvatar();
   }
+
+
+//--------------------------------------------New Updates Start-----------------------------------
+
+  RTCPeerConnection? peerConnection;
+  MediaStream? localStream;
+
+  late IO.Socket socket;
+
+  void initSocket( ) async{
+
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString('user_id');
+    _userId=userId;
+    socket = IO.io('https://picturoenglish.com:2025', <String, dynamic>{
+      'transports': ['websocket'],
+      'autoConnect': false,
+    });
+
+    socket.connect();
+
+    socket.onConnect((_) {
+      print('_____________ ____________ connected ${userId}');
+      socket.emit('register', userId);
+    });
+
+
+
+    socket.on('newMessage', (data) {
+      print('New message from ${data['sender_id']}: ${data['message']}');
+      log("sjdksdjd $data");
+      _handleIncomingMessage(data);
+      // You can call your Flutter function here to update UI
+    });
+    socket.on('register', (data) {
+      print('Regsitedsdd .......... ');
+      log("sjdksdjd $data");
+      // You can call your Flutter function here to update UI
+    });
+    socket.on('sendMessage', (data) {
+      print('sendMessage .......... ');
+      log("sjdksdjd $data");
+      // You can call your Flutter function here to update UI
+    });
+    socket.onError((handler){
+      print('_____________ ____________ Erroer ${handler.toString()}');
+    });
+
+    socket.on('offer', handleOffer);
+    socket.on('answer', handleAnswer);
+    socket.on('ice-candidate', handleIceCandidate);
+  }
+
+
+
+  void sendMessage(String senderId, String receiverId, String message) {
+    print("ldkcslkcmsd Emited ${socket.connected}");
+
+    socket.emit('sendMessage', {
+      'sender_id': senderId,
+      'receiver_id': receiverId,
+      'message': message,
+    });
+  }
+
+
+
+  final Map<String, dynamic> configuration = {
+    'iceServers': [
+      {'urls': 'stun:stun.l.google.com:19302'}
+    ]
+  };
+
+  final Map<String, dynamic> constraints = {
+    'mandatory': {},
+    'optional': [],
+  };
+
+  void startCall(String receiverId) async {
+    localStream = await navigator.mediaDevices.getUserMedia({'audio': true});
+    peerConnection = await createPeerConnection(configuration, constraints);
+    localStream?.getTracks().forEach((track) {
+      peerConnection?.addTrack(track, localStream!);
+    });
+
+    peerConnection?.onIceCandidate = (RTCIceCandidate candidate) {
+      socket.emit('ice-candidate', {
+        'to': receiverId,
+        'candidate': {
+          'candidate': candidate.candidate,
+          'sdpMid': candidate.sdpMid,
+          'sdpMLineIndex': candidate.sdpMLineIndex,
+        }
+      });
+    };
+
+    peerConnection?.onTrack = (RTCTrackEvent event) {
+      // You can assign the remote stream to a RTCVideoRenderer or audio output
+    };
+
+    RTCSessionDescription offer = await peerConnection!.createOffer();
+    await peerConnection!.setLocalDescription(offer);
+    socket.emit('offer', {'to': receiverId, 'offer': offer.toMap()});
+  }
+
+  void handleOffer(data) async {
+    final from = data['from'];
+    final offer = RTCSessionDescription(data['offer']['sdp'], data['offer']['type']);
+
+    localStream = await navigator.mediaDevices.getUserMedia({'audio': true});
+    peerConnection = await createPeerConnection(configuration);
+    localStream?.getTracks().forEach((track) {
+      peerConnection?.addTrack(track, localStream!);
+    });
+
+    await peerConnection!.setRemoteDescription(offer);
+    final answer = await peerConnection!.createAnswer();
+    await peerConnection!.setLocalDescription(answer);
+    socket.emit('answer', {'to': from, 'answer': answer.toMap()});
+  }
+
+  void handleAnswer(data) {
+    final answer = RTCSessionDescription(data['answer']['sdp'], data['answer']['type']);
+    peerConnection?.setRemoteDescription(answer);
+  }
+
+  void handleIceCandidate(data) {
+    final candidateData = data['candidate'];
+    final candidate = RTCIceCandidate(
+      candidateData['candidate'],
+      candidateData['sdpMid'],
+      candidateData['sdpMLineIndex'],
+    );
+    peerConnection?.addCandidate(candidate);
+  }
+
+
+
+
+
+//--------------------------------------------New Updates End-----------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   @override
   void didUpdateWidget(ChatScreen oldWidget) {
@@ -67,7 +238,7 @@ class _ChatScreenState extends State<ChatScreen> {
     if (oldWidget.userId != widget.userId) {
       // User changed, reset messages and reconnect socket
       _messages.clear();
-       _initSocket();
+       // _initSocket();
     }
   }
 
@@ -255,47 +426,59 @@ void _handleOnlineStatus(dynamic data) {
   
   final senderId = data['sender_id']?.toString();
   final receiverId = data['receiver_id']?.toString();
-  final currentUserId = Provider.of<UserProvider>(context, listen: false).userId;
+
   
   // Only process messages meant for this chat
-  if (receiverId == currentUserId || senderId == widget.userId.toString()) {
+  if (receiverId == _userId || senderId == widget.userId.toString()) {
     setState(() {
       _messages.insert(0, {
         "senderId": senderId,
         "message": data['message']?.toString() ?? "",
-        "timestamp": data['timestamp'] ,
+        "timestamp": data['timestamp']?? getCurrentFormattedTime(),
       });
     });
   }
 }
+  String getCurrentFormattedTime() {
+    final now = DateTime.now();
+    final formatter = DateFormat('hh:mm a'); // 12-hour format with AM/PM
+    return formatter.format(now);
+  }
+ void _sendMessage()async {
 
- void _sendMessage() {
-  if (_messageController.text.trim().isEmpty || !_isSocketReady) return;
+  // if (_messageController.text.trim().isEmpty || !_isSocketReady) return;
 
-  final idProvider = Provider.of<UserProvider>(context, listen: false);
-  final senderId = idProvider.userId;
+   final prefs = await SharedPreferences.getInstance();
+
+   _userId= prefs.getString('user_id');
   final receiverId = widget.userId.toString();
 
   final now = _formatTimeTo12Hour(DateTime.now().toIso8601String()); // Get current time in ISO format
+  sendMessage(_userId.toString(),receiverId, _messageController.text.trim());
+
+
 
   final messageData = {
-    "sender_id": int.tryParse(senderId!) ?? 0,
-    "receiver_id": int.tryParse(receiverId) ?? 0,
-    "message": _messageController.text.trim(),
-    "timestamp": now, // Include timestamp
-  };
-
+    "sender_id":_userId,
+    "receiver_id": "$receiverId",
+    "message": _messageController.text
+  }
+  ;
+  bool? response = await _apiService.sendMessagesToAPI(messageMap: messageData);
+   if(response!=null&&response){
+     setState(() {
+       _messages.insert(0, {
+         "senderId": _userId.toString(),
+         "message": _messageController.text.trim(),
+         "timestamp": now,
+         "isOptimistic": true,
+       });
+     });
+   }
   // Optimistic UI update
-  setState(() {
-    _messages.insert(0, {
-      "senderId": senderId,
-      "message": _messageController.text.trim(),
-      "timestamp": now,
-      "isOptimistic": true,
-    });
-  });
 
-  _socketService.sendMessage(messageData);
+
+  // _socketService.sendMessage(messageData);
   _messageController.clear();
 }
 
@@ -335,6 +518,7 @@ void _handleOnlineStatus(dynamic data) {
 
    @override
 void dispose() {
+    socket.dispose();
   _typingTimer?.cancel();
   _messageController.dispose();
   _socketService.dispose();
@@ -343,10 +527,6 @@ void dispose() {
 
   @override
   Widget build(BuildContext context) {
-    final idProvider = Provider.of<UserProvider>(context);
-    final currentUserId = idProvider.userId;
-     bool isOnline = _socketService.isUserOnline(widget.userId.toString());
-
     return Scaffold(
       backgroundColor: Color(0xFFE0F7FF),
       appBar: PreferredSize(
@@ -364,11 +544,9 @@ void dispose() {
             padding: const EdgeInsets.only(top: 10.0),
             child: Row(
               children: [
-                CircleAvatar(
-                  backgroundImage: _getAvatarImage(),
-                  radius: 20,
-                ),
+                widget.avatarWidget,
                 SizedBox(width: 10),
+
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -476,14 +654,14 @@ void dispose() {
                       itemCount: _messages.length,
                       itemBuilder: (context, index) {
                         final message = _messages[index];
-                        final isMe = message["senderId"] == currentUserId;
-                        
+                        final isMe = message["senderId"] == _userId;
+
                         return Align(
                           alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
                           child: ChatMessageLayout(
                             isMeChatting: isMe,
-                            messageBody: message["message"],
-                            timestamp:message["timestamp"],
+                            messageBody: message["message"] ?? "",
+                            timestamp:message["timestamp"] ?? "null",
                           ),
                         );
                       },

@@ -32,7 +32,7 @@ class Friends {
     return Friends(
       friend_id: json['friend_id'],
       friend_name: json['friend_name'],
-      friend_profile_pic: json['friend_profile_pic'],
+      friend_profile_pic: json['friend_profile_pic']??0,
       status:json['status'],
       accepted_at:json['accepted_at']
 

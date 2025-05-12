@@ -20,11 +20,11 @@ class UsersResponse {
 }
 
 class User {
-  final int id;
-  final String username;
-  int avatar_id;
-  int chat_request_status;
-  String chat_status;
+  final int? id;
+  final String? username;
+  int? avatar_id;
+  int? chat_request_status;
+  String? chat_status;
 
   User({required this.id, required this.username, required this.avatar_id,required this.chat_request_status,required this.chat_status});
 

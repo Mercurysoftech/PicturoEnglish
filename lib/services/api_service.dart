@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:picturo_app/responses/allusers_response.dart';
@@ -47,7 +48,7 @@ class ApiService {
   String email, String password, BuildContext context) async {
   final String endpoint = "login.php"; // API endpoint
 
-  try {
+  // try {
     Response response = await _dio.post(
       endpoint,
       data: jsonEncode({"email": email, "password": password}),
@@ -79,9 +80,9 @@ class ApiService {
     } else {
       return {"error": response.data["message"] ?? "Something went wrong"};
     }
-  } on DioException catch (e) {
-    return {"error": e.response?.data["message"] ?? "Network error"};
-  }
+  // } on DioException catch (e) {
+  //   return {"error": e.response?.data["message"] ?? "Network error"};
+  // }
 }
 Future<Map<String, dynamic>> signup(
   String username, String email, String mobile, String password, BuildContext context) async {
@@ -431,7 +432,7 @@ Future<GamesResponse> fetchGames() async {
 Future<UsersResponse> fetchAllUsers() async {
   final String endpoint = "allusers.php"; // Replace with your actual endpoint
 
-  try {
+  // try {
     // Fetch the saved auth token
     String? token = await getAuthToken();
 
@@ -469,18 +470,20 @@ Future<UsersResponse> fetchAllUsers() async {
     } else {
       throw Exception("Failed to fetch books: ${response.statusMessage}");
     }
-  } on DioException catch (e) {
-    print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
-    throw Exception("Error fetching books: ${e.message}");
-  } catch (e) {
-    print("Unexpected Error: $e");
-    throw Exception("An unexpected error occurred: $e");
-  }
+
+
+  // } on DioException catch (e) {
+  //   print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
+  //   throw Exception("Error fetching books: ${e.message}");
+  // } catch (e) {
+  //   print("Unexpected Error: $e");
+  //   throw Exception("An unexpected error occurred: $e");
+  // }
 }
 Future<FriendsResponse> fetchFriends() async {
   final String endpoint = "friends_list.php"; // Replace with your actual endpoint
 
-  try {
+  // try {
     // Fetch the saved auth token
     String? token = await getAuthToken();
 
@@ -498,7 +501,7 @@ Future<FriendsResponse> fetchFriends() async {
     );
 
     // Debugging: Print the raw API response
-    print("Raw API Response: ${response.data}");
+    print("Raw API Response---------: ${response.data}");
 
     // Check if the response status code is 200 (OK)
     if (response.statusCode == 200) {
@@ -518,13 +521,14 @@ Future<FriendsResponse> fetchFriends() async {
     } else {
       throw Exception("Failed to fetch books: ${response.statusMessage}");
     }
-  } on DioException catch (e) {
-    print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
-    throw Exception("Error fetching books: ${e.message}");
-  } catch (e) {
-    print("Unexpected Error: $e");
-    throw Exception("An unexpected error occurred: $e");
-  }
+
+  // } on DioException catch (e) {
+  //   print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
+  //   throw Exception("Error fetching books: ${e.message}");
+  // } catch (e) {
+  //   print("Unexpected Error: $e");
+  //   throw Exception("An unexpected error occurred: $e");
+  // }
 }
 Future<RequestsResponse> fetchRequests() async {
   final String endpoint = "chat_request_list.php"; // Replace with your actual endpoint
@@ -781,7 +785,7 @@ Future<AvatarResponse> fetchAvatars() async {
 Future<UserResponse> fetchProfileDetails() async {
   final String endpoint = "users.php"; // Replace with your actual endpoint
 
-  try {
+  // try {
     // Fetch the saved auth token
     String? token = await getAuthToken();
 
@@ -820,13 +824,13 @@ Future<UserResponse> fetchProfileDetails() async {
     } else {
       throw Exception("Failed to fetch user details: ${response.statusMessage}");
     }
-  } on DioException catch (e) {
-    print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
-    throw Exception("Error fetching user details: ${e.message}");
-  } catch (e) {
-    print("Unexpected Error: $e");
-    throw Exception("An unexpected error occurred: $e");
-  }
+  // } on DioException catch (e) {
+  //   print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
+  //   throw Exception("Error fetching user details: ${e.message}");
+  // } catch (e) {
+  //   print("Unexpected Error: $e");
+  //   throw Exception("An unexpected error occurred: $e");
+  // }
 }
 Future<UserResponse> fetchUserProfileDetails(String token) async {
   final String endpoint = "users.php"; // Replace with your actual endpoint
@@ -1311,8 +1315,12 @@ Future<MessagesResponse> fetchMessages({required int receiverId}) async {
       ),
     );
 
+
     // Debugging: Print the raw API response
-    print("Raw API Response: ${response.data}");
+
+
+    // log("Raw API 999999999999 Response: ${response.data}");
+
 
     // Check if the response status code is 200 (OK)
     if (response.statusCode == 200) {
@@ -1350,6 +1358,61 @@ Future<MessagesResponse> fetchMessages({required int receiverId}) async {
     print("Unexpected Error: $e");
     throw Exception("Failed to load messages");
   }
+}
+Future<bool?> sendMessagesToAPI({required Map<String,dynamic> messageMap}) async {
+  final String endpoint = "chat.php"; // Replace with your actual endpoint
+
+  // try {
+    // Fetch the saved auth token
+    String? token = await getAuthToken();
+
+    if (token == null || token.isEmpty) {
+      throw Exception("Authorization token is missing. Please log in.");
+    }
+
+    // Make the POST request with receiver_id in the body
+  print("sdlkcslkdcmsdc ${messageMap}");
+    Response response = await _dio.post(
+      "http://picturoenglish.com/api/chat.php",
+      data: json.encode(messageMap),
+      options: Options(
+        headers: {
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json",
+        },
+      ),
+    );
+
+
+    // Debugging: Print the raw API response
+    print("Send API -- Response: ${response.data}");
+
+    // Check if the response status code is 200 (OK)
+    if (response.statusCode == 200) {
+      if (response.data is Map<String, dynamic>) {
+        Map<String, dynamic> responseData = response.data;
+
+        // Validate response structure
+        if (responseData.containsKey("status")) {
+
+          return true;
+        } else {
+
+        }
+      } else {
+
+      }
+    } else {
+
+    }
+    return null;
+  // } on DioException catch (e) {
+  //   print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
+  //   throw Exception("Network error: ${e.message}");
+  // } catch (e) {
+  //   print("Unexpected Error: $e");
+  //   throw Exception("Failed to load messages");
+  // }
 }
 
 

@@ -40,7 +40,7 @@ class _ChatListPageState extends State<ChatListPage>
 
   
   Future<void> _fetchAllUsers() async {
-    try {
+    // try {
       final apiService = await ApiService.create();
       final UsersResponse response = await apiService.fetchAllUsers(); 
       final FriendsResponse friendsResponse = await apiService.fetchFriends();
@@ -58,12 +58,12 @@ class _ChatListPageState extends State<ChatListPage>
 
       });
       print('All Users: $allUsers'); // Debugging line
-    } catch (e) {
-      setState(() {
-        errorMessage = e.toString(); 
-        isLoading = false; 
-      });
-    }
+    // } catch (e) {
+    //   setState(() {
+    //     errorMessage = e.toString();
+    //     isLoading = false;
+    //   });
+    // }
   }
 
   void _updateCounts() {
@@ -212,9 +212,11 @@ actions: [
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ChatScreen( profileId: user.avatar_id, 
-            userName: user.username,   
-            userId: user.id,           
+            builder: (context) => ChatScreen(
+              avatarWidget: _buildUserAvatar(user.avatar_id??0),
+              profileId: user.avatar_id??0,
+            userName: user.username??"",
+            userId: user.id??0,
           ),
           ),
         );
@@ -229,14 +231,14 @@ actions: [
             border: Border.all(width: 1, color: Color(0xFFDDDDDD))),
         child: Row(
           children: [
-             _buildUserAvatar(user.avatar_id),
+             _buildUserAvatar(user.avatar_id??0),
             SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    user.username,
+                    user.username??"",
                     style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -264,7 +266,9 @@ actions: [
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ChatScreen( profileId: user.friend_profile_pic, 
+            builder: (context) => ChatScreen(
+              avatarWidget: _buildUserAvatar(user.friend_profile_pic??0),
+              profileId: user.friend_profile_pic,
             userName: user.friend_name,   
             userId: user.friend_id,           
           ),
@@ -323,14 +327,14 @@ actions: [
     ),
     child: Row(
       children: [
-        _buildUserAvatar(user.avatar_id),
+        _buildUserAvatar(user.avatar_id??0),
         SizedBox(width: 10),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                user.username,
+                user.username??"",
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
@@ -368,7 +372,7 @@ actions: [
                       try {
                       final apiService = await ApiService.create();
                       final response = await apiService.sendChatRequest(
-                        receiverId: user.id,
+                        receiverId: user.id??0,
                       );
                       
                       if (response['status'] == 'success') {
