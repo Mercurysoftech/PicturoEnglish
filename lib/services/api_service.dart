@@ -29,12 +29,13 @@ class ApiService {
   ApiService._internal() {
     _dio = Dio(BaseOptions(
       baseUrl: baseUrl,
-      connectTimeout: const Duration(seconds: 10), // Set timeout
+      connectTimeout: const Duration(seconds: 15), // Set timeout
       receiveTimeout: const Duration(seconds: 10),
       headers: {
         "Content-Type": "application/json",
         "accept": "*/*",
       },
+
     ));
   }
   
@@ -85,7 +86,8 @@ class ApiService {
   // }
 }
 Future<Map<String, dynamic>> signup(
-  String username, String email, String mobile, String password, BuildContext context) async {
+  String username, String email, String mobile, String password, BuildContext context) async
+{
   final String endpoint = "register.php"; // API endpoint
 
   try {
@@ -1419,7 +1421,8 @@ Future<bool?> sendMessagesToAPI({required Map<String,dynamic> messageMap}) async
   Future<Map<String, dynamic>> sendSms({
     required String phoneNumber,
     required String message,
-  }) async {
+  }) async
+  {
     try {
       final Map<String, dynamic> body = {
         "key": "11ac642b5cd66a65bb0e636a0441619c", 
@@ -1459,6 +1462,123 @@ Future<bool?> sendMessagesToAPI({required Map<String,dynamic> messageMap}) async
         "success": false,
         "error": "Error sending SMS: ${e.message}",
       };
+    }
+  }
+
+
+  Future<Map<String, dynamic>> blockUser(
+      int userId) async
+  {
+    final String endpoint = "blocked.php"; // API endpoint
+
+    String? token = await getAuthToken();
+
+    if (token == null || token.isEmpty) {
+      throw Exception("Authorization token is missing. Please log in.");
+    }
+
+    try {
+      print("inside block api");
+      Response response = await _dio.post(
+        endpoint,
+        data: jsonEncode({
+          "user_id":userId
+        }),
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      print("Raw API Response: ${response.data}"); // Debugging
+
+      if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
+        final Map<String, dynamic> data = response.data;
+
+        if (data["status"] == "success") {
+          // Handle successful signup
+          return {
+            "status": data["status"],
+            "message": data["message"],
+            "referral_code": data["referral_code"],
+            "token":data["token"],
+            "user_id":data["user_id"],
+            "success": true,
+          };
+        } else if (data["status"] == "error") {
+          // Handle error response
+          return {
+            "error": data["message"] ?? "Invalid input data.",
+            "success": false,
+          };
+        } else {
+          // Handle unexpected response
+          return {"error": "Unexpected response from the server.", "success": false};
+        }
+      } else {
+        // Handle non-200 status code
+        return {"error": response.data["message"] ?? "Something went wrong", "success": false};
+      }
+    } on DioException catch (e) {
+      // Handle network or server errors
+      return {"error": e.response?.data["message"] ?? "Network error", "success": false};
+    }
+  }
+
+
+  Future<List> getBlockedUsers(int userId) async {
+    final String endpoint = "blocked_user_list.php?user_id=$userId"; // Replace with your actual endpoint
+
+    try {
+      // Fetch the saved auth token
+      String? token = await getAuthToken();
+
+      if (token == null || token.isEmpty) {
+        throw Exception("Authorization token is missing. Please log in.");
+      }
+
+      // Make the GET request with the auth token
+      Response response = await _dio.get(
+        endpoint,
+        options: Options(headers: {
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json",
+        }),
+      );
+
+      // Debugging: Print the raw API response
+      print("Raw API Response: ${response.data}");
+
+      // Check if the response status code is 200 (OK)
+      if (response.statusCode == 200) {
+        // Validate the response data
+        if (response.data is Map<String, dynamic>) {
+          Map<String, dynamic> responseData = response.data;
+
+          // Ensure the required keys exist
+          if (responseData.containsKey("status") && responseData.containsKey("data")) {
+
+            print("responseData");
+            print(json.encode(responseData));
+
+            return (responseData["data"]);
+          } else {
+            throw Exception("Invalid API response: Missing required fields.");
+          }
+        } else {
+          throw Exception("Invalid API response: Expected a JSON object.");
+        }
+      } else {
+        throw Exception("Failed to fetch books: ${response.statusMessage}");
+      }
+    } on DioException catch (e) {
+      print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
+      throw Exception("Error fetching books: ${e.message}");
+    } catch (e) {
+      print("Unexpected Error: $e");
+      throw Exception("An unexpected error occurred: $e");
     }
   }
 

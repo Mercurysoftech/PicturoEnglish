@@ -1,31 +1,83 @@
 import 'package:flutter/material.dart';
+import 'package:picturo_app/services/api_service.dart';
+import 'package:provider/provider.dart';
+
+import '../providers/profileprovider.dart';
 
 
-class BlockedUsersPage extends StatelessWidget {
-  const BlockedUsersPage({super.key});
+// class BlockedUsersPage extends StatelessWidget {
+//   const BlockedUsersPage({super.key});
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return MaterialApp(
+//       debugShowCheckedModeBanner: false,
+//       home: BlockedUsersScreen(),
+//     );
+//   }
+// }
+
+class BlockedUsersScreen extends StatefulWidget {
+
+  BlockedUsersScreen({super.key,required this.user});
+
+  final ProfileProvider user;
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: BlockedUsersScreen(),
-    );
-  }
+  State<BlockedUsersScreen> createState() => _BlockedUsersScreenState();
 }
 
-class BlockedUsersScreen extends StatelessWidget {
-  final List<String> blockedUsers = [
-    "User A",
-    "User B",
-    "User C",
-    "User D",
-    "User E",
-  ];
+class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
 
-  BlockedUsersScreen({super.key});
+  late ApiService _apiService;
+  bool _isLoading =true;
+
+
+  getBlockedUsers() async {
+
+    if(widget.user.userId != null){
+      // sample
+      // {"id":7,"user_id":121,"username":"hindiguy","email":"hindimanan@gmail.com","blocked_by":101,"blocked_at":"2025-05-12 20:05:45"}
+      blockedUsers = await _apiService.getBlockedUsers(widget.user.userId!);
+    }
+
+  }
+
+
+  Future<void> _initializeApiService() async {
+    try {
+      _apiService = await ApiService.create();
+
+      await getBlockedUsers();
+
+    } catch (e) {
+      print("Error initializing API service: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  void initState() {
+    _initializeApiService();
+    super.initState();
+
+  }
+
+
+
+
+   List blockedUsers = [];
 
   @override
   Widget build(BuildContext context) {
+
+
+
     return Scaffold(
       backgroundColor: Color(0xFFE0F7FF),
       appBar: PreferredSize(
@@ -76,9 +128,12 @@ class BlockedUsersScreen extends StatelessWidget {
           end: Alignment.bottomRight,
         ),
       ),
-      child:
-       Column(
+      child:_isLoading
+          ? Center(child: CircularProgressIndicator())
+          : Column(
         children: [
+
+
           Padding(
               padding: EdgeInsets.fromLTRB(24, 15, 24, 15),
               child: Container(
@@ -103,7 +158,7 @@ class BlockedUsersScreen extends StatelessWidget {
             ),
           Expanded(
             child: Padding(padding: EdgeInsets.only(left: 24,right: 24),
-            child: 
+            child:
             ListView.separated(
               separatorBuilder: (context, index) => SizedBox(height: 10),
               itemCount: blockedUsers.length,
@@ -119,13 +174,13 @@ class BlockedUsersScreen extends StatelessWidget {
                       backgroundImage: AssetImage('assets/avatar_1.png'),
                       radius: 25,
                     ),
-                    title: Text(blockedUsers[index],style: TextStyle(fontFamily: 'Poppins Regular'),),
+                    title: Text(blockedUsers[index]["username"],style: TextStyle(fontFamily: 'Poppins Regular'),),
                     subtitle: Text('Blocked',style: TextStyle(fontFamily: 'Poppins Regular'),),
                     trailing: TextButton(
                       onPressed: () {
                         // Unblock logic here
                       },
-                    
+
                       child: Text('Unblock',style: TextStyle(fontFamily: 'Poppins Regular',color: Color(0xFF464646)),),
                     ),
                   ),

@@ -197,7 +197,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                       SizedBox(height: 10),
                       PremiumButton(),
                       SizedBox(height: 10),
-                      _buildSettingsOption(Icons.language, "Language", context),
+                      _buildSettingsOption(Icons.language, "Language", context,profileProvider),
                       SizedBox(height: 10),
                       _buildBankDetailsOption("Bank account details", context),
                        SizedBox(height: 10),
@@ -205,11 +205,11 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                       SizedBox(height: 10),
                       _buildTransactionDetailsOption("Transaction History", context),
                       SizedBox(height: 10),
-                      _buildSettingsOption(Icons.block, "Blocked users", context),
+                      _buildSettingsOption(Icons.block, "Blocked users", context,profileProvider),
                       SizedBox(height: 10),
-                       _buildSettingsOption(Icons.help_outline, "Help", context),
+                       _buildSettingsOption(Icons.help_outline, "Help", context,profileProvider),
                        SizedBox(height: 10),
-                      _buildSettingsOption(Icons.delete_outline, "Delete Account", context),
+                      _buildSettingsOption(Icons.delete_outline, "Delete Account", context,profileProvider),
                       SizedBox(height: 10),
                       _buildLogoutButton(),
                     ],
@@ -350,7 +350,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     );
   }
 
-  Widget _buildSettingsOption(IconData icon, String title, BuildContext context) {
+  Widget _buildSettingsOption(IconData icon, String title, BuildContext context,ProfileProvider user) {
     return Card(
       color: Colors.white,
       elevation: 0,
@@ -387,9 +387,10 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
               );
             }
              else {
+
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => BlockedUsersPage()), // Navigate to BlockedUsersPage
+                MaterialPageRoute(builder: (context) => BlockedUsersScreen(user: user,)), // Navigate to BlockedUsersPage
               );
             }
           },
