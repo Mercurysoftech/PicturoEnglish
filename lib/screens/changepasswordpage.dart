@@ -68,6 +68,8 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
         context,
       );
 
+      print(response);
+
       if (response["status"] == "success") {
         _showMessage(response["message"] ?? "Password changed successfully");
        Navigator.pushReplacement(

@@ -73,6 +73,9 @@ class _EditProfileState extends State<EditProfile> {
 if (_mobileController.text.isNotEmpty) {
   final mobileRegex = RegExp(r'^[0-9]{10}$');
   if (!mobileRegex.hasMatch(_mobileController.text)) {
+    setState(() {
+      _isLoading = false;
+    });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Please enter a valid 10-digit mobile number')),
     );
