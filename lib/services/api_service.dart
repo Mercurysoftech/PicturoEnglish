@@ -1,7 +1,11 @@
 import 'dart:convert';
 import 'dart:developer';
+import 'dart:developer' as dev;
+import 'dart:math';
+import 'package:http/http.dart' as http;
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:picturo_app/responses/allusers_response.dart';
 import 'package:picturo_app/responses/avatar_response.dart';
 import 'package:picturo_app/responses/bank_account_details.dart';
@@ -85,6 +89,42 @@ class ApiService {
   //   return {"error": e.response?.data["message"] ?? "Network error"};
   // }
 }
+
+  Future<bool> hitForOTP(String phoneNo) async {
+    final random = Random();
+    final sixDigitNumber = 1000 + random.nextInt(9000);
+
+    String otp=sixDigitNumber.toString();
+    String? mobileNum = phoneNo;
+    // try {
+    final uri = Uri.parse("http://site.ping4sms.com/api/smsapi?key=11ac642b5cd66a65bb0e636a0441619c&route=2&sender=MERSOF&number=$mobileNum&sms="
+        "Your Login Verification code: $otp Don't share this code with others -MERCURY&templateid=1607100000000339284");
+    var response = await http.post(
+      uri,
+    );
+
+
+    if (response.statusCode == 200) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('otp_verify', otp);
+      Fluttertoast.showToast(
+        msg: "OTP Send SuccessFully",
+      );
+      return true;
+
+    } else {
+      Fluttertoast.showToast(
+          msg: "OTP Send Failed",
+          backgroundColor: Colors.red
+      );
+      return false;
+    }
+    // } catch (e) {
+    //   emit(LoginFailure("Exception: ${e.toString()}"));
+    // }
+  }
+
+
 Future<Map<String, dynamic>> signup(
   String username, String email, String mobile, String password, BuildContext context) async
 {
@@ -194,6 +234,64 @@ Future<Map<String, dynamic>> setPersonalDetails(
     return {"error": e.response?.data["message"] ?? "Network error", "success": false};
   }
 }
+Future<bool> setUserNativeLanguage(String language)async{
+  String? token = await getAuthToken();
+
+  // Send POST request to update the language
+  final response = await _dio.post(
+    "update_language.php",
+    options:Options(headers:  {
+      "Authorization": "Bearer $token",
+      "Content-Type": "application/json"}),
+    data:json.encode(
+        {"speaking_language": language.toLowerCase()}),
+  );
+
+  if (response.statusCode == 200) {
+    Fluttertoast.showToast(msg: "Language updated successfully");
+    print('Language updated successfully: ${response.data}');
+    return true;
+  } else {
+    Fluttertoast.showToast(msg: "Failed to update language",backgroundColor: Colors.red);
+    print('Failed to update language: ${response.statusCode}');
+    return false;
+  }
+
+}
+  Future<bool> removeBankAccount(String accountNumber) async {
+    String? token = await getAuthToken(); // Optional if API requires token
+
+    try {
+      final response = await _dio.post(
+        "remove_account.php",
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token", // Remove this line if not required
+            "Content-Type": "application/json",
+          },
+        ),
+        data: json.encode({
+          "account_number": accountNumber,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        Fluttertoast.showToast(msg: "Account removed successfully",backgroundColor: Colors.green);
+        print('Account removed successfully: ${response.data}');
+        return true;
+      } else {
+        Fluttertoast.showToast(msg: "Failed to remove account", backgroundColor: Colors.red);
+        print('Failed to remove account: ${response.statusCode}');
+        return false;
+      }
+    } catch (e) {
+      Fluttertoast.showToast(msg: "Error removing account", backgroundColor: Colors.red);
+      print('Error: $e');
+      return false;
+    }
+  }
+
+
 Future<Map<String, dynamic>> postBankAccount({
   required String accountNumber,
   required String confrimAccountNumber,
@@ -503,7 +601,7 @@ Future<FriendsResponse> fetchFriends() async {
     );
 
     // Debugging: Print the raw API response
-    print("Raw API Response---------: ${response.data}");
+    // print("Raw API Response---------%%%%%: ${json.encode(response.data)} ))PPPP");
 
     // Check if the response status code is 200 (OK)
     if (response.statusCode == 200) {
@@ -535,7 +633,7 @@ Future<FriendsResponse> fetchFriends() async {
 Future<RequestsResponse> fetchRequests() async {
   final String endpoint = "chat_request_list.php"; // Replace with your actual endpoint
 
-  try {
+  // try {
     // Fetch the saved auth token
     String? token = await getAuthToken();
 
@@ -573,13 +671,13 @@ Future<RequestsResponse> fetchRequests() async {
     } else {
       throw Exception("Failed to fetch books: ${response.statusMessage}");
     }
-  } on DioException catch (e) {
-    print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
-    throw Exception("Error fetching books: ${e.message}");
-  } catch (e) {
-    print("Unexpected Error: $e");
-    throw Exception("An unexpected error occurred: $e");
-  }
+  // } on DioException catch (e) {
+  //   print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
+  //   throw Exception("Error fetching books: ${e.message}");
+  // } catch (e) {
+  //   print("Unexpected Error: $e");
+  //   throw Exception("An unexpected error occurred: $e");
+  // }
 }
 Future<TopicsResponse> fetchTopics(int bookId) async {
   final String endpoint = "topics.php"; // Replace with your actual endpoint
@@ -605,7 +703,7 @@ Future<TopicsResponse> fetchTopics(int bookId) async {
     );
 
     // Debugging: Print the raw API response
-    print("Raw API Response: ${response.data}");
+
 
     // Check if the response status code is 200 (OK)
     if (response.statusCode == 200) {
@@ -695,7 +793,7 @@ Future<QuestionDetailsResponse> fetchDetailedQuestion(int questionId) async {
 
   print('Passed questionId: $questionId'); // Debugging
 
-  try {
+  // try {
     // Fetch the saved auth token
     String? token = await getAuthToken();
 
@@ -716,7 +814,7 @@ Future<QuestionDetailsResponse> fetchDetailedQuestion(int questionId) async {
     );
 
     // Debugging: Print the raw API response
-    print("Raw API Response: ${response.data}");
+  dev.log("Raw API Response Eacch Questionssssssss: ${response.data}");
 
     // Check if the response status code is 200 (OK)
     if (response.statusCode == 200) {
@@ -742,13 +840,13 @@ Future<QuestionDetailsResponse> fetchDetailedQuestion(int questionId) async {
     } else {
       throw Exception("Failed to fetch question: ${response.statusMessage}");
     }
-  } on DioException catch (e) {
-    print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
-    throw Exception("Error fetching question: ${e.message}");
-  } catch (e) {
-    print("Unexpected Error: $e");
-    throw Exception("An unexpected error occurred: $e");
-  }
+  // } on DioException catch (e) {
+  //   print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
+  //   throw Exception("Error fetching question: ${e.message}");
+  // } catch (e) {
+  //   print("Unexpected Error: $e");
+  //   throw Exception("An unexpected error occurred: $e");
+  // }
 }
 
 Future<AvatarResponse> fetchAvatars() async {
@@ -805,7 +903,7 @@ Future<UserResponse> fetchProfileDetails() async {
     );
 
     // Debugging: Print the raw API response
-    print("Raw API Response: ${response.data}");
+    print("Raw API Response_____________NBN : ${response.data}");
 
     // Check if the response status code is 200 (OK)
     if (response.statusCode == 200) {
@@ -1079,7 +1177,7 @@ Future<Map<String, dynamic>> sendVerificationCode(
   String email, BuildContext context) async {
   final String endpoint = "forgot_password.php"; // API endpoint for sending verification code
 
-  try {
+  // try {
     Response response = await _dio.post(
       endpoint,
       data: jsonEncode({"email": email}),
@@ -1106,9 +1204,9 @@ Future<Map<String, dynamic>> sendVerificationCode(
     } else {
       return {"error": response.data["message"] ?? "Something went wrong"};
     }
-  } on DioException catch (e) {
-    return {"error": e.response?.data["message"] ?? "Network error"};
-  }
+  // } on DioException catch (e) {
+  //   return {"error": e.response?.data["message"] ?? "Network error"};
+  // }
 }
 
 Future<Map<String, dynamic>> verifyVerificationCode(
@@ -1579,6 +1677,32 @@ Future<bool?> sendMessagesToAPI({required Map<String,dynamic> messageMap}) async
     } catch (e) {
       print("Unexpected Error: $e");
       throw Exception("An unexpected error occurred: $e");
+    }
+  }
+  Future<void> unblockUser(int userId) async {
+    String? token = await getAuthToken();
+
+    final response = await _dio.post(
+      'unblock_user.php',
+      data: {'user_id': userId},
+      options: Options(
+        headers: {
+          "Authorization": "Bearer $token",
+          'Content-Type': 'application/json',
+        },
+      ),
+    );
+    print("sldjkcslkcsdc ${response.data}");
+    if(response.statusCode == 200){
+      Map<String, dynamic> responseData = response.data;
+      if(responseData['status']){
+        Fluttertoast.showToast(msg: '${responseData['message']}',backgroundColor: Colors.green);
+      }else{
+        Fluttertoast.showToast(msg: '${responseData['message']}',backgroundColor: Colors.red);
+      }
+    }else if (response.statusCode != 200) {
+      Fluttertoast.showToast(msg: 'Unable to Unblock Check Your Internet Connection',backgroundColor: Colors.red);
+      throw Exception('Failed to unblock user');
     }
   }
 

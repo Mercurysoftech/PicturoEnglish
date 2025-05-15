@@ -5,26 +5,15 @@ import 'package:image_picker/image_picker.dart';
 import 'package:picturo_app/classes/svgfiles.dart';
 import 'package:picturo_app/screens/actionsnaptopics.dart';
 
-class ActionSnapApp extends StatelessWidget {
+
+class ActionSnapApp extends StatefulWidget {
   const ActionSnapApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: ActionSnapScreen(),
-    );
-  }
+  _ActionSnapAppState createState() => _ActionSnapAppState();
 }
 
-class ActionSnapScreen extends StatefulWidget {
-  const ActionSnapScreen({super.key});
-
-  @override
-  _ActionSnapScreenState createState() => _ActionSnapScreenState();
-}
-
-class _ActionSnapScreenState extends State<ActionSnapScreen> {
+class _ActionSnapAppState extends State<ActionSnapApp> {
   File? _capturedImage;
   final ImagePicker _picker = ImagePicker();
 

@@ -120,7 +120,7 @@ class _LoginScreenState extends State<LoginScreen> {
           } else if (profileResponse.speakingLanguage.isEmpty) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const LanguageSelectionScreen()),
+              MaterialPageRoute(builder: (context) => const LanguageSelectionApp()),
             );
           } else if (profileResponse.location.isEmpty) {
             Navigator.pushReplacement(
@@ -323,7 +323,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               TextButton(
                                 onPressed: () {
-                                  Navigator.pushReplacement(
+                                  Navigator.push(
                                     context,
                                     MaterialPageRoute(builder: (context) => const ForgotPasswordPage()),
                                   );

@@ -5,6 +5,8 @@ import 'package:picturo_app/services/api_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 
+import '../responses/my_profile_response.dart';
+
 
 class LearnWordsPage extends StatefulWidget {
   final String? optionTitle;
@@ -23,19 +25,41 @@ class _LearnWordsPageState extends State<LearnWordsPage> {
   QuestionDetailsResponse? _questionData;
   ApiService? apiService;
   String? userLanguage;
-  bool _languageLoaded = false; 
-  
+  bool _languageLoaded = false;
+  UserResponse? userResponse;
 
    @override
   void initState() {
     super.initState();
+    fetchUserDetails();
     initializeApiService();
+  }
+
+
+
+
+  Future<void> fetchUserDetails() async {
+    try {
+      final apiService = await ApiService.create();
+      final response = await apiService.fetchProfileDetails();
+
+      setState(() {
+        userResponse=response;
+        userLanguage=userResponse?.speakingLanguage??'';
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = "Error fetching questions: ${e.toString()}";
+
+      });
+      print("Error fetching questions: $e");
+    }
   }
 
    Future<void> initializeApiService() async {
     apiService = await ApiService.create();
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-    userLanguage=profileProvider.speakingLanguage!;
+    // userLanguage=userResponse?.speakingLanguage??'';
 
     print('Language is heres: $userLanguage');
 
@@ -51,24 +75,25 @@ class _LearnWordsPageState extends State<LearnWordsPage> {
   }
 
   Future<void> _loadQuestionData() async {
-    try {
+    // try {
       final questionData = await _questionFuture;
       setState(() {
         _questionData = questionData;
         _isLoading = false;
       });
-    } catch (e) {
-      setState(() {
-        _errorMessage = "Error loading question: $e";
-        _isLoading = false;
-      });
-      print("Error loading question: $e");
-    }
+    // } catch (e) {
+    //   setState(() {
+    //     _errorMessage = "Error loading question: $e";
+    //     _isLoading = false;
+    //   });
+    //   print("Error loading question: $e");
+    // }
   }
 
   
   @override
   Widget build(BuildContext context) {
+     print("skdjcksjdc ${userLanguage}");
     return Scaffold(
       backgroundColor: Color(0xFFFFFFFF),
       appBar: PreferredSize(
@@ -80,7 +105,7 @@ class _LearnWordsPageState extends State<LearnWordsPage> {
             child: IconButton(
               icon: Icon(Icons.arrow_back_ios, color: Colors.white, size: 26),
               onPressed: () {
-                Navigator.pop(context); 
+                Navigator.pop(context);
               },
             ),
           ),
@@ -213,6 +238,8 @@ if (userLanguage?.toLowerCase() != 'english') ...[
       _questionData!.nativeMeaning[0], 
       userLanguage
     ) ??
+
+
     Text(
       'No Native meaning available',
       style: TextStyle(
@@ -316,6 +343,7 @@ String? _getExampleBasedOnLanguage(Example example, String? userLanguage) {
   if (userLanguage?.toLowerCase() == 'english') {
     return null;
   }
+  print("aljkclaksm ${userLanguage}");
 
   final language = userLanguage?.toLowerCase() ?? 'english';
   

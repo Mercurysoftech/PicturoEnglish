@@ -3,7 +3,8 @@ import 'package:picturo_app/screens/changepasswordpage.dart';
 import 'dart:async';
 
 import 'package:picturo_app/screens/successfullyverification.dart';
-import 'package:picturo_app/services/api_service.dart'; // For the Timer
+import 'package:picturo_app/services/api_service.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // For the Timer
 
 class VerificationScreen extends StatefulWidget {
   final String? mobile;
@@ -50,28 +51,32 @@ final List<FocusNode> _otpFocusNodes = List.generate(4, (index) => FocusNode());
   }
 
   final email = widget.mailId ?? '';
-  
-  try {
-    final response = await apiService.verifyVerificationCode(email, otp, context);
 
-    if (response["status"] == "success") {
-      _showMessage(response["message"]);
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ChangePasswordPage(emailId: widget.mailId!,),
-        ),
-      );
-    } else {
-      _showMessage(response["error"] ?? "OTP verification failed");
-    }
-  } catch (e) {
-    _showMessage("An error occurred. Please try again.");
-  } finally {
-    setState(() {
-      _isLoading = false;
-    });
-  }
+  final prefs = await SharedPreferences.getInstance();
+  String? otpSended= prefs.getString('otp_verify');
+
+  // try {
+  //   final response = await apiService.verifyVerificationCode(email, otp, context);
+  //   print("sdcnslkcmnsldkc ${response}");
+  //
+  //   if (response["status"] == "success") {
+  //     _showMessage(response["message"]);
+  //     Navigator.pushReplacement(
+  //       context,
+  //       MaterialPageRoute(
+  //         builder: (context) => ChangePasswordPage(emailId: widget.mailId!,),
+  //       ),
+  //     );
+  //   } else {
+  //     _showMessage(response["error"] ?? "OTP verification failed");
+  //   }
+  // } catch (e) {
+  //   _showMessage("An error occurred. Please try again.");
+  // } finally {
+  //   setState(() {
+  //     _isLoading = false;
+  //   });
+  // }
 }
 
 void _showMessage(String message) {
@@ -99,11 +104,16 @@ void _showMessage(String message) {
     });
   }
 
-  void _resendOtp() {
-    setState(() {
-      _remainingTime = 60;
-    });
-    _startTimer();
+  void _resendOtp() async{
+    final apiService = await ApiService.create();
+    bool otpSend = await apiService.hitForOTP(widget.mobile??'');
+    if(otpSend){
+      setState(() {
+        _remainingTime = 60;
+      });
+      _startTimer();
+    }
+
   }
 
   @override
@@ -117,6 +127,7 @@ void _showMessage(String message) {
   }
   super.dispose();
   }
+
 
   String maskMobile(String mobile) {
     if (mobile.length >= 3) {

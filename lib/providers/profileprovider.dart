@@ -30,14 +30,10 @@ class ProfileProvider with ChangeNotifier {
   int? get avatarId => _user?.avatarId;
 
   Future<void> initialize() async {
-    try {
+
       _apiService = await ApiService.create();
       await fetchProfile();
-    } catch (e) {
-      print("Error initializing ProfileProvider: $e");
-      _isLoading = false;
-      notifyListeners();
-    }
+
   }
 
   Future<void> fetchProfile() async {
@@ -46,24 +42,28 @@ class ProfileProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    try {
+    // try {
       // Fetch profile details
       final userResponse = await _apiService!.fetchProfileDetails();
+
       _user = userResponse;
-      
+
+      notifyListeners();
       // Load avatar if avatarId is available
       if (_user?.avatarId != null && _user!.avatarId > 0) {
         await _loadAvatar(_user!.avatarId);
       } else {
         _avatarUrl = null;
       }
-    } catch (e) {
-      print("Error fetching profile: $e");
-      // You might want to handle errors differently here
-    } finally {
-      _isLoading = false;
+    _isLoading = false;
       notifyListeners();
-    }
+    // } catch (e) {
+    //   print("Error fetching profile: $e");
+    //   // You might want to handle errors differently here
+    // } finally {
+    //   _isLoading = false;
+    //   notifyListeners();
+    // }
   }
 
   Future<void> _loadAvatar(int avatarId) async {

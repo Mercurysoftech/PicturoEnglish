@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:picturo_app/responses/topics_response.dart'; // Import your TopicsResponse model
 import 'package:picturo_app/screens/homepage.dart';
@@ -32,6 +34,7 @@ class _TopicsScreenState extends State<TopicsScreen> {
       TopicsResponse topicsResponse = await apiService.fetchTopics(widget.topicId); // Replace 1 with the actual book ID
 
       // Update the state with the fetched topics
+
       setState(() {
         _topics = topicsResponse.data.map((topic) {
           return {
@@ -144,7 +147,7 @@ class _TopicsScreenState extends State<TopicsScreen> {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => SubtopicPage(
+                                      builder: (context) => SubtopicPage(bookId: widget.topicId,
                                         title: _topics[index]['title']!,
                                         topicId: _topics[index]['id']
                                       ),

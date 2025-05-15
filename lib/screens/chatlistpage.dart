@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:intl/intl.dart';
 import 'package:picturo_app/classes/svgfiles.dart';
 import 'package:picturo_app/providers/userprovider.dart';
 import 'package:picturo_app/responses/allusers_response.dart';
@@ -51,7 +52,7 @@ class _ChatListPageState extends State<ChatListPage>
 
          // Filter out current user from friends count
         final currentUserId = Provider.of<UserProvider>(context, listen: false).userId;
-        friendsCount = friends.where((f) => f.friend_id != currentUserId).length;
+        friendsCount = friends.where((f) => f.friendId != currentUserId).length;
 
         isLoading = false; 
        
@@ -70,7 +71,7 @@ class _ChatListPageState extends State<ChatListPage>
   final currentUserId = Provider.of<UserProvider>(context, listen: false).userId;
   setState(() {
     allUsersCount = allUsers.length;
-    friendsCount = friends.where((f) => f.friend_id != currentUserId).length;
+    friendsCount = friends.where((f) => f.friendId != currentUserId).length;
   });
 }
 
@@ -259,7 +260,11 @@ actions: [
       ),
     );
   }
-
+  String formatTo12Hour(String dateTimeStr) {
+    final dateTime = DateTime.parse(dateTimeStr); // parses ISO string
+    final formatter = DateFormat('h:mm a'); // 12-hour format
+    return formatter.format(dateTime);
+  }
   Widget _buildFriendTile(BuildContext context, Friends user) {
     return GestureDetector(
       onTap: () {
@@ -267,10 +272,10 @@ actions: [
           context,
           MaterialPageRoute(
             builder: (context) => ChatScreen(
-              avatarWidget: _buildUserAvatar(user.friend_profile_pic??0),
-              profileId: user.friend_profile_pic,
-            userName: user.friend_name,   
-            userId: user.friend_id,           
+              avatarWidget: _buildUserAvatar(user.friendProfilePic??0),
+              profileId: user.friendProfilePic??0,
+            userName: user.friendName??'',
+            userId: user.friendId??0,
           ),
           ),
         );
@@ -285,21 +290,32 @@ actions: [
             border: Border.all(width: 1, color: Color(0xFFDDDDDD))),
         child: Row(
           children: [
-             _buildUserAvatar(user.friend_profile_pic),
+             _buildUserAvatar(user.friendProfilePic??0),
             SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    user.friend_name,
-                    style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Poppins Regular'),
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        user.friendName??'',
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Poppins Regular'),
+                      ),
+                      Text(
+                       formatTo12Hour(user.lastMessageTime??''),
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w400,
+                            fontFamily: 'Poppins Regular'),
+                      ),
+                    ],
                   ),
                   Text(
-                    'Communicate with your buddy',
+                    '${user.lastMessage}',
                     style: TextStyle(
                         color: Colors.grey,
                         fontFamily: 'Poppins Regular',
@@ -444,8 +460,9 @@ actions: [
 
   // Filter out the current user from the friends list
   List<Friends> filteredFriends = friends
-      .where((friend) => friend.friend_id != currentUserId)
+      .where((friend) => friend.friendId != currentUserId)
       .toList();
+
 
   return RefreshIndicator(
     onRefresh: _fetchAllUsers, // Allow pull-to-refresh

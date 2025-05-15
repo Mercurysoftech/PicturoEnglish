@@ -113,9 +113,9 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     super.initState();
     initializeApiService();
      // Initialize the provider when the screen loads
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<ProfileProvider>(context, listen: false).initialize();
-    });
+    context.read<ProfileProvider>().initialize();
+
+    // Provider.of<ProfileProvider>(context, listen: false).initialize()
     ApiService.create().then((service) {
       _apiService = service;
     });
@@ -126,11 +126,6 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
   Widget build(BuildContext context) {
     final profileProvider = Provider.of<ProfileProvider>(context);
 
-    if (apiService == null) {
-      return Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
     return Scaffold(
       backgroundColor: Color(0xFFE0F7FF),
       appBar: PreferredSize(

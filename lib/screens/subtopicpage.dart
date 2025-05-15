@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:picturo_app/responses/questions_response.dart'; 
+import 'package:picturo_app/responses/questions_response.dart';
+import 'package:picturo_app/screens/widgets/cat_progress_bar_widget.dart';
 import 'package:picturo_app/services/api_service.dart'; 
 import 'package:picturo_app/screens/learnwordspage.dart';
+
+import '../responses/my_profile_response.dart';
 
 class SubtopicPage extends StatefulWidget {
   final String? title;
   final int? topicId; 
-  const SubtopicPage({super.key, this.title, this.topicId});
+  final int? bookId;
+  const SubtopicPage({super.key,required this.title,required this.topicId,required this.bookId});
 
   @override
   _SubtopicPageState createState() => _SubtopicPageState();
@@ -16,15 +20,17 @@ class _SubtopicPageState extends State<SubtopicPage> {
   int selectedOption = -1; 
   List<Question> _questions = []; 
   bool _isLoading = true; 
-  String _errorMessage = ''; 
+  String _errorMessage = '';
 
   @override
   void initState() {
     super.initState();
-    fetchQuestionsAndUpdateUI(); 
+
+    fetchQuestionsAndUpdateUI();
   }
 
-  Future<void> fetchQuestionsAndUpdateUI() async {
+
+Future<void> fetchQuestionsAndUpdateUI() async {
   try {
     final apiService = await ApiService.create();
     final response = await apiService.fetchQuestions(widget.topicId!);
@@ -91,42 +97,7 @@ class _SubtopicPageState extends State<SubtopicPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Progress Bar
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Column(
-              children: [
-                SizedBox(height: 10),
-                Stack(
-                  children: [
-                    Container(
-                      height: 10,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    Container(
-                      height: 10,
-                      width: MediaQuery.of(context).size.width * 0, // 39%
-                      decoration: BoxDecoration(
-                        color: Color(0xFF49329A),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 5),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    "0%",
-                    style: TextStyle(color: Color(0xFF49329A), fontWeight: FontWeight.bold, fontFamily: 'Poppins Regular'),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          ProgressBarWidget(bookId: widget.bookId??0,topicId: widget.topicId??0,),
           SizedBox(height: 20),
 
           // List of Options

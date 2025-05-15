@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:picturo_app/screens/genderandagepage.dart';
 import 'package:picturo_app/screens/loginscreen.dart';
+import 'package:picturo_app/screens/verificationscreen.dart';
 import 'package:picturo_app/services/api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // Import your ApiService
 
@@ -45,31 +46,39 @@ class _SignupscreenState extends State<Signupscreen> {
     // Call the signup API
     final apiService = await ApiService.create();
     final result = await apiService.signup(name, email, phone, password, context);
-    
+
+
 
     if (result["success"] == true) {
+      bool otpSend = await apiService.hitForOTP(phone);
+      if(otpSend){
         final String? token = result["token"];
-      final String? userId = result["user_id"]; // Use "userid" (lowercase) to match the API response
-      // Navigate to VerificationScreen on success
-      if (token != null && userId != null) {
-        _showMessage("Register successful!");
+        final String? userId = result["user_id"]; // Use "userid" (lowercase) to match the API response
+        // Navigate to VerificationScreen on success
+        if (token != null && userId != null) {
+          _showMessage("Register successful!");
 
-        // Save token and userId to SharedPreferences (if not already done in ApiService)
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString("auth_token", token);
-        await prefs.setString("user_id", userId);
-        print('Token: $token');
-        print('UserId:$userId');
+          // Save token and userId to SharedPreferences (if not already done in ApiService)
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString("auth_token", token);
+          await prefs.setString("user_id", userId);
+          print('Token: $token');
+          print('UserId:$userId');
 
-
-        Navigator.pushAndRemoveUntil(
-    context,
-    MaterialPageRoute(builder: (context) => GenderAgeScreen()),
-    (route) => false,
-  );
-      } else {
-        _showMessage("Invalid response from server. Please try again.");
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => VerificationScreen(mailId:email ,mobile:phone ,)),
+          );
+          //       Navigator.pushAndRemoveUntil(
+          //   context,
+          //   MaterialPageRoute(builder: (context) => GenderAgeScreen()),
+          //   (route) => false,
+          // );
+        } else {
+          _showMessage("Invalid response from server. Please try again.");
+        }
       }
+
     } else {
       // Show error message
       _showMessage(result["error"] ?? "Signup failed. Please try again.");

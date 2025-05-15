@@ -42,8 +42,10 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     return;
   }
 
-  try {
+
+  // try {
     // Call the API service to perform login
+  final apiService = await ApiService.create();
     final response = await apiService.sendVerificationCode(email, context);
 
     if (response["status"] == "success") {
@@ -57,13 +59,13 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     } else {
       _showMessage(response["error"] ?? "Sent OTP failed. Please try again.");
     }
-  } catch (e) {
-    _showMessage("An error occurred. Please try again.");
-  } finally {
-    setState(() {
-      _isLoading = false; // Hide loading indicator
-    });
-  }
+  // } catch (e) {
+  //   _showMessage("An error occurred. Please try again.");
+  // } finally {
+  //   setState(() {
+  //     _isLoading = false; // Hide loading indicator
+  //   });
+  // }
 }
 
 void _showMessage(String message) {

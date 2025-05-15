@@ -6,26 +6,15 @@ import 'package:picturo_app/services/api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 
-class LanguageSelectionApp extends StatelessWidget {
+
+class LanguageSelectionApp extends StatefulWidget {
   const LanguageSelectionApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: const LanguageSelectionScreen(),
-    );
-  }
+  _LanguageSelectionAppState createState() => _LanguageSelectionAppState();
 }
 
-class LanguageSelectionScreen extends StatefulWidget {
-  const LanguageSelectionScreen({super.key});
-
-  @override
-  _LanguageSelectionScreenState createState() => _LanguageSelectionScreenState();
-}
-
-class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
+class _LanguageSelectionAppState extends State<LanguageSelectionApp> {
   String? selectedLanguage;
   final double _scale = 1.0;  // This controls the scaling effect
   List<LanguageData> languages = []; // Store fetched languages

@@ -56,7 +56,7 @@ class Requests {
       age: json['age'],
       gender: json['gender'],
       speaking_level: json['speaking_level'],
-      avatar_id: json['avatar_id'],
+      avatar_id: json['avatar_id']??0,
     );
   }
 

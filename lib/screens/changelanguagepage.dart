@@ -1,21 +1,14 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:picturo_app/responses/language_response.dart';
 import 'package:picturo_app/screens/locationgetpage.dart';
 import 'package:picturo_app/services/api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 
-
-class ChangeLanguageSelectionApp extends StatelessWidget {
-  const ChangeLanguageSelectionApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: const ChangeLanguagePage(),
-    );
-  }
-}
+import '../responses/my_profile_response.dart';
 
 class ChangeLanguagePage extends StatefulWidget {
   const ChangeLanguagePage({super.key});
@@ -28,13 +21,29 @@ class _ChangeLanguagePageState extends State<ChangeLanguagePage> {
   String? selectedLanguage;
   final double _scale = 1.0;  // This controls the scaling effect
   List<LanguageData> languages = []; // Store fetched languages
-
+  UserResponse? userResponse;
   @override
   void initState() {
     super.initState();
+    fetchUserDetails();
     fetchAndDisplayLanguages(); // Fetch languages on screen load
   }
+  Future<void> fetchUserDetails() async {
+    try {
+      final apiService = await ApiService.create();
+      final response = await apiService.fetchProfileDetails();
 
+      setState(() {
+        userResponse=response;
+        selectedLanguage=userResponse?.speakingLanguage??'';
+      });
+    } catch (e) {
+      setState(() {
+
+      });
+      print("Error fetching questions: $e");
+    }
+  }
 
    Future<void> fetchAndDisplayLanguages() async {
     try {
@@ -90,13 +99,18 @@ class _ChangeLanguagePageState extends State<ChangeLanguagePage> {
                   padding: const EdgeInsets.symmetric(vertical: 5),
                   child: GestureDetector(
                     onTap: () async {
-                      setState(() {
-                        selectedLanguage = language.language;
-                      });
-                       // Save the selected language to SharedPreferences
-                      SharedPreferences prefs = await SharedPreferences.getInstance();
-                      await prefs.setString('selectedLanguage', language.language);
+                      final apiService = await ApiService.create();
+                      final bool languageResponse = await apiService.setUserNativeLanguage(language.language);
+                      if(languageResponse){
+                        setState(() {
+                          selectedLanguage = language.language;
+                        });
+                        SharedPreferences prefs = await SharedPreferences.getInstance();
+                        await prefs.setString('selectedLanguage', language.language);
+
+                      }
                       Navigator.pop(context);
+
                     },
                     child: Container(
                       width: double.infinity,
@@ -136,6 +150,7 @@ class _ChangeLanguagePageState extends State<ChangeLanguagePage> {
 
   @override
   Widget build(BuildContext context) {
+    print("sdjklcsldkc ${selectedLanguage}");
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: PreferredSize(

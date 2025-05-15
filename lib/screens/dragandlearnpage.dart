@@ -1,26 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:picturo_app/screens/dragandlearntopics.dart';
 
-class DragAndLearnApp extends StatelessWidget {
+class DragAndLearnApp extends StatefulWidget {
   const DragAndLearnApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: DragAndLearnScreen(),
-    );
-  }
+  _DragAndLearnAppState createState() => _DragAndLearnAppState();
 }
 
-class DragAndLearnScreen extends StatefulWidget {
-  const DragAndLearnScreen({super.key});
-
-  @override
-  _DragAndLearnScreenState createState() => _DragAndLearnScreenState();
-}
-
-class _DragAndLearnScreenState extends State<DragAndLearnScreen> {
+class _DragAndLearnAppState extends State<DragAndLearnApp> {
   final List<String> words = ["Run", "Write", "Eat", "Sleep", "Walk", "Jump"];
   final List<String> images = [
     "assets/run.png",

@@ -5,18 +5,6 @@ import 'package:provider/provider.dart';
 import '../providers/profileprovider.dart';
 
 
-// class BlockedUsersPage extends StatelessWidget {
-//   const BlockedUsersPage({super.key});
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return MaterialApp(
-//       debugShowCheckedModeBanner: false,
-//       home: BlockedUsersScreen(),
-//     );
-//   }
-// }
-
 class BlockedUsersScreen extends StatefulWidget {
 
   BlockedUsersScreen({super.key,required this.user});
@@ -36,8 +24,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
   getBlockedUsers() async {
 
     if(widget.user.userId != null){
-      // sample
-      // {"id":7,"user_id":121,"username":"hindiguy","email":"hindimanan@gmail.com","blocked_by":101,"blocked_at":"2025-05-12 20:05:45"}
+
       blockedUsers = await _apiService.getBlockedUsers(widget.user.userId!);
     }
 
@@ -75,11 +62,13 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    print("sdlclskdcm ${blockedUsers}");
 
 
 
     return Scaffold(
       backgroundColor: Color(0xFFE0F7FF),
+
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(80), // Increased app bar height
         child: AppBar(
@@ -170,6 +159,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
                     borderRadius: BorderRadius.circular(15.0),
                   ),
                   child: ListTile(
+
                     leading: CircleAvatar(
                       backgroundImage: AssetImage('assets/avatar_1.png'),
                       radius: 25,
@@ -177,7 +167,16 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
                     title: Text(blockedUsers[index]["username"],style: TextStyle(fontFamily: 'Poppins Regular'),),
                     subtitle: Text('Blocked',style: TextStyle(fontFamily: 'Poppins Regular'),),
                     trailing: TextButton(
-                      onPressed: () {
+                      onPressed: () async{
+                        setState(() {
+                          _isLoading=true;
+                        });
+                        await _apiService.unblockUser(blockedUsers[index]["user_id"]);
+                        blockedUsers.clear();
+                        await getBlockedUsers();
+                        setState(() {
+                          _isLoading=false;
+                        });
                         // Unblock logic here
                       },
 

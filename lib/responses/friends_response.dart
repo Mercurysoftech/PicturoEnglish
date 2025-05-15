@@ -18,34 +18,52 @@ class FriendsResponse {
     };
   }
 }
-
 class Friends {
-  final int friend_id;
-  final String friend_name;
-  final int friend_profile_pic;
-  final String status;
-  final String accepted_at;
+  int? friendId;
+  String? friendName;
+  int? friendProfilePic;
+  String? status;
+  String? acceptedAt;
+  String? lastMessage;
+  String? lastMessageTime;
+  String? lastMessageDirection;
+  int? unreadCount;
 
-  Friends({required this.friend_id, required this.friend_name, required this.friend_profile_pic,required this.status,required this.accepted_at});
+  Friends(
+      {this.friendId,
+        this.friendName,
+        this.friendProfilePic,
+        this.status,
+        this.acceptedAt,
+        this.lastMessage,
+        this.lastMessageTime,
+        this.lastMessageDirection,
+        this.unreadCount});
 
-  factory Friends.fromJson(Map<String, dynamic> json) {
-    return Friends(
-      friend_id: json['friend_id'],
-      friend_name: json['friend_name'],
-      friend_profile_pic: json['friend_profile_pic']??0,
-      status:json['status'],
-      accepted_at:json['accepted_at']
-
-    );
+  Friends.fromJson(Map<String, dynamic> json) {
+    friendId = json['friend_id'];
+    friendName = json['friend_name'];
+    friendProfilePic = json['friend_profile_pic'];
+    status = json['status'];
+    acceptedAt = json['accepted_at'];
+    lastMessage = json['last_message'];
+    lastMessageTime = json['last_message_time'];
+    lastMessageDirection = json['last_message_direction'];
+    unreadCount = json['unread_count'];
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'friend_id': friend_id,
-      'friend_name': friend_name,
-      'friend_profile_pic': friend_profile_pic,
-      'status':status,
-      'accepted_at':accepted_at
-    };
+    final Map<String, dynamic> data = new Map<String, dynamic>();
+    data['friend_id'] = this.friendId;
+    data['friend_name'] = this.friendName;
+    data['friend_profile_pic'] = this.friendProfilePic;
+    data['status'] = this.status;
+    data['accepted_at'] = this.acceptedAt;
+    data['last_message'] = this.lastMessage;
+    data['last_message_time'] = this.lastMessageTime;
+    data['last_message_direction'] = this.lastMessageDirection;
+    data['unread_count'] = this.unreadCount;
+    return data;
   }
 }
+

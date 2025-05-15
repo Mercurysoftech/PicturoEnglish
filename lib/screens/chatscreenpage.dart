@@ -16,6 +16,8 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
+import 'call/calling_widget.dart';
+
 enum ChatMenuAction { //enum class for menu option like "block user"...etc
   block,
 }
@@ -100,8 +102,7 @@ class _ChatScreenState extends State<ChatScreen> {
       // You can call your Flutter function here to update UI
     });
     socket.on('register', (data) {
-      print('Regsitedsdd .......... ');
-      log("sjdksdjd $data");
+
       // You can call your Flutter function here to update UI
     });
     socket.on('sendMessage', (data) {
@@ -226,29 +227,6 @@ class _ChatScreenState extends State<ChatScreen> {
 
 
 //--------------------------------------------New Updates End-----------------------------------
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
   @override
@@ -434,41 +412,42 @@ void _handleOnlineStatus(dynamic data) {
     return formatter.format(now);
   }
  void _sendMessage()async {
+    if(_messageController.text.isNotEmpty){
 
+      final prefs = await SharedPreferences.getInstance();
+
+      _userId= prefs.getString('user_id');
+      final receiverId = widget.userId.toString();
+
+      final now = _formatTimeTo12Hour(DateTime.now().toIso8601String()); // Get current time in ISO format
+      sendMessage(_userId.toString(),receiverId, _messageController.text.trim());
+
+
+
+      final messageData = {
+        "sender_id":_userId,
+        "receiver_id": "$receiverId",
+        "message": _messageController.text
+      };
+      bool? response = await _apiService.sendMessagesToAPI(messageMap: messageData);
+      if(response!=null&&response){
+        setState(() {
+          _messages.insert(0, {
+            "senderId": _userId.toString(),
+            "message": _messageController.text.trim(),
+            "timestamp": now,
+            "isOptimistic": true,
+          });
+        });
+      }
+      // Optimistic UI update
+
+
+      // _socketService.sendMessage(messageData);
+      _messageController.clear();
+    }
   // if (_messageController.text.trim().isEmpty || !_isSocketReady) return;
 
-   final prefs = await SharedPreferences.getInstance();
-
-   _userId= prefs.getString('user_id');
-  final receiverId = widget.userId.toString();
-
-  final now = _formatTimeTo12Hour(DateTime.now().toIso8601String()); // Get current time in ISO format
-  sendMessage(_userId.toString(),receiverId, _messageController.text.trim());
-
-
-
-  final messageData = {
-    "sender_id":_userId,
-    "receiver_id": "$receiverId",
-    "message": _messageController.text
-  }
-  ;
-  bool? response = await _apiService.sendMessagesToAPI(messageMap: messageData);
-   if(response!=null&&response){
-     setState(() {
-       _messages.insert(0, {
-         "senderId": _userId.toString(),
-         "message": _messageController.text.trim(),
-         "timestamp": now,
-         "isOptimistic": true,
-       });
-     });
-   }
-  // Optimistic UI update
-
-
-  // _socketService.sendMessage(messageData);
-  _messageController.clear();
 }
 
 
@@ -569,7 +548,8 @@ void dispose() {
                     color: Colors.transparent,
                     child: InkWell(
                       onTap: () {
-                        _startVoiceCall();
+                        Navigator.push(context, MaterialPageRoute(builder: (context)=>CallingScreen(callerName: 'Test User', avatarUrl: '',)));
+                        // _startVoiceCall();
                       },
                       borderRadius: BorderRadius.circular(70),
                       child: Container(

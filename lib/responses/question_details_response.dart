@@ -31,7 +31,7 @@ class QuestionDetailsResponse {
       example: json['example'],
       qusImage: json['qus_image'],
       examples: (json['examples'] as List?)
-          ?.map((e) => Example.fromJson(e))
+          ?.map((e) => (e.runtimeType==String)?Example():Example.fromJson(e))
           .toList() ?? [],
     );
   }

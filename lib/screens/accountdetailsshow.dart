@@ -328,7 +328,7 @@ Widget _buildBankHeader(ViewAccountDetails account) {
         ),
         TextButton(
           onPressed: () {
-            Navigator.pop(context);
+            // Navigator.pop(context);
             _removeAccount(account); // Pass the specific account to remove
           },
           child: const Text('Remove', style: TextStyle(color: Colors.red)),
@@ -339,7 +339,10 @@ Widget _buildBankHeader(ViewAccountDetails account) {
 }
 
   Future<void> _removeAccount(ViewAccountDetails account) async {
-    // Implement account removal logic
+    final apiService = await ApiService.create();
+    final bool languageResponse = await apiService.removeBankAccount(account.accountNumber??"");
+    Navigator.pop(context);
+    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>AccountDetailShow()));
   }
 }
 

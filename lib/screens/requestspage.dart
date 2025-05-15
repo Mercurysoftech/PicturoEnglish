@@ -23,7 +23,7 @@ class _RequestsPageState extends State<RequestsPage> {
   }
 
   Future<void> _fetchAllUsers() async {
-    try {
+    // try {
       final apiService = await ApiService.create();
       final RequestsResponse response = await apiService.fetchRequests();
 
@@ -36,12 +36,12 @@ class _RequestsPageState extends State<RequestsPage> {
             .toList();
         isLoading = false;
       });
-    } catch (e) {
-      setState(() {
-        errorMessage = e.toString();
-        isLoading = false;
-      });
-    }
+    // } catch (e) {
+    //   setState(() {
+    //     errorMessage = e.toString();
+    //     isLoading = false;
+    //   });
+    // }
   }
 
   @override

@@ -43,13 +43,13 @@ class UserResponse {
       age: json["age"],
       gender: json["gender"],
       speakingLevel: json["speaking_level"],
-      location: json["location"],
-      membership: json["membership"],
+      location: json["location"]??"",
+      membership: json["membership"]??"",
       referralCode: json["referral_code"],
-      reason: json["reason"],
+      reason: json["reason"]??'',
       speakingLanguage: json["speaking_language"] ?? "",
       qualification: json["qualification"] ?? "",
-      avatarId: json["avatar_id"] ?? ""
+      avatarId: int.parse((json["avatar_id"] ?? 0).toString())
     );
   }
 
