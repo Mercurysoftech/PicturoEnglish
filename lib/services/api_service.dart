@@ -188,6 +188,15 @@ Future<Map<String, dynamic>> setPersonalDetails(
     }
 
     // Make the POST request with the Bearer token
+    print("sdjcnslkdcsldc ${{
+      "gender": gender,
+      "age": age,
+      "speaking_level": speakingLevel,
+      "location": location,
+      "reason": reason,
+      "speaking_language":speakingLanguage,
+      "qualification":qualification
+    }}");
     Response response = await _dio.post(
       endpoint,
       data: jsonEncode({
@@ -206,18 +215,27 @@ Future<Map<String, dynamic>> setPersonalDetails(
       ),
     );
 
-    print("Raw API Response: ${response.data}"); // Debugging
+    print("Raw API Response Personal Detailssss : ${response.data}"); // Debugging
 
     if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
       final Map<String, dynamic> data = response.data;
 
+
       if (data["status"] == true) {
         // Handle successful update
-        return {
-          "status": data["status"],
-          "message": data["message"],
-          "success": true,
-        };
+        if(data['message'].toString().contains("updated successfully")){
+          return {
+            "status": data["status"],
+            "message": data["message"],
+            "success": true,
+          };
+        }else{
+          return {
+            "error": data["message"] ?? "Invalid input data.",
+            "success": false,
+          };
+        }
+
       } else {
         // Handle error response
         return {
@@ -225,11 +243,13 @@ Future<Map<String, dynamic>> setPersonalDetails(
           "success": false,
         };
       }
+
     } else {
       // Handle non-200 status code
       return {"error": response.data["message"] ?? "Something went wrong", "success": false};
     }
   } on DioException catch (e) {
+
     // Handle network or server errors
     return {"error": e.response?.data["message"] ?? "Network error", "success": false};
   }

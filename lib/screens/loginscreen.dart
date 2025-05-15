@@ -108,12 +108,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
           final profileResponse = await apiService.fetchProfileDetails();
 
+
           if (profileResponse.age == 0 ||
               profileResponse.gender.isEmpty ||
               profileResponse.qualification.isEmpty ||
               profileResponse.speakingLevel.isEmpty ||
               profileResponse.reason.isEmpty) {
-            Navigator.pushReplacement(
+            Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const GenderAgeScreen()),
             );

@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:picturo_app/screens/changepasswordpage.dart';
 import 'dart:async';
 
 import 'package:picturo_app/screens/successfullyverification.dart';
 import 'package:picturo_app/services/api_service.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // For the Timer
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'genderandagepage.dart'; // For the Timer
 
 class VerificationScreen extends StatefulWidget {
   final String? mobile;
@@ -42,18 +45,24 @@ final List<FocusNode> _otpFocusNodes = List.generate(4, (index) => FocusNode());
   }
 
   // Validate OTP length
-  if (otp.length != 4) {
-    _showMessage("Please enter a complete 4-digit OTP");
-    setState(() {
-      _isLoading = false;
-    });
-    return;
-  }
+
 
   final email = widget.mailId ?? '';
 
   final prefs = await SharedPreferences.getInstance();
   String? otpSended= prefs.getString('otp_verify');
+
+  if(otpSended!=null){
+    if(otpSended==otp){
+      Fluttertoast.showToast(msg: "Otp Verified",backgroundColor: Colors.green);
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => GenderAgeScreen()),
+      );
+    }else{
+      Fluttertoast.showToast(msg: "Otp Mismatched",backgroundColor: Colors.red);
+    }
+  }
 
   // try {
   //   final response = await apiService.verifyVerificationCode(email, otp, context);

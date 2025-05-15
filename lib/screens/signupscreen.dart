@@ -15,6 +15,7 @@ class Signupscreen extends StatefulWidget {
 class _SignupscreenState extends State<Signupscreen> {
   bool isPasswordVisible = false;
   bool isConfirmPasswordVisible = false;
+  bool buttonLoading=false;
 
   // Controllers for text fields
   final TextEditingController _nameController = TextEditingController();
@@ -26,6 +27,9 @@ class _SignupscreenState extends State<Signupscreen> {
   // Function to handle signup
   Future<void> _handleSignup() async {
     // Get input values
+    setState(() {
+      buttonLoading=true;
+    });
     final String name = _nameController.text.trim();
     final String email = _emailController.text.trim();
     final String password = _passwordController.text.trim();
@@ -77,6 +81,9 @@ class _SignupscreenState extends State<Signupscreen> {
         } else {
           _showMessage("Invalid response from server. Please try again.");
         }
+        setState(() {
+          buttonLoading=false;
+        });
       }
 
     } else {
@@ -271,7 +278,14 @@ class _SignupscreenState extends State<Signupscreen> {
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                 ),
-                                child: Text(
+                                child: (buttonLoading)?SizedBox(
+                                  height: 18,
+                                  width: 18,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 0.7,
+                                  ),
+                                ):Text(
                                   "Sign Up",
                                   style: TextStyle(
                                     fontSize: 18,

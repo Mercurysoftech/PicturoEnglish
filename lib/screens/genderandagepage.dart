@@ -32,6 +32,7 @@ class _GenderAgeScreenState extends State<GenderAgeScreen> {
     return true;
   }
 
+
   // Function to save gender & age in SharedPreferences
   Future<void> _saveGenderAge() async {
   final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -248,6 +249,7 @@ Widget build(BuildContext context) {
                           current: _isMaleSelected,
                           values: const [false, true],
                           indicatorSize: const Size.fromWidth(200),
+
                           iconOpacity: 0.2,
                           customIconBuilder: (context, local, global) {
                             return Text(

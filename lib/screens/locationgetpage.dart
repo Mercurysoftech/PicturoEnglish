@@ -132,10 +132,20 @@ class _LocationGetPageState extends State<LocationGetPage> {
 
   if (result["success"] == true) {
     print('Raw Response: $result');
-
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => Homepage()),
+          (route) => false,
+    );
 
   } else {
     _showMessage(result["error"] ?? "Something went wrong. Please try again.");
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => Homepage()),
+          (route) => false,
+    );
+
   }
 }
 
@@ -204,11 +214,7 @@ class _LocationGetPageState extends State<LocationGetPage> {
   
 
      
-      Navigator.pushAndRemoveUntil(
-    context,
-    MaterialPageRoute(builder: (context) => Homepage()),
-    (route) => false,
-  );
+
     } else {
       setState(() {
         locationMessage = "No address found.";
