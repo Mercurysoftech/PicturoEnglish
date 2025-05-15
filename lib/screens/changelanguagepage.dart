@@ -62,7 +62,8 @@ class _ChangeLanguagePageState extends State<ChangeLanguagePage> {
   }
 
   void _showLanguageBottomSheet() {
-  showModalBottomSheet(
+    if(languages.isNotEmpty) {
+      showModalBottomSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
@@ -141,6 +142,7 @@ class _ChangeLanguagePageState extends State<ChangeLanguagePage> {
       );
     },
   );
+    }
 }
 
 
@@ -220,7 +222,7 @@ class _ChangeLanguagePageState extends State<ChangeLanguagePage> {
               // Positioned label similar to languageSelectionTile
               const SizedBox(height: 5),
               GestureDetector(
-                onTap: _showLanguageBottomSheet,
+                onTap:_showLanguageBottomSheet,
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
