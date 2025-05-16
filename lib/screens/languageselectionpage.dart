@@ -43,80 +43,92 @@ class _LanguageSelectionAppState extends State<LanguageSelectionApp> {
   }
 
   void _showLanguageBottomSheet() {
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (context) {
-      return Container(
-        width: MediaQuery.of(context).size.width,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+    if(languages.isNotEmpty) {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const Text(
-              "Select a Language",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'Poppins Medium',
-                color: Color(0xFF522B8F),
-              ),
+        builder: (context) {
+          return Container(
+            width: MediaQuery
+                .of(context)
+                .size
+                .width,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20)),
             ),
-            const SizedBox(height: 20),
-            Column(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.center,
-              children: languages.map((language) {
-                bool isSelected = selectedLanguage == language.language;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 5),
-                  child: GestureDetector(
-                    onTap: () async {
-                      setState(() {
-                        selectedLanguage = language.language;
-                      });
-                       // Save the selected language to SharedPreferences
-                      SharedPreferences prefs = await SharedPreferences.getInstance();
-                      await prefs.setString('selectedLanguage', language.language);
-                      Navigator.pop(context);
-                    },
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-                      decoration: BoxDecoration(
-                        color: isSelected ? const Color(0xFF49329A) : Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFF49329A), width: 1),
-                      ),
-                      child: Text(
-                        language.language,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Poppins Medium',
-                          color: isSelected ? Colors.white : const Color(0xFF49329A),
+              children: [
+                const Text(
+                  "Select a Language",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Poppins Medium',
+                    color: Color(0xFF522B8F),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: languages.map((language) {
+                    bool isSelected = selectedLanguage == language.language;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 5),
+                      child: GestureDetector(
+                        onTap: () async {
+                          setState(() {
+                            selectedLanguage = language.language;
+                          });
+                          // Save the selected language to SharedPreferences
+                          SharedPreferences prefs = await SharedPreferences
+                              .getInstance();
+                          await prefs.setString(
+                              'selectedLanguage', language.language);
+                          Navigator.pop(context);
+                        },
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 12, horizontal: 20),
+                          decoration: BoxDecoration(
+                            color: isSelected ? const Color(0xFF49329A) : Colors
+                                .white,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                                color: const Color(0xFF49329A), width: 1),
+                          ),
+                          child: Text(
+                            language.language,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Poppins Medium',
+                              color: isSelected ? Colors.white : const Color(
+                                  0xFF49329A),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                );
-              }).toList(),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 30),
+              ],
             ),
-            const SizedBox(height: 30),
-          ],
-        ),
+          );
+        },
       );
-    },
-  );
+    }
 }
 
   @override

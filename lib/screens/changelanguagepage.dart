@@ -92,6 +92,7 @@ class _ChangeLanguagePageState extends State<ChangeLanguagePage> {
               ),
             ),
             const SizedBox(height: 20),
+
             Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: languages.map((language) {
@@ -238,7 +239,7 @@ class _ChangeLanguagePageState extends State<ChangeLanguagePage> {
                         textAlign: TextAlign.center,
                         selectedLanguage ?? "Select a language",
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
                           fontFamily: 'Poppins Medium',
                           color: selectedLanguage != null ? Color(0xFF49329A) : Colors.grey,

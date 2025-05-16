@@ -253,7 +253,8 @@ class _SignupscreenState extends State<Signupscreen> {
                               ),
                               SizedBox(width: 10),
                               Expanded(
-                                child: _buildTextField(
+                                child: _buildTextField(maxLength: 10,
+                                  textInputType: TextInputType.phone,
                                   controller: _phoneController,
                                   hintText: "Phone Number",
                                   fontStyle: TextStyle(
@@ -337,13 +338,19 @@ class _SignupscreenState extends State<Signupscreen> {
     required TextEditingController controller,
     required String hintText,
     Widget? icon,
+    TextInputType? textInputType,
+    int? maxLength,
     bool obscureText = false,
     TextStyle? fontStyle,
   }) {
-    return TextField(
+    return TextField(keyboardType: textInputType,
+      maxLength: maxLength,
       controller: controller,
       obscureText: obscureText,
       style: fontStyle,
+      buildCounter: (_, {required int currentLength, required bool isFocused, required int? maxLength}) {
+        return SizedBox.shrink(); // Also hides counter
+      },
       decoration: InputDecoration(
         hintText: hintText,
         prefixIcon: icon,

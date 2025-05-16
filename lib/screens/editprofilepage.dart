@@ -401,7 +401,9 @@ if (_mobileController.text.isNotEmpty) {
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-              child: TextField(
+              child: TextFormField(
+                keyboardType: TextInputType.number,
+                maxLength: 10,
                 controller: _mobileController,
                 decoration: InputDecoration(
                   border: OutlineInputBorder(

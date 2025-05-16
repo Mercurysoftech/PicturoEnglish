@@ -18,6 +18,9 @@ import 'package:picturo_app/services/api_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'earnings_ref/earnings_referral.dart';
+import 'locationgetpage.dart';
+
 class MyProfileScreen extends StatefulWidget {
   const MyProfileScreen({super.key});
 
@@ -193,6 +196,10 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                       PremiumButton(),
                       SizedBox(height: 10),
                       _buildSettingsOption(Icons.language, "Language", context,profileProvider),
+                          // SizedBox(height: 10),
+                      // _buildSettingsOption(Icons.location_city, "Update Location", context,profileProvider),
+                          SizedBox(height: 10),
+                      _buildSettingsOption(Icons.monetization_on_outlined, "Referral Earning", context,profileProvider),
                       SizedBox(height: 10),
                       _buildBankDetailsOption("Bank account details", context),
                        SizedBox(height: 10),
@@ -358,7 +365,17 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, fontFamily: 'Poppins Regular')),
           trailing: Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 18),
           onTap: () {
-            if (title == 'Language') {
+            if (title == 'Referral Earning') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => WalletReferralPage()), // Navigate to ChangeLanguagePage
+              );
+            } else if (title == 'Update Location') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => LocationGetPage()), // Navigate to ChangeLanguagePage
+              );
+            } else if (title == 'Language') {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => ChangeLanguagePage()), // Navigate to ChangeLanguagePage
