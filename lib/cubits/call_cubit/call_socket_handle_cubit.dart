@@ -125,16 +125,16 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
     });
 
     callSocket.on('call-ended', (_)async {
-      print("📞 Call was ended by remote user");
-
-      await _peerConnection?.close();
-      _peerConnection = null;
-
-      _localStream?.getTracks().forEach((track) => track.stop());
-      _localStream = null;
-
-      localRenderer.srcObject = null;
-      await localRenderer.dispose(); print("Call ended by remote");
+      // print("📞 Call was ended by remote user");
+      //
+      // await _peerConnection?.close();
+      // _peerConnection = null;
+      //
+      // _localStream?.getTracks().forEach((track) => track.stop());
+      // _localStream = null;
+      //
+      // localRenderer.srcObject = null;
+      // await localRenderer.dispose(); print("Call ended by remote");
       emit(CallRejected());
     });
 
@@ -230,22 +230,18 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
     try {
       // End CallKit session
 
-        await FlutterCallkitIncoming.endCall("sdkjcslkcmslkcmsdc");
-
-      await FlutterCallkitIncoming.endAllCalls();
-       await disposeLocalRender();
-       await disposeRemoteRender();
       // Notify receiver
       callSocket.emit('end-call', {'to': targetUserId});
 
+      await FlutterCallkitIncoming.endCall("sdkjcslkcmslkcmsdc");
+      await FlutterCallkitIncoming.endAllCalls();
       // Cleanup resources
       await _peerConnection?.close();
-    _peerConnection = null;
-
-    _localStream?.getTracks().forEach((track) => track.stop());
-    _localStream = null;
-
-
+      await _peerConnection?.dispose();
+     _localStream?.getTracks().forEach((track) => track.stop());
+      await _localStream?.dispose();
+      await disposeLocalRender();
+      await disposeRemoteRender();
     emit(CallRejected());
     print("📴 Call completely cut for both users.");
     } catch (e) {

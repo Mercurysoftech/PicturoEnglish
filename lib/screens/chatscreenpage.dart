@@ -379,7 +379,7 @@ void dispose() {
             child: IconButton(
               icon: Icon(Icons.arrow_back_ios, color: Colors.white),
               onPressed: (){
-                context.read<CallSocketHandleCubit>().endCall(targetUserId:widget.friendDetails.friendId??0);
+               Navigator.pop(context);
               },
             ),
           ),

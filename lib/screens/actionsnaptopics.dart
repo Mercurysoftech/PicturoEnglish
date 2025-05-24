@@ -101,7 +101,7 @@ class _ActionSnapTopicsScreenState extends State<ActionSnapTopicsScreen> {
   void _navigateToGame(BuildContext context) {
     switch (widget.gameName) {
       case 'Drag and Learn':
-        Navigator.push(context, MaterialPageRoute(builder: (_) => DragAndLearnApp()));
+        // Navigator.push(context, MaterialPageRoute(builder: (_) => DragAndLearnApp(level: null,)));
         break;
       case 'Picture Grammar Quest':
         Navigator.push(context, MaterialPageRoute(builder: (_) => PictureGrammarQuestScreen()));

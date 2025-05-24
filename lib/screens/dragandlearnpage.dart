@@ -1,37 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:picturo_app/screens/dragandlearntopics.dart';
 
+import '../models/dragand_learn_model.dart';
+
 class DragAndLearnApp extends StatefulWidget {
-  const DragAndLearnApp({super.key});
+  const DragAndLearnApp({super.key,required this.level});
+  final Levels? level;
 
   @override
   _DragAndLearnAppState createState() => _DragAndLearnAppState();
 }
 
 class _DragAndLearnAppState extends State<DragAndLearnApp> {
-  final List<String> words = ["Run", "Write", "Eat", "Sleep", "Walk", "Jump"];
-  final List<String> images = [
-    "assets/run.png",
-    "assets/write.png",
-    "assets/eat.png",
-    "assets/sleep.png",
-    "assets/walk.png",
-    "assets/jump.png"
-  ];
+  late List<String?> words;
+  late List<String?> images;
 
   // Map to store which image is correctly placed on each word
-  Map<String, String?> placedImages = {};
-  List<String> availableImages = [];
+  Map<String?, String?> placedImages = {};
+  List<String?> availableImages = [];
 
   @override
   void initState() {
     super.initState();
+    if(widget.level?.questions!=null){
+      words = widget.level!.questions!.map((q) => q.question).toList();
+      images = widget.level!.questions!.map((q) => q.qusImage).toList();
+    }
+
+// Assuming qus_image is qusImage in your model
+
     for (var word in words) {
       placedImages[word] = null;
     }
+
     availableImages = List.from(images);
   }
-
   void _showCongratulationsPopup() {
     showDialog(
       context: context,
@@ -151,7 +154,7 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
     ),
     itemCount: words.length,
     itemBuilder: (context, index) {
-      String word = words[index];
+      String? word = words[index];
       return DragTarget<String>(
         onWillAcceptWithDetails: (data) => true,
         onAccept: (imagePath) {
@@ -179,9 +182,9 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
               ),
               alignment: Alignment.center,
               child: placedImages[word] != null
-                  ? Image.asset(placedImages[word]!, fit: BoxFit.cover)
+                  ? Image.network(placedImages[word]!, fit: BoxFit.cover)
                   : Text(
-                      word,
+                      word??'',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -232,7 +235,7 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
                         child: SizedBox(
                           width: itemSize,
                           height: itemSize,
-                          child: Image.asset(availableImages[index], fit: BoxFit.cover),
+                          child: Image.network(availableImages[index]??'', fit: BoxFit.cover),
                         ),
                       ),
                       childWhenDragging: SizedBox(
@@ -250,7 +253,7 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
                           ),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(12),
-                            child: Image.asset(availableImages[index], fit: BoxFit.cover),
+                            child: Image.network(availableImages[index]??'', fit: BoxFit.cover),
                           ),
                         ),
                       ),

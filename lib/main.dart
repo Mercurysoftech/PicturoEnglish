@@ -31,6 +31,7 @@ import 'package:picturo_app/socket/socketservice.dart';
 import 'package:provider/provider.dart';
 
 import 'cubits/call_cubit/call_socket_handle_cubit.dart';
+import 'cubits/drag_and_learn_cubit/drag_and_learn_cubit.dart';
 import 'cubits/get_topics_list_cubit/get_topic_list_cubit.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -61,6 +62,7 @@ void main() async{
         ChangeNotifierProvider(create: (_) => SocketService()),
         ChangeNotifierProvider(create: (context) => ProfileProvider()),
         BlocProvider(create: (context) => CallSocketHandleCubit()),
+        BlocProvider(create: (context) => DragLearnCubit()),
       ],
       child: MyApp(),
     ),

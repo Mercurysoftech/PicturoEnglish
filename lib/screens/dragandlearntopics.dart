@@ -3,6 +3,7 @@ import 'package:picturo_app/screens/dragandlearnpage.dart';
 import 'package:picturo_app/screens/gamespage.dart';
 import 'package:picturo_app/screens/picturegrammerquest.dart';
 import 'package:picturo_app/screens/actionsnappage.dart';
+import 'package:picturo_app/screens/widgets/drag_and_learn_level.dart';
 
 class DragandLearnTopicScreen extends StatefulWidget {
   String? gameName;
@@ -110,7 +111,7 @@ class _DragandLearnTopicScreenState extends State<DragandLearnTopicScreen> {
                 itemCount: _grammarTopics.length,
                 itemBuilder: (context, index) {
                   final topic = _grammarTopics[index];
-                  return _buildGrammarCard(
+                  return _buildGrammarCard(index,
                     context,
                     topic['title'],
                     topic['description'],
@@ -126,7 +127,7 @@ class _DragandLearnTopicScreenState extends State<DragandLearnTopicScreen> {
     );
   }
 
-  Widget _buildGrammarCard(BuildContext context, String title, String description, Color color, IconData icon) {
+  Widget _buildGrammarCard(int bookId, BuildContext context, String title, String description, Color color, IconData icon) {
     return Card(
       elevation: 0,
       margin: EdgeInsets.symmetric(vertical: 8),
@@ -135,9 +136,15 @@ class _DragandLearnTopicScreenState extends State<DragandLearnTopicScreen> {
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () {
+
+            // Navigator.push(
+            //   context,
+            //   MaterialPageRoute(builder: (context) => DragAndLearnApp()),
+            // );
+
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => DragAndLearnApp()),
+              MaterialPageRoute(builder: (context) => DragLearnPage(bookId: bookId+1,)),
             );
         },
         child: Container(
