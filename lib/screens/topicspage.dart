@@ -1,10 +1,14 @@
 import 'dart:developer';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:picturo_app/responses/topics_response.dart'; // Import your TopicsResponse model
 import 'package:picturo_app/screens/homepage.dart';
 import 'package:picturo_app/services/api_service.dart'; // Import your API service
 import 'package:picturo_app/screens/subtopicpage.dart';
+
+import '../cubits/get_topics_list_cubit/get_topic_list_cubit.dart';
 
 class TopicsScreen extends StatefulWidget {
   final String title;
@@ -17,42 +21,42 @@ class TopicsScreen extends StatefulWidget {
 
 class _TopicsScreenState extends State<TopicsScreen> {
   int? selectedIndex; // Track the selected item
-  List<Map<String, dynamic>> _topics = []; // Store fetched topics
+
   bool _isLoading = true; // Track loading state
   String _errorMessage = ''; // Store error messages
 
   @override
   void initState() {
     super.initState();
-    fetchTopicsAndUpdateUI(); // Fetch topics when the widget is initialized
+    context.read<TopicCubit>().fetchTopics(widget.topicId);
   }
 
-  Future<void> fetchTopicsAndUpdateUI() async {
-    try {
-      // Fetch the topics data
-      final apiService = await ApiService.create();
-      TopicsResponse topicsResponse = await apiService.fetchTopics(widget.topicId); // Replace 1 with the actual book ID
-
-      // Update the state with the fetched topics
-
-      setState(() {
-        _topics = topicsResponse.data.map((topic) {
-          return {
-            'title': topic.topicsName, // Use topics_name from the response
-            'id': topic.id, // Use id from the response
-            'image': 'assets/work and success.png', // Use a default image
-          };
-        }).toList();
-        _isLoading = false; // Data fetching is complete
-      });
-    } catch (e) {
-      setState(() {
-        _errorMessage = "Error fetching topics: $e"; // Store the error message
-        _isLoading = false; // Data fetching failed
-      });
-      print("Error fetching topics: $e");
-    }
-  }
+  // Future<void> fetchTopicsAndUpdateUI() async {
+  //   try {
+  //     // Fetch the topics data
+  //     final apiService = await ApiService.create();
+  //     TopicsResponse topicsResponse = await apiService.fetchTopics(widget.topicId); // Replace 1 with the actual book ID
+  //
+  //     // Update the state with the fetched topics
+  //
+  //     setState(() {
+  //       _topics = topicsResponse.data.map((topic) {
+  //         return {
+  //           'title': topic.topicsName, // Use topics_name from the response
+  //           'id': topic.id, // Use id from the response
+  //           'image': topic.topicsImage, // Use a default image
+  //         };
+  //       }).toList();
+  //       _isLoading = false; // Data fetching is complete
+  //     });
+  //   } catch (e) {
+  //     setState(() {
+  //       _errorMessage = "Error fetching topics: $e"; // Store the error message
+  //       _isLoading = false; // Data fetching failed
+  //     });
+  //     print("Error fetching topics: $e");
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -106,7 +110,12 @@ class _TopicsScreenState extends State<TopicsScreen> {
           ),
         ),
       ),
-      body: Container(
+      body: BlocBuilder<TopicCubit, TopicState>(
+  builder: (context, state) {
+    print("sdjclskcsdc ${state.runtimeType}");
+    if(state is TopicLoaded){
+      List<Map<String,dynamic>> topics=state.topics;
+      return Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
@@ -125,54 +134,60 @@ class _TopicsScreenState extends State<TopicsScreen> {
               Text("Categories", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold,fontFamily: 'Poppins Regular', color: Colors.black)),
               SizedBox(height: 16),
               Expanded(
-                child: _isLoading
-                    ? Center(child: CircularProgressIndicator()) // Show loading indicator
-                    : _errorMessage.isNotEmpty
-                        ? Center(child: Text(_errorMessage)) // Show error message
-                        : GridView.builder(
-                            itemCount: _topics.length,
-                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              crossAxisSpacing: 16,
-                              mainAxisSpacing: 14,
-                              childAspectRatio: 0.85,
+                child:  GridView.builder(
+                  shrinkWrap: true,
+                  itemCount: topics.length,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 14,
+                    childAspectRatio: 0.85,
+                  ),
+                  itemBuilder: (context, index) {
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          selectedIndex = index;
+                        });
+                        // Navigate to a new screen when an item is clicked
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => SubtopicPage(bookId: widget.topicId,
+                                title: topics[index]['title']!,
+                                topicId: topics[index]['id']
                             ),
-                            itemBuilder: (context, index) {
-                              return GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    selectedIndex = index;
-                                  });
-                                  // Navigate to a new screen when an item is clicked
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => SubtopicPage(bookId: widget.topicId,
-                                        title: _topics[index]['title']!,
-                                        topicId: _topics[index]['id']
-                                      ),
-                                    ),
-                                  );
-                                },
-                                child: TopicCard(
-                                  title: _topics[index]['title']!,
-                                  image: _topics[index]['image']!,
-                                  isSelected: selectedIndex == index,
-                                ),
-                              );
-                            },
                           ),
+                        );
+                      },
+                      child: TopicCard(
+                        title: topics[index]['title']!,
+                        image: topics[index]['image']!,
+                        isSelected: selectedIndex == index,
+                      ),
+                    );
+                  },
+                ),
               ),
             ],
           ),
         ),
-      ),
+      );
+    }else{
+      return Center(child: SizedBox(
+          height: 20,
+          width: 20,
+          child: CircularProgressIndicator())) ;
+    }
+
+  },
+),
     ),
     );
   }
 }
 
-class TopicCard extends StatelessWidget {
+class TopicCard extends StatefulWidget {
   final String title;
   final String image;
   final bool isSelected;
@@ -185,12 +200,18 @@ class TopicCard extends StatelessWidget {
   });
 
   @override
+  State<TopicCard> createState() => _TopicCardState();
+}
+
+class _TopicCardState extends State<TopicCard> {
+
+  @override
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: isSelected ? Color(0xFFDDF6D6) : Colors.white,
+        color: widget.isSelected ? Color(0xFFDDF6D6) : Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: isSelected ? Border.all(color: Colors.green, width: 2) : null,
+        border: widget.isSelected ? Border.all(color: Colors.green, width: 2) : null,
         boxShadow: [
           BoxShadow(
             color: Colors.grey.withOpacity(0.2),
@@ -202,26 +223,39 @@ class TopicCard extends StatelessWidget {
       child: Stack(
         children: [
           Center(
-            child: 
+            child:
           Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.asset(
-                    image,
-                    height: 120,
-                    width: 125,
-                    fit: BoxFit.cover,
-                  ),
-                ),
+
+            ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+      child: CachedNetworkImage(
+        filterQuality: FilterQuality.low,
+        useOldImageOnUrlChange: true,
+        imageUrl: "https://picturoenglish.com/admin/${widget.image}",
+        height: 120,
+        width: 125,
+        fit: BoxFit.cover,
+
+        placeholder: (context, url) => Center(
+          child: CircularProgressIndicator(strokeWidth: 0.7,),
+        ),
+        errorWidget: (context, url, error) => const Center(
+          child: Icon(
+            Icons.broken_image,
+            size: 50,
+            color: Colors.grey,
+          ),
+        ),
+      ),),
                 const SizedBox(height: 12),
                 Flexible(
                   child: Text(
-                    title,
+                    widget.title,
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 11,
@@ -236,7 +270,7 @@ class TopicCard extends StatelessWidget {
             ),
           ),
           ),
-          if (isSelected)
+          if (widget.isSelected)
             Positioned(
               top: 4,
               right: 1,

@@ -10,7 +10,9 @@ import 'package:picturo_app/screens/calllogspage.dart';
 import 'package:picturo_app/screens/chatscreenpage.dart';
 import 'package:picturo_app/screens/myprofilepage.dart';
 import 'package:picturo_app/services/api_service.dart';
-import 'package:provider/provider.dart'; // Import your API service
+import 'package:provider/provider.dart';
+
+import '../cubits/call_cubit/call_socket_handle_cubit.dart'; // Import your API service
 
 class ChatListPage extends StatefulWidget {
   const ChatListPage({super.key});
@@ -48,11 +50,12 @@ class _ChatListPageState extends State<ChatListPage>
       setState(() {
         allUsers = response.data;
         friends = friendsResponse.data;
+       context.read<CallSocketHandleCubit>().updateFriendsList(friends);
          allUsersCount = allUsers.length;
 
          // Filter out current user from friends count
         final currentUserId = Provider.of<UserProvider>(context, listen: false).userId;
-        friendsCount = friends.where((f) => f.friendId != currentUserId).length;
+        friendsCount = friends.where((f) => f.friendId.toString() != currentUserId.toString()).length;
 
         isLoading = false; 
        
@@ -207,71 +210,19 @@ actions: [
   }
 
 
-  Widget _buildUserTile(BuildContext context, User user) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ChatScreen(
-              avatarWidget: _buildUserAvatar(user.avatar_id??0),
-              profileId: user.avatar_id??0,
-            userName: user.username??"",
-            userId: user.id??0,
-          ),
-          ),
-        );
-      },
-      child: 
-      Container(
-        margin: EdgeInsets.symmetric(vertical: 8),
-        padding: EdgeInsets.all(15),
-        decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(15),
-            border: Border.all(width: 1, color: Color(0xFFDDDDDD))),
-        child: Row(
-          children: [
-             _buildUserAvatar(user.avatar_id??0),
-            SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    user.username??"",
-                    style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Poppins Regular'),
-                  ),
-                  Text(
-                    'Communicate with your buddy',
-                    style: TextStyle(
-                        color: Colors.grey,
-                        fontFamily: 'Poppins Regular',
-                        fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
   String formatTo12Hour(String dateTimeStr) {
     final dateTime = DateTime.parse(dateTimeStr); // parses ISO string
     final formatter = DateFormat('h:mm a'); // 12-hour format
     return formatter.format(dateTime);
   }
   Widget _buildFriendTile(BuildContext context, Friends user) {
+
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ChatScreen(
+            builder: (context) => ChatScreen(friendDetails: user,
               avatarWidget: _buildUserAvatar(user.friendProfilePic??0),
               profileId: user.friendProfilePic??0,
             userName: user.friendName??'',
@@ -306,7 +257,7 @@ actions: [
                             fontFamily: 'Poppins Regular'),
                       ),
                       Text(
-                       formatTo12Hour(user.lastMessageTime??''),
+                          (user.lastMessageTime==null)?"":formatTo12Hour(user.lastMessageTime??''),
                         style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w400,
@@ -314,7 +265,7 @@ actions: [
                       ),
                     ],
                   ),
-                  Text(
+                  (user.lastMessage==null)?SizedBox():Text(
                     '${user.lastMessage}',
                     style: TextStyle(
                         color: Colors.grey,
@@ -460,7 +411,7 @@ actions: [
 
   // Filter out the current user from the friends list
   List<Friends> filteredFriends = friends
-      .where((friend) => friend.friendId != currentUserId)
+      .where((friend) => friend.friendId.toString() != currentUserId.toString())
       .toList();
 
 

@@ -76,6 +76,7 @@ dependencies:
   flutter_webrtc: 0.9.47
   flutter_bloc: ^9.1.1
   equatable: ^2.0.7
+  flutter_callkit_incoming: ^2.5.2
 
 flutter_icons:
   android: true

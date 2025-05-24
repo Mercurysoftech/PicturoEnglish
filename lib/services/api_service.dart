@@ -58,8 +58,7 @@ class ApiService {
       endpoint,
       data: jsonEncode({"email": email, "password": password}),
     );
-
-    print("Raw API Response: ${response.data}"); // Debugging
+// Debugging
 
     if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
       final Map<String, dynamic> data = response.data;
@@ -141,7 +140,7 @@ Future<Map<String, dynamic>> signup(
       }),
     );
 
-    print("Raw API Response: ${response.data}"); // Debugging
+
 
     if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
       final Map<String, dynamic> data = response.data;
@@ -438,7 +437,7 @@ Future<ViewBankAccountResponse> fetchBankAccount({
     );
 
     // Debugging: Print the raw API response
-    print("Raw API Response: ${response.data}");
+
 
     // Check if the response status code is 200 (OK)
     if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
@@ -472,7 +471,7 @@ Future<BookResponse> fetchBooks() async {
     );
 
     // Debugging: Print the raw API response
-    print("Raw API Response: ${response.data}");
+
 
     // Check if the response status code is 200 (OK)
     if (response.statusCode == 200) {
@@ -521,7 +520,6 @@ Future<GamesResponse> fetchGames() async {
     );
 
     // Debugging: Print the raw API response
-    print("Raw API Response: ${response.data}");
 
     // Check if the response status code is 200 (OK)
     if (response.statusCode == 200) {
@@ -570,7 +568,7 @@ Future<UsersResponse> fetchAllUsers() async {
     );
 
     // Debugging: Print the raw API response
-    print("Raw API Response: ${response.data}");
+
 
     // Check if the response status code is 200 (OK)
     if (response.statusCode == 200) {
@@ -671,7 +669,7 @@ Future<RequestsResponse> fetchRequests() async {
     );
 
     // Debugging: Print the raw API response
-    print("Raw API Response: ${response.data}");
+
 
     // Check if the response status code is 200 (OK)
     if (response.statusCode == 200) {
@@ -763,6 +761,7 @@ Future<QuestionsResponse> fetchQuestions(int topicId) async {
     }
 
 
+
     Response response = await _dio.get(
       endpoint,
       queryParameters: {
@@ -774,11 +773,9 @@ Future<QuestionsResponse> fetchQuestions(int topicId) async {
       }),
     );
 
-
-    print("Raw API Response: ${response.data}");
-
-
+      print("sdljcslkdcsdkl __ ${response.data}");
     if (response.statusCode == 200) {
+
 
       if (response.data is Map<String, dynamic>) {
         Map<String, dynamic> responseData = response.data;
@@ -886,12 +883,47 @@ Future<AvatarResponse> fetchAvatars() async {
       }),
     );
 
-    print("Raw API Response: ${response.data}");
+
 
     if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
       return AvatarResponse.fromJson(response.data);
     } else {
       throw Exception("Invalid API response format.");
+    }
+  } on DioException catch (e) {
+    print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
+    throw Exception("Error fetching avatars: ${e.message}");
+  } catch (e) {
+    print("Unexpected Error: $e");
+    throw Exception("An unexpected error occurred: $e");
+  }
+}
+Future<void> readMarkAsRead({required String bookId,required String topicId,required String questionId}) async {
+  final String endpoint = "mark_read.php";
+
+  try {
+    String? token = await getAuthToken();
+    if (token == null || token.isEmpty) {
+      throw Exception("Authorization token is missing. Please log in.");
+    }
+
+    Response response = await _dio.post(
+      endpoint,
+      data: {
+        "book_id": bookId,
+        "topic_id": topicId,
+        "question_id": questionId
+      }
+      ,
+      options: Options(headers: {
+        "Authorization": "Bearer $token",
+        "Content-Type": "application/json",
+      }),
+    );
+
+    if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
+    } else {
+
     }
   } on DioException catch (e) {
     print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
@@ -971,7 +1003,7 @@ Future<UserResponse> fetchUserProfileDetails(String token) async {
     );
 
     // Debugging: Print the raw API response
-    print("Raw API Response: ${response.data}");
+
 
     // Check if the response status code is 200 (OK)
     if (response.statusCode == 200) {
@@ -1202,9 +1234,7 @@ Future<Map<String, dynamic>> sendVerificationCode(
       endpoint,
       data: jsonEncode({"email": email}),
     );
-
-    print("Raw API Response: ${response.data}"); // Debugging
-
+    print("sdljcnsjncslcnlsdkcmsdc ${response.data}");
     if (response.statusCode == 200) {
       if (response.data is Map<String, dynamic>) {
         final Map<String, dynamic> data = response.data;
@@ -1239,7 +1269,7 @@ Future<Map<String, dynamic>> verifyVerificationCode(
       data: jsonEncode({"email": email,"code":code}),
     );
 
-    print("Raw API Response: ${response.data}"); // Debugging
+
 
     if (response.statusCode == 200) {
       if (response.data is Map<String, dynamic>) {
@@ -1272,13 +1302,25 @@ Future<Map<String, dynamic>> changePasswordCode(
   final String endpoint = "reset_password.php"; // API endpoint for sending verification code
 
   try {
+    String? token = await getAuthToken();
+    print("lsdkclksmccd ${{
+      "email": email,
+      "new_password": code
+    }}");
     Response response = await _dio.post(
       endpoint,
-      data: jsonEncode({"email": email,"new_password":code}),
+      data: {
+        "email": email,
+        "new_password": code
+      },
+      options: Options(
+        headers: {
+          "Authorization": "Bearer $token", // Add the Bearer token
+          "Content-Type": "application/json",
+        },
+      ),
     );
-
-    print("Raw API Response: ${response.data}"); // Debugging
-
+    print("sdlkcmslkdmcslkdcmsdlck ${response.data}");
     if (response.statusCode == 200) {
       if (response.data is Map<String, dynamic>) {
         final Map<String, dynamic> data = response.data;
@@ -1610,7 +1652,7 @@ Future<bool?> sendMessagesToAPI({required Map<String,dynamic> messageMap}) async
         ),
       );
 
-      print("Raw API Response: ${response.data}"); // Debugging
+
 
       if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
         final Map<String, dynamic> data = response.data;
@@ -1666,8 +1708,7 @@ Future<bool?> sendMessagesToAPI({required Map<String,dynamic> messageMap}) async
         }),
       );
 
-      // Debugging: Print the raw API response
-      print("Raw API Response: ${response.data}");
+
 
       // Check if the response status code is 200 (OK)
       if (response.statusCode == 200) {

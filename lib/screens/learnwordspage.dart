@@ -11,7 +11,9 @@ import '../responses/my_profile_response.dart';
 class LearnWordsPage extends StatefulWidget {
   final String? optionTitle;
   final int? questionId;
-  const LearnWordsPage({super.key,this.optionTitle, this.questionId});
+  final String? bookId;
+  final String? topicId;
+  const LearnWordsPage({super.key,this.optionTitle, this.questionId,required this.bookId,required this.topicId});
   
 
   @override
@@ -32,10 +34,9 @@ class _LearnWordsPageState extends State<LearnWordsPage> {
   void initState() {
     super.initState();
     fetchUserDetails();
+    readQuestion();
     initializeApiService();
   }
-
-
 
 
   Future<void> fetchUserDetails() async {
@@ -47,6 +48,19 @@ class _LearnWordsPageState extends State<LearnWordsPage> {
         userResponse=response;
         userLanguage=userResponse?.speakingLanguage??'';
       });
+    } catch (e) {
+      setState(() {
+        _errorMessage = "Error fetching questions: ${e.toString()}";
+
+      });
+      print("Error fetching questions: $e");
+    }
+  }
+  Future<void> readQuestion() async {
+    try {
+      final apiService = await ApiService.create();
+      final response = await apiService.readMarkAsRead(bookId: widget.bookId.toString(), topicId: widget.topicId.toString(), questionId: widget.questionId.toString());
+
     } catch (e) {
       setState(() {
         _errorMessage = "Error fetching questions: ${e.toString()}";
@@ -93,7 +107,7 @@ class _LearnWordsPageState extends State<LearnWordsPage> {
   
   @override
   Widget build(BuildContext context) {
-     print("skdjcksjdc ${userLanguage}");
+
     return Scaffold(
       backgroundColor: Color(0xFFFFFFFF),
       appBar: PreferredSize(

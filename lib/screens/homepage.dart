@@ -1,5 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_callkit_incoming/entities/call_event.dart';
+import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:picturo_app/providers/profileprovider.dart';
 import 'package:picturo_app/responses/books_response.dart';
@@ -10,8 +14,12 @@ import 'package:picturo_app/screens/gamespage.dart';
 import 'package:picturo_app/screens/myprofilepage.dart';
 import 'package:picturo_app/screens/notificationspage.dart';
 import 'package:picturo_app/screens/topicspage.dart';
+import 'package:picturo_app/screens/voicecallscreen.dart';
 import 'package:picturo_app/services/api_service.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../cubits/call_cubit/call_socket_handle_cubit.dart';
 
 class Homepage extends StatefulWidget{
   final int? initialIndex;
@@ -105,6 +113,7 @@ class _HomepageState extends State<Homepage> {
       'gradient': Color(0xff8b8b8b80),
     },
   ];
+  String? currentUserId='';
 
   // Define the different pages/screens for each bottom navigation item
   final List<Widget> _pages = [];
@@ -121,8 +130,50 @@ class _HomepageState extends State<Homepage> {
 
     initializeServices();
 
+    callSocketInit();
+    handleCall();
+    context.read<CallSocketHandleCubit>().fetchAllUsers();
     // Fetch books data from the API
     fetchBooksAndUpdateGrid();
+  }
+  void handleCall(){
+    FlutterCallkitIncoming.onEvent.listen((event) {
+
+      if(event?.event==Event.actionCallAccept){
+
+        Map<String,dynamic> data=event?.body??{};
+
+        if(currentUserId!=''){
+          int userCurrentId=int.parse(currentUserId??"0");
+          int target=int.parse(data["extra"]['userId']??"0");
+          context.read<CallSocketHandleCubit>().acceptCall(target, userCurrentId);
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => VoiceCallScreen( callerId:target,callerName: "${data['nameCaller']}", callerImage:'',isIncoming: false),
+              ),);
+        }
+
+      }else if(event?.event==Event.actionCallDecline){
+
+        Map<String,dynamic> data=event?.body??{};
+        int target=int.parse(data["extra"]['userId']??"0");
+        context.read<CallSocketHandleCubit>().endCall(targetUserId: target);
+
+      }else if(event?.event==Event.actionCallEnded){
+
+      }
+
+    });
+  }
+  void callSocketInit()async{
+    final prefs = await SharedPreferences.getInstance();
+    String? userId= prefs.getString("user_id");
+    currentUserId=userId;
+    int? profileProvider=userId!=null&&userId!=''?int.parse(userId):null;
+    if(profileProvider!=null){
+      context.read<CallSocketHandleCubit>().initCallSocket(currentUserId:profileProvider);
+    }
   }
 
    Future<void> initializeServices() async {
@@ -219,7 +270,7 @@ print('Languages da: ${userResponse.speakingLanguage}');
 
   @override
 Widget build(BuildContext context) {
-  final profileProvider = Provider.of<ProfileProvider>(context);
+
 
   // ignore: deprecated_member_use
   return  WillPopScope(
@@ -282,38 +333,43 @@ Widget build(BuildContext context) {
 }
 
 // Define the different content widgets for each page
-class HomeContent extends StatelessWidget {
+class HomeContent extends StatefulWidget {
   final List<Map<String, dynamic>> gridItems;
  
 
   const HomeContent({super.key, required this.gridItems});
 
+  @override
+  State<HomeContent> createState() => _HomeContentState();
+}
 
-
+class _HomeContentState extends State<HomeContent> {
   Future<String> _getCurrentUserAvatar() async {
   try {
     final apiService = await ApiService.create();
     final profile = await apiService.fetchProfileDetails();
-    
+
     if (profile.avatarId == null || profile.avatarId == 0) {
       throw Exception('Using default avatar');
     }
-    
+
     final avatarResponse = await apiService.fetchAvatars();
     final avatar = avatarResponse.data.firstWhere(
       (a) => a.id == profile.avatarId,
       orElse: () => throw Exception('Avatar not found'),
     );
-    
+
     return 'https://picturoenglish.com/admin/${avatar.avatarUrl}';
   } catch (e) {
     print('Error fetching current user avatar: $e');
     throw e; // This will trigger the default avatar fallback
   }
 }
-
-
-  
+@override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -333,11 +389,11 @@ class HomeContent extends StatelessWidget {
 
     return WillPopScope(
       onWillPop: onWillPop,
-      child: 
+      child:
     Scaffold(
       backgroundColor: Color(0xFFE0F7FF),
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(80),
+        preferredSize: Size.fromHeight(72),
         child: AppBar(
           backgroundColor: Color(0xFF49329A),
           automaticallyImplyLeading: false,
@@ -352,7 +408,7 @@ class HomeContent extends StatelessWidget {
           ),
            actions: [
   Padding(
-    padding: const EdgeInsets.only(top: 10.0, right: 24.0),
+    padding: const EdgeInsets.only(top: 10.0,left: 8, right: 24.0),
     child: FutureBuilder(
       future: _getCurrentUserAvatar(),
       builder: (context, snapshot) {
@@ -394,7 +450,7 @@ class HomeContent extends StatelessWidget {
         ),
       ),
       body: FutureBuilder(
-        future: Future.value(gridItems), // Use the gridItems passed to the widget
+        future: Future.value(widget.gridItems), // Use the gridItems passed to the widget
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator());

@@ -1,22 +1,143 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class CallingScreen extends StatelessWidget {
+import '../../cubits/call_cubit/call_socket_handle_cubit.dart';
+import '../../responses/friends_response.dart';
+import '../../services/api_service.dart';
+import '../voicecallscreen.dart';
+
+class CallingScreen extends StatefulWidget {
   final String callerName;
-  final String avatarUrl;
-
+  final int? avatarUrl;
+  final Friends friendDetails;
   const CallingScreen({
     super.key,
     required this.callerName,
-    required this.avatarUrl,
+    required this.avatarUrl,required this.friendDetails,
   });
 
+  @override
+  State<CallingScreen> createState() => _CallingScreenState();
+}
+
+class _CallingScreenState extends State<CallingScreen> {
+
+
+
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    //
+    // context.read<CallSocketHandleCubit>().checkConnected();
+    connectCall();
+    super.initState();
+  }
+
+  void connectCall()async{
+    final prefs = await SharedPreferences.getInstance();
+    String? userId= prefs.getString("user_id");
+
+    int? profileProvider=userId!=null&&userId!=''?int.parse(userId):null;
+
+    if(profileProvider!=null){
+      await requestPermissions();
+      await context.read<CallSocketHandleCubit>().initiateWebRTCCall(targetId: widget.friendDetails.friendId??0, currentUserId: profileProvider, targettedUserName: '${widget.callerName}');
+
+    }
+  }
+  Future<void> requestPermissions() async {
+    final status = await Permission.microphone.request();
+
+    if (status != PermissionStatus.granted) {
+      throw Exception("Microphone permission not granted");
+    }
+  }
+
+  Future<String> _getAvatarUrl(int avatarId) async {
+    try {
+      final apiService = await ApiService.create();
+      final avatarResponse = await apiService.fetchAvatars();
+
+      final avatar = avatarResponse.data.firstWhere(
+            (a) => a.id == avatarId,
+        orElse: () => throw Exception('Avatar not found'),
+      );
+
+      return 'http://picturoenglish.com/admin/${avatar.avatarUrl}';
+    } catch (e) {
+      print('Error fetching avatar URL: $e');
+      throw e; // This will trigger the error state in FutureBuilder
+    }
+  }
+
+  Widget _buildUserAvatar(int avatarId) {
+    // If avatarId is 0 or null, use default panda image
+    if (avatarId == null || avatarId == 0) {
+      return CircleAvatar(
+        radius: 25,
+        backgroundColor: Color(0xFF49329A),
+        backgroundImage: AssetImage('assets/avatar2.png'),
+      );
+    }
+
+    // Otherwise, use network image with the avatar URL
+    return FutureBuilder<String>(
+      future: _getAvatarUrl(avatarId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return CircleAvatar(
+            radius: 25,
+            backgroundColor: Color(0xFF49329A),
+            child: CircularProgressIndicator(
+              color: Colors.white,
+              strokeWidth: 2,
+            ),
+          );
+        } else if (snapshot.hasError || !snapshot.hasData) {
+          return CircleAvatar(
+            radius: 25,
+            backgroundColor: Color(0xFF49329A),
+            backgroundImage: AssetImage('assets/avatar2.png'),
+          );
+        } else {
+          return CircleAvatar(
+            radius: 25,
+            backgroundImage: NetworkImage(snapshot.data!),
+          );
+        }
+      },
+    );
+  }
   @override
   Widget build(BuildContext context) {
     final double avatarRadius = 80;
 
     return Scaffold(
-      body: Container(
+      body: BlocBuilder<CallSocketHandleCubit, CallSocketHandleState>(
+  builder: (context, state) {
+    if(state is CallRejected){
+      Future.delayed(Duration.zero,(){
+        if(context.mounted){
+          Navigator.pop(context);
+        }
+      });
+      context.read<CallSocketHandleCubit>().resetCubit();
+    }else if( state is CallAccepted){
+      Future.delayed(Duration.zero,(){
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => VoiceCallScreen( callerId:widget.friendDetails.friendId??0,callerName: "${widget.callerName}", callerImage:'',isIncoming: false),
+          ),);
+
+      });
+      context.read<CallSocketHandleCubit>().resetCubit();
+    }
+    return Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [Color(0xFF1D2671), Color(0xFFC33764)],
@@ -41,10 +162,10 @@ class CallingScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: CircleAvatar(
+                  child:  widget.avatarUrl==null?CircleAvatar(
                     radius: avatarRadius,
-                    backgroundImage: avatarUrl==''?AssetImage('assets/avatar2.png'):NetworkImage(avatarUrl),
-                  ),
+                    backgroundImage:AssetImage('assets/avatar2.png'),
+                  ):_buildUserAvatar(widget.avatarUrl??0),
                 ),
 
                 const SizedBox(height: 30),
@@ -67,7 +188,7 @@ class CallingScreen extends StatelessWidget {
                       child: Column(
                         children: [
                           Text(
-                            callerName,
+                            widget.callerName,
                             style: const TextStyle(
                               fontSize: 26,
                               fontWeight: FontWeight.bold,
@@ -93,7 +214,10 @@ class CallingScreen extends StatelessWidget {
                 // End Call Button
                 GestureDetector(
                   onTap: () {
-                    Navigator.pop(context);
+                    context.read<CallSocketHandleCubit>().endCall(targetUserId:widget.friendDetails.friendId??0);
+                    // context.read<CallSocketHandleCubit>().checkConnected();
+
+
                   },
                   child: Container(
                     decoration: BoxDecoration(
@@ -121,132 +245,11 @@ class CallingScreen extends StatelessWidget {
             ),
           ),
         ),
-      ),
+      );
+  },
+),
     );
   }
 }
 
-class CallIcomingScreen extends StatelessWidget {
-  final String callerName;
-  final String avatarUrl;
 
-   CallIcomingScreen({
-    super.key,
-    required this.callerName,
-    required this.avatarUrl,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final double avatarRadius = 80;
-
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF1D2671), Color(0xFFC33764)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Avatar with glowing shadow
-                Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.white.withOpacity(0.2),
-                        blurRadius: 20,
-                        spreadRadius: 5,
-                      ),
-                    ],
-                  ),
-                  child: CircleAvatar(
-                    radius: avatarRadius,
-                    backgroundImage: avatarUrl==''?AssetImage('assets/avatar2.png'):NetworkImage(avatarUrl),
-                  ),
-                ),
-
-                const SizedBox(height: 30),
-
-                // Blurred name card
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.white24),
-                      ),
-                      child: Column(
-                        children: [
-                          Text(
-                            callerName,
-                            style: const TextStyle(
-                              fontSize: 26,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 5),
-                          const Text(
-                            'InComing Call',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.white70,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 80),
-
-                // End Call Button
-                GestureDetector(
-                  onTap: () {
-                    Navigator.pop(context);
-                  },
-                  child: Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: const LinearGradient(
-                        colors: [Colors.redAccent, Colors.deepOrange],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.redAccent.withOpacity(0.6),
-                          blurRadius: 12,
-                          offset: const Offset(0, 6),
-                        )
-                      ],
-                    ),
-                    padding: const EdgeInsets.all(20),
-                    child: const Icon(
-                      Icons.call_end,
-                      color: Colors.white,
-                      size: 32,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}

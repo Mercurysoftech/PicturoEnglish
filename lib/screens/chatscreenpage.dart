@@ -16,7 +16,11 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
+import '../cubits/call_cubit/call_socket_handle_cubit.dart';
+import '../responses/friends_response.dart';
 import 'call/calling_widget.dart';
+import 'call/widgets/call_socket_page.dart';
+import 'call/widgets/check_web_call.dart';
 
 enum ChatMenuAction { //enum class for menu option like "block user"...etc
   block,
@@ -26,6 +30,7 @@ class ChatScreen extends StatefulWidget {
   final int profileId;
   final String userName;
   final Widget avatarWidget;
+  final Friends friendDetails;
   final int userId;
   
   const ChatScreen({
@@ -33,6 +38,7 @@ class ChatScreen extends StatefulWidget {
     required this.profileId,
     required this.userName,
     required this.avatarWidget,
+    required this.friendDetails,
     required this.userId,
   });
 
@@ -45,16 +51,10 @@ class _ChatScreenState extends State<ChatScreen> {
   String? _avatarUrl;
   bool _isLoading = true;
   final String baseUrl = "https://picturoenglish.com/";
-  final SocketService _socketService = SocketService();
-  bool _isSocketReady = false;
-  
-
   final TextEditingController _messageController = TextEditingController();
   final List<Map<String, dynamic>> _messages = [];
   final prefs = SharedPreferences.getInstance();
 
-  // Typing and online status variables
-  bool _isTyping = false;
   bool _isOnline = false;
   Timer? _typingTimer;
   bool _isUserTyping = false;
@@ -63,7 +63,6 @@ class _ChatScreenState extends State<ChatScreen> {
   void initState() {
     super.initState();
     _initializeApiService();
-    // _initSocket();
     initSocket();
     _setupTypingListener();
     _loadAvatar();
@@ -77,6 +76,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   late IO.Socket socket;
 
+
   void initSocket( ) async{
 
     final prefs = await SharedPreferences.getInstance();
@@ -86,29 +86,13 @@ class _ChatScreenState extends State<ChatScreen> {
       'transports': ['websocket'],
       'autoConnect': false,
     });
-
     socket.connect();
-
     socket.onConnect((_) {
       socket.emit('register', userId);
     });
-
-
-
     socket.on('newMessage', (data) {
-      print('New message from ${data['sender_id']}: ${data['message']}');
-      log("sjdksdjd $data");
       _handleIncomingMessage(data);
-      // You can call your Flutter function here to update UI
-    });
-    socket.on('register', (data) {
 
-      // You can call your Flutter function here to update UI
-    });
-    socket.on('sendMessage', (data) {
-      print('sendMessage .......... ');
-      log("sjdksdjd $data");
-      // You can call your Flutter function here to update UI
     });
     socket.onError((handler){
       print('_____________ ____________ Erroer ${handler.toString()}');
@@ -134,100 +118,16 @@ class _ChatScreenState extends State<ChatScreen> {
         'is_typing': false,
       });
     });
-    socket.on('offer', handleOffer);
-    socket.on('answer', handleAnswer);
-    socket.on('ice-candidate', handleIceCandidate);
+
   }
 
-
-
   void sendMessage(String senderId, String receiverId, String message) {
-
-
     socket.emit('sendMessage', {
       'sender_id': senderId,
       'receiver_id': receiverId,
       'message': message,
     });
   }
-
-
-
-  final Map<String, dynamic> configuration = {
-    'iceServers': [
-      {'urls': 'stun:stun.l.google.com:19302'}
-    ]
-  };
-
-  final Map<String, dynamic> constraints = {
-    'mandatory': {},
-    'optional': [],
-  };
-
-  void startCall(String receiverId) async {
-    localStream = await navigator.mediaDevices.getUserMedia({'audio': true});
-    peerConnection = await createPeerConnection(configuration, constraints);
-    localStream?.getTracks().forEach((track) {
-      peerConnection?.addTrack(track, localStream!);
-    });
-
-    peerConnection?.onIceCandidate = (RTCIceCandidate candidate) {
-      socket.emit('ice-candidate', {
-        'to': receiverId,
-        'candidate': {
-          'candidate': candidate.candidate,
-          'sdpMid': candidate.sdpMid,
-          'sdpMLineIndex': candidate.sdpMLineIndex,
-        }
-      });
-    };
-
-    peerConnection?.onTrack = (RTCTrackEvent event) {
-      // You can assign the remote stream to a RTCVideoRenderer or audio output
-    };
-
-    RTCSessionDescription offer = await peerConnection!.createOffer();
-    await peerConnection!.setLocalDescription(offer);
-    socket.emit('offer', {'to': receiverId, 'offer': offer.toMap()});
-  }
-
-  void handleOffer(data) async {
-    final from = data['from'];
-    final offer = RTCSessionDescription(data['offer']['sdp'], data['offer']['type']);
-
-    localStream = await navigator.mediaDevices.getUserMedia({'audio': true});
-    peerConnection = await createPeerConnection(configuration);
-    localStream?.getTracks().forEach((track) {
-      peerConnection?.addTrack(track, localStream!);
-    });
-
-    await peerConnection!.setRemoteDescription(offer);
-    final answer = await peerConnection!.createAnswer();
-    await peerConnection!.setLocalDescription(answer);
-    socket.emit('answer', {'to': from, 'answer': answer.toMap()});
-  }
-
-  void handleAnswer(data) {
-    final answer = RTCSessionDescription(data['answer']['sdp'], data['answer']['type']);
-    peerConnection?.setRemoteDescription(answer);
-  }
-
-  void handleIceCandidate(data) {
-    final candidateData = data['candidate'];
-    final candidate = RTCIceCandidate(
-      candidateData['candidate'],
-      candidateData['sdpMid'],
-      candidateData['sdpMLineIndex'],
-    );
-    peerConnection?.addCandidate(candidate);
-  }
-
-
-
-
-
-//--------------------------------------------New Updates End-----------------------------------
-
 
   @override
   void didUpdateWidget(ChatScreen oldWidget) {
@@ -329,16 +229,6 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
-void _startTypingTimer() {
-  _typingTimer?.cancel();
-  _typingTimer = Timer(const Duration(seconds: 3), () {
-    if (_isTyping) {
-      _isTyping = false;
-      _socketService.sendTypingStatus(widget.userId.toString(), false);
-    }
-  });
-}
-
 void _handleTypingStatus(dynamic data) {
   if (!mounted) return;
   
@@ -394,8 +284,7 @@ void _handleOnlineStatus(dynamic data) {
   final senderId = data['sender_id']?.toString();
   final receiverId = data['receiver_id']?.toString();
 
-  
-  // Only process messages meant for this chat
+
   if (receiverId == _userId || senderId == widget.userId.toString()) {
     setState(() {
       _messages.insert(0, {
@@ -429,6 +318,7 @@ void _handleOnlineStatus(dynamic data) {
         "receiver_id": "$receiverId",
         "message": _messageController.text
       };
+
       bool? response = await _apiService.sendMessagesToAPI(messageMap: messageData);
       if(response!=null&&response){
         setState(() {
@@ -440,14 +330,8 @@ void _handleOnlineStatus(dynamic data) {
           });
         });
       }
-      // Optimistic UI update
-
-
-      // _socketService.sendMessage(messageData);
       _messageController.clear();
     }
-  // if (_messageController.text.trim().isEmpty || !_isSocketReady) return;
-
 }
 
 
@@ -479,7 +363,6 @@ void dispose() {
     socket.dispose();
   _typingTimer?.cancel();
   _messageController.dispose();
-  // _socketService.dispose();
   super.dispose();
 }
 
@@ -495,7 +378,9 @@ void dispose() {
             padding: const EdgeInsets.only(top: 10.0),
             child: IconButton(
               icon: Icon(Icons.arrow_back_ios, color: Colors.white),
-              onPressed: () => Navigator.pop(context),
+              onPressed: (){
+                context.read<CallSocketHandleCubit>().endCall(targetUserId:widget.friendDetails.friendId??0);
+              },
             ),
           ),
           title: Padding(
@@ -548,9 +433,11 @@ void dispose() {
                     color: Colors.transparent,
                     child: InkWell(
                       onTap: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (context)=>CallingScreen(callerName: 'Test User', avatarUrl: '',)));
-                        // _startVoiceCall();
+                        Navigator.push(context, MaterialPageRoute(builder: (context)=>CallingScreen(friendDetails: widget.friendDetails,callerName: "${widget.friendDetails.friendName}",avatarUrl: widget.friendDetails.friendProfilePic,)));
+                        // Navigator.push(context, MaterialPageRoute(builder: (context)=>CallScreen( userId: '${widget.friendDetails.friendId}',)));
+
                       },
+
                       borderRadius: BorderRadius.circular(70),
                       child: Container(
                         padding: EdgeInsets.all(5),
@@ -662,7 +549,7 @@ void dispose() {
                           ),
                         ),
                       ),
-                      onSubmitted: (_) => _sendMessage(),
+                      // onSubmitted: (_) => _sendMessage(),
                     ),
                   ),
                 ],
@@ -719,13 +606,4 @@ Future<void> _blockUser() async {
   }
 }
 
-  void _startVoiceCall() {
-     Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => VoiceCallScreen( callerId:widget.userId,callerName: widget.userName, callerImage:_avatarUrl!,isIncoming: false),
-),
-  );
-  print('VoiceCall: ${widget.userId},${widget.userName},${_avatarUrl}}');
-  }
 }

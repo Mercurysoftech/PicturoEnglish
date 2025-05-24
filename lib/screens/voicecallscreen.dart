@@ -1,4 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:picturo_app/cubits/call_cubit/call_socket_handle_cubit.dart';
 
 
 class VoiceCallScreen extends StatefulWidget {
@@ -25,12 +29,13 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
   bool isKeypadVisible = false;
   bool showCallControls = true;
   Duration callDuration = Duration.zero;
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
-    // Start a timer to update call duration
-    Future.delayed(Duration(seconds: 1), () {
+    // Start a periodic timer that updates every second
+    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
       if (mounted) {
         setState(() {
           callDuration += Duration(seconds: 1);
@@ -39,92 +44,104 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
     });
   }
 
-  String _formatDuration(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, "0");
-    String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
-    String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
-    return "${twoDigits(duration.inHours)}:$twoDigitMinutes:$twoDigitSeconds";
+  @override
+  void dispose() {
+    _timer?.cancel(); // Stop the timer when the widget is disposed
+    super.dispose();
   }
+
+  String formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final hours = twoDigits(duration.inHours);
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    return "$hours:$minutes:$seconds";
+  }
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          // Background
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.black87,
-                  Colors.black,
-                ],
-              ),
-            ),
-          ),
-
-          // Main content
-          Column(
+      body: BlocBuilder<CallSocketHandleCubit, CallSocketHandleState>(
+        builder: (context, state) {
+          if(state is CallRejected){
+            Future.delayed(Duration.zero,(){
+                Navigator.pop(context);
+              context.read<CallSocketHandleCubit>().resetCubit();
+            });
+          }
+          return Stack(
             children: [
-              SizedBox(height: 60),
-              // Caller info
+              // Background
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black87,
+                      Colors.black,
+                    ],
+                  ),
+                ),
+              ),
+
+              // Main content
               Column(
                 children: [
-                  CircleAvatar(
-                    radius: 60,
-                    backgroundImage: NetworkImage(widget.callerImage!),
+                  SizedBox(height: 60),
+
+                  // Caller info
+                  Column(
+                    children: [
+                      CircleAvatar(
+                        radius: 60,
+                        backgroundImage:AssetImage('assets/avatar_1.png'),
+                      ),
+                      SizedBox(height: 20),
+                      Text(
+                        widget.callerName,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      // SizedBox(height: 10),
+                      SizedBox(height: 10),
+                      Text(
+                        formatDuration(callDuration),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
                   ),
-                  SizedBox(height: 20),
-                  Text(
-                    widget.callerName,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    widget.isIncoming ? "Incoming call" : "Calling...",
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontSize: 16,
-                    ),
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    _formatDuration(callDuration),
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                    ),
-                  ),
+
+                  Spacer(),
+
+                  // Call controls
+                  if (showCallControls) ...[
+                    if (isKeypadVisible) _buildKeypad(),
+                    if (!isKeypadVisible) _buildCallControls(),
+                  ],
                 ],
               ),
 
-              Spacer(),
-
-              // Call controls
-              if (showCallControls) ...[
-                if (isKeypadVisible) _buildKeypad(),
-                if (!isKeypadVisible) _buildCallControls(),
-              ],
+              // Close button
+              Positioned(
+                top: 40,
+                left: 20,
+                child: IconButton(
+                  icon: Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
             ],
-          ),
-
-          // Close button
-          Positioned(
-            top: 40,
-            left: 20,
-            child: IconButton(
-              icon: Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () => Navigator.pop(context),
-            ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -182,7 +199,10 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
           SizedBox(height: 60),
           // End call button
           GestureDetector(
-            onTap: () => Navigator.pop(context),
+            onTap: (){
+              context.read<CallSocketHandleCubit>().endCall(targetUserId:widget.callerId);
+
+            },
             child: Container(
               padding: EdgeInsets.all(15),
               decoration: BoxDecoration(

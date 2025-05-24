@@ -242,7 +242,11 @@ class _LanguageSelectionAppState extends State<LanguageSelectionApp> {
             children: [
               // Positioned label similar to languageSelectionTile
               const SizedBox(height: 5),
-              GestureDetector(
+              (languages.isEmpty)?SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(strokeWidth: 0.8,),
+              ):GestureDetector(
                 onTap: _showLanguageBottomSheet,
                 child: Stack(
                   clipBehavior: Clip.none,

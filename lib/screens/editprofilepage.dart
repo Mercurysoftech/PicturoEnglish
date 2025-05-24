@@ -443,7 +443,7 @@ if (_mobileController.text.isNotEmpty) {
   onTap: () {
     Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => ChangePasswordPage()), // Replace with your target page
+        MaterialPageRoute(builder: (context) => ChangePasswordPage(emailId: widget.email,)), // Replace with your target page
       );
   },
 ),

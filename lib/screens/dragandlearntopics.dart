@@ -59,14 +59,8 @@ class _DragandLearnTopicScreenState extends State<DragandLearnTopicScreen> {
             padding: const EdgeInsets.only(top: 15.0, left: 24.0), // Adjust top padding
             child: IconButton(
               icon: Icon(Icons.arrow_back_ios, color: Colors.white, size: 26),
-              onPressed: () {       
-        Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => GamesPage(
-                                      ),
-                                    ),
-                                  );
+              onPressed: () {
+                Navigator.pop(context);
       },
             ),
           ),

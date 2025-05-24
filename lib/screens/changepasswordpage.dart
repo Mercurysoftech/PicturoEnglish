@@ -25,6 +25,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
   @override
   void initState() {
     super.initState();
+
     initializeApiService();
   }
 

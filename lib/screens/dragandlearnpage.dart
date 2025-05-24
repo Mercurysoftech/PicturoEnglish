@@ -97,13 +97,7 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
             child: IconButton(
               icon: Icon(Icons.arrow_back_ios, color: Colors.white, size: 26),
               onPressed: () {       
-        Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => DragandLearnTopicScreen(
-                                      ),
-                                    ),
-                                  );
+       Navigator.pop(context);
       },
             ),
           ),

@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:picturo_app/responses/questions_response.dart';
 import 'package:picturo_app/screens/widgets/cat_progress_bar_widget.dart';
@@ -38,6 +40,7 @@ Future<void> fetchQuestionsAndUpdateUI() async {
     setState(() {
       if (response.status=='success') {
         _questions = response.questions ?? [];
+
       } else {
         _errorMessage = response.message ?? 'No questions found for this topic';
       }
@@ -82,6 +85,7 @@ Future<void> fetchQuestionsAndUpdateUI() async {
                     fontFamily: 'Poppins Regular',
                   ),
                 ),
+
               ],
             ),
           ),
@@ -155,7 +159,7 @@ Future<void> fetchQuestionsAndUpdateUI() async {
 
   // Option Tile Widget
   Widget optionTile(int number, Question question) {
-  bool isSelected = selectedOption == number;
+  bool isSelected =  question.read??false;
   return GestureDetector(
     onTap: () {
       setState(() {
@@ -166,6 +170,8 @@ Future<void> fetchQuestionsAndUpdateUI() async {
         context,
         MaterialPageRoute(
           builder: (context) => LearnWordsPage(
+            topicId: widget.topicId.toString(),
+            bookId: widget.bookId.toString(),
             optionTitle: question.question ?? '',
             questionId: question.id ?? 0, // Pass the question ID
           ),
@@ -176,7 +182,7 @@ Future<void> fetchQuestionsAndUpdateUI() async {
       margin: EdgeInsets.only(bottom: 12),
       padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isSelected ? Colors.green[100] : Colors.white,
+        color: isSelected? Colors.green[100] : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey[300]!),
       ),

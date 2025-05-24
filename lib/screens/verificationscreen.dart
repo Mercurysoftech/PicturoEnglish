@@ -64,28 +64,6 @@ final List<FocusNode> _otpFocusNodes = List.generate(4, (index) => FocusNode());
     }
   }
 
-  // try {
-  //   final response = await apiService.verifyVerificationCode(email, otp, context);
-  //   print("sdcnslkcmnsldkc ${response}");
-  //
-  //   if (response["status"] == "success") {
-  //     _showMessage(response["message"]);
-  //     Navigator.pushReplacement(
-  //       context,
-  //       MaterialPageRoute(
-  //         builder: (context) => ChangePasswordPage(emailId: widget.mailId!,),
-  //       ),
-  //     );
-  //   } else {
-  //     _showMessage(response["error"] ?? "OTP verification failed");
-  //   }
-  // } catch (e) {
-  //   _showMessage("An error occurred. Please try again.");
-  // } finally {
-  //   setState(() {
-  //     _isLoading = false;
-  //   });
-  // }
 }
 
 void _showMessage(String message) {

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:picturo_app/classes/services/notification_service.dart';
@@ -29,6 +30,9 @@ import 'package:picturo_app/screens/splashscreenpage.dart';
 import 'package:picturo_app/socket/socketservice.dart';
 import 'package:provider/provider.dart';
 
+import 'cubits/call_cubit/call_socket_handle_cubit.dart';
+import 'cubits/get_topics_list_cubit/get_topic_list_cubit.dart';
+
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 class MyHttpOverrides extends HttpOverrides {
@@ -40,7 +44,7 @@ class MyHttpOverrides extends HttpOverrides {
 }
 void main() async{
   WidgetsFlutterBinding.ensureInitialized();
-  
+  initLocalNotification();
   await NotificationService().init();
   
   // Request notification permissions
@@ -56,12 +60,45 @@ void main() async{
         ChangeNotifierProvider(create: (_) => UserProvider()),
         ChangeNotifierProvider(create: (_) => SocketService()),
         ChangeNotifierProvider(create: (context) => ProfileProvider()),
+        BlocProvider(create: (context) => CallSocketHandleCubit()),
       ],
       child: MyApp(),
     ),
   );
 }
+Future<void> initLocalNotification() async {
+  const AndroidInitializationSettings initializationSettingsAndroid =
+  AndroidInitializationSettings('@mipmap/ic_launcher'); // make sure the icon exists
 
+  const InitializationSettings initializationSettings = InitializationSettings(
+    android: initializationSettingsAndroid,
+  );
+
+  await flutterLocalNotificationsPlugin.initialize(
+    initializationSettings,
+    onDidReceiveNotificationResponse: (NotificationResponse response) {
+
+      //   if (response.actionId == 'ongoing_call_channel') {
+      //         stopCallDurationNotification();
+      //         Map<String,dynamic> msgData= jsonDecode(response.payload??"{}");
+      //         Call call=Call.fromMap(msgData);
+      //         BuildContext? context=NavigationService.instance.navigationKey.currentContext;
+      //         if(context!=null){
+      //           Navigator.push(context, MaterialPageRoute(builder: (context)=>CometchatCallMainPage(isAudioOnly: false, sessionId:call.sessionId==null?'': call.sessionId.toString(),)));
+      //         }else{
+      //           NavigationService.instance.pushNamedIfNotCurrent(AppRoute.callingPage, args:call.sessionId);
+      //         }
+      //         // 🚨 Hangup clicked!
+      //       }else{
+      //         Map<String,dynamic> msgData= jsonDecode(response.payload??"{}");
+      //
+      //         RemoteMessage gg=RemoteMessage.fromMap(msgData);
+      //         openNotification(gg, NavigationService.instance.navigationKey);
+      //       }
+      // Navigate or perform action
+    },
+  );
+}
 Future<void> _initializeNotifications() async {
   const AndroidInitializationSettings initializationSettingsAndroid =
       AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -78,7 +115,9 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return BlocProvider(
+  create: (context) => TopicCubit(),
+  child: MaterialApp(
       debugShowCheckedModeBanner: false,
       initialRoute: '/',
       routes: {
@@ -92,6 +131,7 @@ class MyApp extends StatelessWidget {
         '/location':(context)=> LocationGetPage(),
         '/language':(context)=> LanguageSelectionApp(),
       }
-    );
+    ),
+);
   }
 }

@@ -26,6 +26,7 @@ class Question {
   final String? meaning;
   final String? example;
   final String? qusImage;
+  final bool? read;
 
   Question({
     required this.id,
@@ -34,6 +35,7 @@ class Question {
     required this.meaning,
     required this.example,
     required this.qusImage,
+    required this.read,
   });
 
   factory Question.fromJson(Map<String, dynamic> json) {
@@ -44,6 +46,7 @@ class Question {
       meaning: json['meaning'],
       example: json['example'],
       qusImage: json['qus_image'],
+      read: json['read'],
     );
   }
 }
