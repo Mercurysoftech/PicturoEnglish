@@ -23,7 +23,7 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
   RTCPeerConnection? _peerConnection;
   MediaStream? _localStream;
   List<Friends> friends = [];
-  final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
+  final RTCVideoRenderer localRenderer = RTCVideoRenderer();
   final Map<String, RTCPeerConnection> peerConnections = {};
   final Map<String, RTCVideoRenderer> remoteRenderers = {};
   late int targetUserId;
@@ -47,6 +47,7 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
   }
 
   Future<void> initCallSocket({required int currentUserId}) async {
+
     callSocket = IO.io('https://picturoenglish.com:2027', {
       'transports': ['websocket'],
       'autoConnect': false,
@@ -123,8 +124,17 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
       }
     });
 
-    callSocket.on('call-ended', (_) {
-      print("Call ended by remote");
+    callSocket.on('call-ended', (_)async {
+      print("📞 Call was ended by remote user");
+
+      await _peerConnection?.close();
+      _peerConnection = null;
+
+      _localStream?.getTracks().forEach((track) => track.stop());
+      _localStream = null;
+
+      localRenderer.srcObject = null;
+      await localRenderer.dispose(); print("Call ended by remote");
       emit(CallRejected());
     });
 
@@ -134,27 +144,39 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
   }
 
   void acceptCall(int targetUser, int currentUserId) async {
-    await connectNewUser(targetUser, currentUserId);
+    // await connectNewUser(targetUser, currentUserId);
+    initiateWebRTCCall(targetId: targetUser, currentUserId: currentUserId,);
+
     callSocket.emit("call-accepted", {"to": targetUser});
     emit(CallAccepted());
   }
 
-  Future<void> initiateWebRTCCall({
+  Future<void> emitCallingFunction({
     required int currentUserId,
     required int targetId,
     required String targettedUserName,
+})async{
+    callSocket.emit('call-user', {'from': currentUserId, 'to': targetId});
+    callSocket.emit('incoming-call', {
+      'from': currentUserId,
+      'to': targetId,
+      "userName": targettedUserName
+    });
+  }
+
+
+
+
+  Future<void> initiateWebRTCCall({
+    required int currentUserId,
+    required int targetId,
   }) async {
+    print("sdlkcsldkcmslkcsdc ${targetId}");
     targetUserId = targetId;
     await connectNewUser(targetId, currentUserId);
     final offer = await peerConnections[targetId.toString()]!.createOffer();
     await peerConnections[targetId.toString()]!.setLocalDescription(offer);
 
-    callSocket.emit('call-user', {'from': currentUserId, 'to': targetUserId});
-    callSocket.emit('incoming-call', {
-      'from': currentUserId,
-      'to': targetUserId,
-      "userName": targettedUserName
-    });
     callSocket.emit('signal', {
       'to': targetUserId,
       'from': currentUserId,
@@ -196,23 +218,106 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
 
     peerConnections[userId.toString()] = pc;
   }
+  void muteACall(bool isMuted){
+    if (_localStream != null) {
+      final audioTrack = _localStream!.getAudioTracks().first;
+      audioTrack.enabled = isMuted;
 
-  void endCall({required int targetUserId}) {
-    FlutterCallkitIncoming.endCall("sdkjcslkcmslkcmsdc");
-    FlutterCallkitIncoming.endAllCalls();
-
-    _peerConnection?.close();
-
-    _peerConnection?.dispose();
-
-    _localStream?.getTracks().forEach((track) => track.stop());
-    _localStream?.dispose();
-
-
-    callSocket.emit('end-call', {'to': targetUserId});
-    emit(CallRejected());
+    }
   }
 
+  Future<void> endCall({required int targetUserId})async{
+    try {
+      // End CallKit session
+
+        await FlutterCallkitIncoming.endCall("sdkjcslkcmslkcmsdc");
+
+      await FlutterCallkitIncoming.endAllCalls();
+       await disposeLocalRender();
+       await disposeRemoteRender();
+      // Notify receiver
+      callSocket.emit('end-call', {'to': targetUserId});
+
+      // Cleanup resources
+      await _peerConnection?.close();
+    _peerConnection = null;
+
+    _localStream?.getTracks().forEach((track) => track.stop());
+    _localStream = null;
+
+
+    emit(CallRejected());
+    print("📴 Call completely cut for both users.");
+    } catch (e) {
+
+      emit(CallRejected());
+    print("❌ Error in cutCall: $e");
+    }
+    // FlutterCallkitIncoming.endCall("sdkjcslkcmslkcmsdc");
+    // FlutterCallkitIncoming.endAllCalls();
+    //
+    // _peerConnection?.close();
+    //
+    // _peerConnection?.dispose();
+    //
+    // _localStream?.getTracks().forEach((track) => track.stop());
+    // _localStream?.dispose();
+    //
+    //
+    // callSocket.emit('end-call', {'to': targetUserId});
+
+  }
+  Future<void> disposeLocalRender() async {
+    if (localRenderer.srcObject != null) {
+      final audioTracks = localRenderer.srcObject!.getAudioTracks();
+      if (audioTracks.isNotEmpty) {
+        for (var track in audioTracks) {
+          track.stop();
+        }
+      }
+
+      final videoTracks = localRenderer.srcObject!.getVideoTracks();
+      if (videoTracks.isNotEmpty) {
+        for (var track in videoTracks) {
+          track.stop();
+        }
+      }
+
+      localRenderer.srcObject!.getAudioTracks().clear();
+      localRenderer.srcObject!.getVideoTracks().clear();
+    }
+
+    await localRenderer.dispose();
+  }
+  Future<void> disposeRemoteRender() async {
+    remoteRenderers.forEach((key, renderer) async {
+      if (renderer.srcObject != null) {
+        final audioTracks = renderer.srcObject!.getAudioTracks();
+        if (audioTracks.isNotEmpty) {
+          for (var track in audioTracks) {
+            print('Stopping audio track for renderer $key');
+            track.stop();
+          }
+        }
+
+        final videoTracks = renderer.srcObject!.getVideoTracks();
+        if (videoTracks.isNotEmpty) {
+          for (var track in videoTracks) {
+            print('Stopping video track for renderer $key');
+            track.stop();
+          }
+        }
+
+        renderer.srcObject!.getAudioTracks().clear();
+        renderer.srcObject!.getVideoTracks().clear();
+      } else {
+        print('No srcObject found for renderer $key');
+      }
+
+      await renderer.dispose();
+      print('Renderer $key disposed');
+    });
+  }
   void showFlutterCallNotification({
     required String callSessionId,
     required String userId,

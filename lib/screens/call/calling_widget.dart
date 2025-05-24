@@ -45,7 +45,7 @@ class _CallingScreenState extends State<CallingScreen> {
 
     if(profileProvider!=null){
       await requestPermissions();
-      await context.read<CallSocketHandleCubit>().initiateWebRTCCall(targetId: widget.friendDetails.friendId??0, currentUserId: profileProvider, targettedUserName: '${widget.callerName}');
+      await context.read<CallSocketHandleCubit>().emitCallingFunction(targetId: widget.friendDetails.friendId??0, currentUserId: profileProvider, targettedUserName: '${widget.callerName}');
 
     }
   }

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:picturo_app/cubits/call_cubit/call_socket_handle_cubit.dart';
 
 
@@ -58,7 +59,20 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
     return "$hours:$minutes:$seconds";
   }
 
+  void _toggleMute() {
+    context.read<CallSocketHandleCubit>().muteACall(isMuted);
+      setState(() {
+        isMuted = !isMuted;
+      });
 
+  }
+
+  void _toggleSpeaker() async {
+    await Helper.setSpeakerphoneOn(!isSpeakerOn);
+    setState(() {
+      isSpeakerOn = !isSpeakerOn;
+    });
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -170,7 +184,9 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
                 icon: isSpeakerOn ? Icons.volume_up : Icons.volume_off,
                 label: "Speaker",
                 isActive: isSpeakerOn,
-                onPressed: () => setState(() => isSpeakerOn = !isSpeakerOn),
+                onPressed: () {
+                  _toggleSpeaker();
+                },
               ),
             ],
           ),
