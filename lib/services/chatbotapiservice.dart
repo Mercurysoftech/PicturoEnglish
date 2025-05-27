@@ -46,11 +46,11 @@ class ChatBotApiService {
   }) async {
     try {
       final response = await _dio.post(
-        '/chat',
+        '/continue_scenario',
         data: {
-          'message': message,
-          'language': language,
-          'scenario': scenario,
+          'user_response': message,
+          // 'language': language,
+          'scenario_name': scenario,
         },
       ).timeout(const Duration(seconds: _timeoutSeconds));
 

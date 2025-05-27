@@ -285,6 +285,7 @@ class _ChatBotScreenState extends State<ChatBotScreen> with TickerProviderStateM
     });
   }
 }
+
 void _showSuccessfulResponse(Map<String, dynamic> response) {
   String botMessage = response['reply']?.toString() ?? "I didn't get that. Please try again.";
   String? audioBase64 = response['audio_base64']?.toString();
@@ -426,7 +427,8 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
       }
     }
   }
-  
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -524,6 +526,16 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
                 },
               ),
             ),
+
+            if(_messages.length <=1)
+              ChatBotQuickReplies(
+                onSend: (message) {
+                  _messageController.text = message;
+                  _sendMessage(userLanguage);
+                },
+              ),
+
+
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
               child: TextField(
@@ -605,6 +617,42 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
           ],
         ),
       ),
+    );
+  }
+}
+
+
+class ChatBotQuickReplies extends StatelessWidget {
+  final List<String> predefinedQuestions = [
+    "Teach me 5 new English words",
+    "Explain this grammar rule",
+    // "Help me practice speaking",
+    "Correct my sentence",
+  ];
+
+  final void Function(String message) onSend;
+
+  ChatBotQuickReplies({required this.onSend});
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8.0,
+      runSpacing: 8.0,
+      children: predefinedQuestions.map((question) {
+        return ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Color(0xFF49329A).withValues(alpha: .85),
+            foregroundColor: Colors.white,
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
+          onPressed: () => onSend(question),
+          child: Text(question,style: TextStyle(fontSize: 12),),
+        );
+      }).toList(),
     );
   }
 }
