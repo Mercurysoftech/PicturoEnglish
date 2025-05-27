@@ -898,7 +898,7 @@ Future<AvatarResponse> fetchAvatars() async {
     throw Exception("An unexpected error occurred: $e");
   }
 }
-Future<void> readMarkAsRead({required String bookId,required String topicId,required String questionId}) async {
+Future<bool?> readMarkAsRead({required String bookId,required String topicId,required String questionId}) async {
   final String endpoint = "mark_read.php";
 
   try {
@@ -922,6 +922,7 @@ Future<void> readMarkAsRead({required String bookId,required String topicId,requ
     );
 
     if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
+      return true;
     } else {
 
     }
@@ -932,6 +933,7 @@ Future<void> readMarkAsRead({required String bookId,required String topicId,requ
     print("Unexpected Error: $e");
     throw Exception("An unexpected error occurred: $e");
   }
+  return null;
 }
 
 Future<UserResponse> fetchProfileDetails() async {

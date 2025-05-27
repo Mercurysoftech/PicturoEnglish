@@ -18,23 +18,54 @@ class _DragLearnPageState extends State<DragLearnPage> {
   @override
   void initState() {
     // TODO: implement initState
-    context.read<DragLearnCubit>().fetchDragLearnData(bookId:1);
+    context.read<DragLearnCubit>().fetchDragLearnData(bookId:widget.bookId);
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
-      appBar: AppBar(
-        title: Text("Levels", style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.deepPurple,
-        foregroundColor: Colors.white,
-        elevation: 0,
+      backgroundColor: Color(0xFFF5F7FA),
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(80),
+        child: AppBar(
+          backgroundColor: Color(0xFF49329A),
+          leading: Padding(
+            padding: const EdgeInsets.only(top: 15.0, left: 24.0), // Adjust top padding
+            child: IconButton(
+              icon: Icon(Icons.arrow_back_ios, color: Colors.white, size: 26),
+              onPressed: () {
+                Navigator.pop(context);
+              },
+            ),
+          ),
+          title: Padding(
+            padding: const EdgeInsets.only(top: 15.0), // Adjust top padding
+            child: Row(
+              children: [
+                Text(
+                  'Levels',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Poppins Regular',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(20),
+              bottomRight: Radius.circular(20),
+            ),
+          ),
+        ),
       ),
       body: BlocBuilder<DragLearnCubit, DragLearnState>(
         builder: (context, state) {
-          print("sldkclskdc ${state.runtimeType}");
+
           if(state is DragLearnLoaded){
             DragAndLearnLevelModel data=state.data;
             return ListView.builder(
@@ -56,6 +87,7 @@ class _DragLearnPageState extends State<DragLearnPage> {
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)],
                     ),
+
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -64,17 +96,28 @@ class _DragLearnPageState extends State<DragLearnPage> {
                           width: double.infinity,
                           padding: EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [Colors.deepPurple, Colors.deepPurpleAccent],
-                            ),
+                            gradient: (data.levels?[index].completed??false)?LinearGradient(
+                              colors: [Colors.green, Colors.deepPurpleAccent],
+                            ):null,
                             borderRadius: BorderRadius.vertical(top: Radius
                                 .circular(20)),
                           ),
-                          child: Text(
-                            "Level ${data.levels?[index].level}",
-                            style: TextStyle(color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold),
+                          child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                "Level ${data.levels?[index].level}",
+                                style: TextStyle(color:  (data.levels?[index].completed??false)?Colors.white:Colors.black,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                              (data.levels?[index].completed??false)?Text(
+                                "Completed",
+                                style: TextStyle(color:  Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold),
+                              ):SizedBox(),
+
+                            ],
                           ),
                         ),
                       ],

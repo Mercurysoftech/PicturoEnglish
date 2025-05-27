@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:intl/intl.dart';
 import 'package:picturo_app/classes/svgfiles.dart';
@@ -12,7 +13,8 @@ import 'package:picturo_app/screens/myprofilepage.dart';
 import 'package:picturo_app/services/api_service.dart';
 import 'package:provider/provider.dart';
 
-import '../cubits/call_cubit/call_socket_handle_cubit.dart'; // Import your API service
+import '../cubits/call_cubit/call_socket_handle_cubit.dart';
+import '../cubits/get_avatar_cubit/get_avatar_cubit.dart'; // Import your API service
 
 class ChatListPage extends StatefulWidget {
   const ChatListPage({super.key});
@@ -24,13 +26,15 @@ class ChatListPage extends StatefulWidget {
 class _ChatListPageState extends State<ChatListPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final TextEditingController _searchController = TextEditingController();
 
   // List to store fetched users
   List<User> allUsers = [];
   List<Friends> friends = [];
   bool isLoading = true;
   String errorMessage = '';
-
+  List<User> filteredAllUsers = [];
+  List<Friends> filteredFriends = [];
   int allUsersCount = 0;
   int friendsCount = 0;
 
@@ -38,6 +42,7 @@ class _ChatListPageState extends State<ChatListPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _searchController.addListener(_onSearchChanged);
     _fetchAllUsers();
   }
 
@@ -77,6 +82,22 @@ class _ChatListPageState extends State<ChatListPage>
     friendsCount = friends.where((f) => f.friendId != currentUserId).length;
   });
 }
+  void _onSearchChanged() {
+    final query = _searchController.text.toLowerCase();
+
+    setState(() {
+
+      filteredFriends = friends.where((friend) {
+        return friend.friendName?.toLowerCase().contains(query)??false;
+      }).toList();
+
+
+      filteredAllUsers = allUsers.where((user) {
+        return user.username!.toLowerCase().contains(query);
+      }).toList();
+
+    });
+  }
 
 
 
@@ -108,34 +129,33 @@ class _ChatListPageState extends State<ChatListPage>
 actions: [
   Padding(
     padding: const EdgeInsets.only(top: 10.0, right: 24.0),
-    child: FutureBuilder(
-      future: _getCurrentUserAvatar(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return CircleAvatar(
-            radius: 25,
-            backgroundColor: Color(0xFF49329A),
-            child: CircularProgressIndicator(
-              color: Colors.white,
-              strokeWidth: 2,
+    child: BlocBuilder<AvatarCubit, AvatarState>(
+      builder: (context, state) {
+        if (state is AvatarLoaded) {
+
+          return InkWell(
+            onTap: (){
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => MyProfileScreen()),
+              );
+            },
+            child: CircleAvatar(
+              radius: 25,
+              backgroundColor: Color(0xFF49329A),
+              backgroundImage: state.imageProvider,
             ),
           );
+        } else if (state is AvatarLoading) {
+          return const CircularProgressIndicator();
+        } else {
+          // Fallback image
+          final fallback = context.read<AvatarCubit>().getFallbackAvatarImage();
+          return CircleAvatar(
+            backgroundImage: fallback,
+            radius: 40,
+          );
         }
-        return GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => MyProfileScreen()),
-            );
-          },
-          child: CircleAvatar(
-            radius: 25,
-            backgroundColor: Color(0xFF49329A),
-            backgroundImage: snapshot.hasData
-                ? NetworkImage(snapshot.data.toString())
-                : AssetImage('assets/avatar2.png') as ImageProvider,
-          ),
-        );
       },
     ),
   ),
@@ -174,6 +194,7 @@ actions: [
                   ),
                 ),
                 child: TextField(
+                  controller: _searchController,
                   decoration: InputDecoration(
                     icon: Icon(Icons.search, color: Color(0xFF49329A)),
                     hintText: 'Search',
@@ -199,7 +220,7 @@ actions: [
                 children: [
                   _buildChatlist(),
                   _buildAllUsersTab(),
-                  CallLogsPage(),
+                  CallLogPage(allUsers: allUsers,),
                 ],
               ),
             ),
@@ -404,16 +425,27 @@ actions: [
       ),
     );
   }
-
   final currentUserId = Provider.of<UserProvider>(context).userId;
   print('Current User ID: $currentUserId');
   print('Friends List: $friends');
 
-  // Filter out the current user from the friends list
-  List<Friends> filteredFriends = friends
-      .where((friend) => friend.friendId.toString() != currentUserId.toString())
-      .toList();
-
+  List<Friends> displayFriends = _searchController.text.isEmpty
+      ? friends.where((f) => f.friendId.toString() != currentUserId).toList()
+      : filteredFriends.where((f) => f.friendId.toString() != currentUserId).toList();
+  print("sdlclksmcslk ${displayFriends}");
+  if (displayFriends.isEmpty) {
+    return Center(
+      child: Text(
+        _searchController.text.isEmpty
+            ? 'No friends yet'
+            : 'No matching friends found',
+        style: TextStyle(
+          fontFamily: 'Poppins Regular',
+          color: Colors.grey,
+        ),
+      ),
+    );
+  }
 
   return RefreshIndicator(
     onRefresh: _fetchAllUsers, // Allow pull-to-refresh
@@ -421,7 +453,7 @@ actions: [
       padding: EdgeInsets.fromLTRB(15, 0, 15, 15),
       children: [
         SizedBox(height: 20),
-        ...filteredFriends.map((friend) => _buildFriendTile(context, friend)),
+        ...displayFriends.map((friend) => _buildFriendTile(context, friend)),
       ],
     ),
   );
@@ -509,6 +541,23 @@ Future<String> _getAvatarUrl(int avatarId) async {
   final userProvider = Provider.of<UserProvider>(context, listen: false);
   final currentUserId = userProvider.userId; // Get current user ID
 
+  List<User> displayUsers = _searchController.text.isEmpty
+      ? allUsers
+      : filteredAllUsers;
+
+  if (displayUsers.isEmpty) {
+    return Center(
+      child: Text(
+        _searchController.text.isEmpty
+            ? 'No users found'
+            : 'No matching users found',
+        style: TextStyle(
+          fontFamily: 'Poppins Regular',
+          color: Colors.grey,
+        ),
+      ),
+    );
+  }
 
   if (isLoading) {
     return Center(child: CircularProgressIndicator());

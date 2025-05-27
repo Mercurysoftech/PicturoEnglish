@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_callkit_incoming/entities/call_event.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -20,6 +21,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../cubits/call_cubit/call_socket_handle_cubit.dart';
+import '../cubits/get_avatar_cubit/get_avatar_cubit.dart';
 
 class Homepage extends StatefulWidget{
   final int? initialIndex;
@@ -117,9 +119,12 @@ class _HomepageState extends State<Homepage> {
 
   // Define the different pages/screens for each bottom navigation item
   final List<Widget> _pages = [];
-
+  Future<void> getCurrentUserAvatar() async {
+      context.read<AvatarCubit>().loadAvatar();
+  }
   @override
   void initState() {
+    getCurrentUserAvatar();
     super.initState();
      _selectedIndex = widget.initialIndex ?? 0;
     // Initialize the pages with the required data
@@ -138,6 +143,7 @@ class _HomepageState extends State<Homepage> {
   }
   void handleCall(){
     FlutterCallkitIncoming.onEvent.listen((event) {
+
 
       if(event?.event==Event.actionCallAccept){
 
@@ -344,32 +350,8 @@ class HomeContent extends StatefulWidget {
 }
 
 class _HomeContentState extends State<HomeContent> {
-  Future<String> _getCurrentUserAvatar() async {
-  try {
-    final apiService = await ApiService.create();
-    final profile = await apiService.fetchProfileDetails();
 
-    if (profile.avatarId == null || profile.avatarId == 0) {
-      throw Exception('Using default avatar');
-    }
 
-    final avatarResponse = await apiService.fetchAvatars();
-    final avatar = avatarResponse.data.firstWhere(
-      (a) => a.id == profile.avatarId,
-      orElse: () => throw Exception('Avatar not found'),
-    );
-
-    return 'https://picturoenglish.com/admin/${avatar.avatarUrl}';
-  } catch (e) {
-    print('Error fetching current user avatar: $e');
-    throw e; // This will trigger the default avatar fallback
-  }
-}
-@override
-  void initState() {
-    // TODO: implement initState
-    super.initState();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -409,34 +391,33 @@ class _HomeContentState extends State<HomeContent> {
            actions: [
   Padding(
     padding: const EdgeInsets.only(top: 10.0,left: 8, right: 24.0),
-    child: FutureBuilder(
-      future: _getCurrentUserAvatar(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return CircleAvatar(
-            radius: 25,
-            backgroundColor: Color(0xFF49329A),
-            child: CircularProgressIndicator(
-              color: Colors.white,
-              strokeWidth: 2,
+    child: BlocBuilder<AvatarCubit, AvatarState>(
+      builder: (context, state) {
+
+        if (state is AvatarLoaded) {
+          return InkWell(
+            onTap: (){
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => MyProfileScreen()),
+              );
+            },
+            child: CircleAvatar(
+              radius: 25,
+              backgroundColor: Color(0xFF49329A),
+              backgroundImage: state.imageProvider,
             ),
           );
+        } else if (state is AvatarLoading) {
+          return const CircularProgressIndicator();
+        } else {
+          // Fallback image
+          final fallback = context.read<AvatarCubit>().getFallbackAvatarImage();
+          return CircleAvatar(
+            backgroundImage: fallback,
+            radius: 40,
+          );
         }
-        return GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => MyProfileScreen()),
-            );
-          },
-          child: CircleAvatar(
-            radius: 25,
-            backgroundColor: Color(0xFF49329A),
-            backgroundImage: snapshot.hasData
-                ? NetworkImage(snapshot.data.toString())
-                : AssetImage('assets/avatar2.png') as ImageProvider,
-          ),
-        );
       },
     ),
   ),

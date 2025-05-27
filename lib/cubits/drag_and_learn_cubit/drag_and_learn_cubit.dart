@@ -30,12 +30,11 @@ class DragLearnCubit extends Cubit<DragLearnState> {
       );
 
       log("sldclskdmclksdc ${response.body}");
-    log("sldclskdmclksdc ${response.body.split(' ')[1]}");
     final data = json.decode(response.body);
-
+    List<dynamic> listData=data['data'];
       if (data['status'] == 'success') {
 
-        DragAndLearnLevelModel dataj=DragAndLearnLevelModel.fromJson(data['data']);
+        DragAndLearnLevelModel dataj=DragAndLearnLevelModel.fromJson(listData.first);
 
         emit(DragLearnLoaded(dataj));
       } else {

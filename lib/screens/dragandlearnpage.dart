@@ -182,7 +182,7 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
               ),
               alignment: Alignment.center,
               child: placedImages[word] != null
-                  ? Image.network(placedImages[word]!, fit: BoxFit.cover)
+                  ? Image.network("https://picturoenglish.com/admin/${placedImages[word]!}", fit: BoxFit.cover)
                   : Text(
                       word??'',
                       style: const TextStyle(
@@ -235,7 +235,7 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
                         child: SizedBox(
                           width: itemSize,
                           height: itemSize,
-                          child: Image.network(availableImages[index]??'', fit: BoxFit.cover),
+                          child: Image.network("https://picturoenglish.com/admin/${availableImages[index]??''}", fit: BoxFit.cover),
                         ),
                       ),
                       childWhenDragging: SizedBox(
@@ -253,7 +253,7 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
                           ),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(12),
-                            child: Image.network(availableImages[index]??'', fit: BoxFit.cover),
+                            child: Image.network("https://picturoenglish.com/admin/${availableImages[index]??''}", fit: BoxFit.cover),
                           ),
                         ),
                       ),

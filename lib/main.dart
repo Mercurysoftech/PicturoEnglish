@@ -18,6 +18,7 @@ import 'package:picturo_app/screens/gamespage.dart';
 import 'package:picturo_app/screens/genderandagepage.dart';
 import 'package:picturo_app/screens/homepage.dart';
 import 'package:picturo_app/screens/indermidiateandreasonpage.dart';
+import 'package:picturo_app/screens/introduction_animation/introduction_animation_screen.dart';
 import 'package:picturo_app/screens/languageselectionpage.dart';
 import 'package:picturo_app/screens/learningtitlepage.dart';
 import 'package:picturo_app/screens/learnwordspage.dart';
@@ -31,7 +32,10 @@ import 'package:picturo_app/socket/socketservice.dart';
 import 'package:provider/provider.dart';
 
 import 'cubits/call_cubit/call_socket_handle_cubit.dart';
+import 'cubits/call_log_his_cubit/call_log_cubit.dart';
 import 'cubits/drag_and_learn_cubit/drag_and_learn_cubit.dart';
+import 'cubits/get_avatar_cubit/get_avatar_cubit.dart';
+import 'cubits/get_sub_topics_list/get_sub_topics_list_cubit.dart';
 import 'cubits/get_topics_list_cubit/get_topic_list_cubit.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -63,6 +67,9 @@ void main() async{
         ChangeNotifierProvider(create: (context) => ProfileProvider()),
         BlocProvider(create: (context) => CallSocketHandleCubit()),
         BlocProvider(create: (context) => DragLearnCubit()),
+        BlocProvider(create: (context) => SubtopicCubit()),
+        BlocProvider(create: (context) => AvatarCubit()),
+        BlocProvider(create: (context) => CallLogCubit()),
       ],
       child: MyApp(),
     ),

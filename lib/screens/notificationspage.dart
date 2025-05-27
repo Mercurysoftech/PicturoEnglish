@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:picturo_app/screens/myprofilepage.dart';
 import 'package:picturo_app/screens/requestspage.dart';
 import 'package:picturo_app/services/api_service.dart';
+
+import '../cubits/get_avatar_cubit/get_avatar_cubit.dart';
 
 class NotificationScreen extends StatelessWidget {
   const NotificationScreen({super.key});
@@ -21,34 +24,32 @@ class NotificationScreen extends StatelessWidget {
            actions: [
   Padding(
     padding: const EdgeInsets.only(top: 10.0, right: 24.0),
-    child: FutureBuilder(
-      future: _getCurrentUserAvatar(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return CircleAvatar(
-            radius: 25,
-            backgroundColor: Color(0xFF49329A),
-            child: CircularProgressIndicator(
-              color: Colors.white,
-              strokeWidth: 2,
+    child: BlocBuilder<AvatarCubit, AvatarState>(
+      builder: (context, state) {
+        if (state is AvatarLoaded) {
+          return InkWell(
+            onTap: (){
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => MyProfileScreen()),
+              );
+            },
+            child: CircleAvatar(
+              radius: 25,
+              backgroundColor: Color(0xFF49329A),
+              backgroundImage: state.imageProvider,
             ),
           );
+        } else if (state is AvatarLoading) {
+          return const CircularProgressIndicator();
+        } else {
+          // Fallback image
+          final fallback = context.read<AvatarCubit>().getFallbackAvatarImage();
+          return CircleAvatar(
+            backgroundImage: fallback,
+            radius: 40,
+          );
         }
-        return GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => MyProfileScreen()),
-            );
-          },
-          child: CircleAvatar(
-            radius: 25,
-            backgroundColor: Color(0xFF49329A),
-            backgroundImage: snapshot.hasData
-                ? NetworkImage(snapshot.data.toString())
-                : AssetImage('assets/avatar2.png') as ImageProvider,
-          ),
-        );
       },
     ),
   ),

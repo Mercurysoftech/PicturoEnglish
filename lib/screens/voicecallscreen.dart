@@ -34,8 +34,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
 
   @override
   void initState() {
-    super.initState();
-    // Start a periodic timer that updates every second
+    context.read<CallSocketHandleCubit>().resetCubit();
     _timer = Timer.periodic(Duration(seconds: 1), (timer) {
       if (mounted) {
         setState(() {
@@ -43,6 +42,9 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
         });
       }
     });
+    super.initState();
+    // Start a periodic timer that updates every second
+
   }
 
   @override
@@ -79,6 +81,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
       backgroundColor: Colors.black,
       body: BlocBuilder<CallSocketHandleCubit, CallSocketHandleState>(
         builder: (context, state) {
+          print("lsdkcmlskcmsdlkcmslcksdc ${state.runtimeType}");
           if(state is CallRejected){
             Future.delayed(Duration.zero,(){
                 Navigator.pop(context);

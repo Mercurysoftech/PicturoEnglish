@@ -4,7 +4,9 @@ import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:picturo_app/screens/loginscreen.dart';
-import 'package:picturo_app/screens/homepage.dart'; // Import your homepage
+import 'package:picturo_app/screens/homepage.dart';
+
+import 'introduction_animation/introduction_animation_screen.dart'; // Import your homepage
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -49,11 +51,23 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
 
     if (mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => isLoggedIn ? const Homepage() : const LoginScreen(),
-        ),
-      );
+
+     bool? isFirst= prefs.getBool("isFirstTime");
+     if(isFirst==false){
+       Navigator.of(context).pushReplacement(
+         MaterialPageRoute(
+           builder: (context) => isLoggedIn ? const Homepage() : const LoginScreen(),
+         ),
+       );
+     }else{
+       Navigator.of(context).pushReplacement(
+         MaterialPageRoute(
+           builder: (context) => IntroductionAnimationScreen(),
+         ),
+       );
+     }
+
+
     }
   }
 

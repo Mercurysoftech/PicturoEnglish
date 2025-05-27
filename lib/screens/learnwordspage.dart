@@ -5,6 +5,7 @@ import 'package:picturo_app/services/api_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 
+import '../cubits/get_sub_topics_list/get_sub_topics_list_cubit.dart';
 import '../responses/my_profile_response.dart';
 
 
@@ -12,7 +13,7 @@ class LearnWordsPage extends StatefulWidget {
   final String? optionTitle;
   final int? questionId;
   final String? bookId;
-  final String? topicId;
+  final int? topicId;
   const LearnWordsPage({super.key,this.optionTitle, this.questionId,required this.bookId,required this.topicId});
   
 
@@ -39,6 +40,7 @@ class _LearnWordsPageState extends State<LearnWordsPage> {
   }
 
 
+
   Future<void> fetchUserDetails() async {
     try {
       final apiService = await ApiService.create();
@@ -61,6 +63,9 @@ class _LearnWordsPageState extends State<LearnWordsPage> {
       final apiService = await ApiService.create();
       final response = await apiService.readMarkAsRead(bookId: widget.bookId.toString(), topicId: widget.topicId.toString(), questionId: widget.questionId.toString());
 
+      if(response!=null&&response){
+        context.read<SubtopicCubit>().fetchQuestions(widget.topicId!);
+      }
     } catch (e) {
       setState(() {
         _errorMessage = "Error fetching questions: ${e.toString()}";
