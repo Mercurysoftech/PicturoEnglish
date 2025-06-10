@@ -23,12 +23,15 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
   late IO.Socket callSocket;
   RTCPeerConnection? _peerConnection;
   MediaStream? _localStream;
+  bool isLiveCallActive=false;
+
   List<Friends> friends = [];
   final RTCVideoRenderer localRenderer = RTCVideoRenderer();
   final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
   final Map<String, RTCPeerConnection> peerConnections = {};
   final Map<String, RTCVideoRenderer> remoteRenderers = {};
-  late int targetUserId;
+  int? targetUserId;
+  String?  callerName;
 
   final _config = {
     'iceServers': [
@@ -72,6 +75,8 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
           FlutterCallkitIncoming.endCall("sdkjcslkcmslkcmsdc");
           FlutterCallkitIncoming.endAllCalls();
         });
+        callerName=friends[findedIndex].friendName;
+
         showFlutterCallNotification(
           callSessionId: 'sdkjcslkcmslkcmsdc',
           userId: '$from',
@@ -84,11 +89,12 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
     callSocket.on('call-accepted', (data) {
       print("Accepted $data ");
       emit(CallAccepted());
+      isLiveCallActive=true;
       FlutterCallkitIncoming.setCallConnected("sdkjcslkcmslkcmsdc");
     });
 
     callSocket.on('call-rejected', (_) {
-      endCall(targetUserId: targetUserId);
+      endCall(targetUserId: targetUserId??0);
     });
 
     callSocket.on('signal', (data) async {
@@ -127,7 +133,7 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
     });
 
     callSocket.on('call-ended', (_)async {
-
+      isLiveCallActive=false;
       emit(CallRejected());
     });
 
@@ -142,6 +148,7 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
     initiateWebRTCCall(targetId: targetUser, currentUserId: currentUserId,);
 
     callSocket.emit("call-accepted", {"to": targetUser});
+    isLiveCallActive=true;
     emit(CallAccepted());
   }
 
@@ -166,6 +173,7 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
     required int targetId,
   }) async {
     targetUserId = targetId;
+    emit(state);
     await connectNewUser(targetId, currentUserId);
     final offer = await peerConnections[targetId.toString()]!.createOffer();
     await peerConnections[targetId.toString()]!.setLocalDescription(offer);
@@ -223,6 +231,8 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
     await session.setActive(false);
   }
   Future<void> hangup() async {
+    isLiveCallActive=false;
+    emit(state);
     print('Attempting to hang up the call...');
    await releaseAudioFocus();
     // Stop and dispose local stream

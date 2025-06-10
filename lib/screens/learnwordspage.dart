@@ -5,8 +5,12 @@ import 'package:picturo_app/services/api_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 
+import '../cubits/content_view_per_get/content_view_percentage_cubit.dart';
 import '../cubits/get_sub_topics_list/get_sub_topics_list_cubit.dart';
+import '../main.dart';
 import '../responses/my_profile_response.dart';
+import '../utils/common_app_bar.dart';
+import '../utils/common_file.dart';
 
 
 class LearnWordsPage extends StatefulWidget {
@@ -64,6 +68,7 @@ class _LearnWordsPageState extends State<LearnWordsPage> {
       final response = await apiService.readMarkAsRead(bookId: widget.bookId.toString(), topicId: widget.topicId.toString(), questionId: widget.questionId.toString());
 
       if(response!=null&&response){
+        context.read<ProgressCubit>().fetchProgress(bookId: int.parse(widget.bookId??"0"), topicId: widget.topicId??0);
         context.read<SubtopicCubit>().fetchQuestions(widget.topicId!);
       }
     } catch (e) {
@@ -115,43 +120,7 @@ class _LearnWordsPageState extends State<LearnWordsPage> {
 
     return Scaffold(
       backgroundColor: Color(0xFFFFFFFF),
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(80), // Increased app bar height
-        child: AppBar(
-          backgroundColor: Color(0xFF49329A),
-          leading: Padding(
-            padding: const EdgeInsets.only(top: 15.0, left: 24.0), // Adjust top padding
-            child: IconButton(
-              icon: Icon(Icons.arrow_back_ios, color: Colors.white, size: 26),
-              onPressed: () {
-                Navigator.pop(context);
-              },
-            ),
-          ),
-          title: Padding(
-            padding: const EdgeInsets.only(top: 15.0), // Adjust top padding
-            child: Row(
-              children: [
-                Text(
-                  widget.optionTitle ?? 'Learn Words',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Poppins Regular',
-                  ),
-                ),
-              ],
-            ),
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-            ),
-          ),
-        ),
-      ),
+      appBar: CommonAppBar(title:"Learn Words",isBackbutton: true,),
       body:  !_languageLoaded || _isLoading
         ? Center(child: CircularProgressIndicator())
         : _errorMessage.isNotEmpty
@@ -211,7 +180,7 @@ class _LearnWordsPageState extends State<LearnWordsPage> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        fontFamily: 'Poppins Regular',
+                        fontFamily: AppConstants.commonFont,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -226,16 +195,16 @@ class _LearnWordsPageState extends State<LearnWordsPage> {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              fontFamily: 'Poppins Regular',
+                              fontFamily: AppConstants.commonFont,
                             ),
                           ),
                           SizedBox(height: 10),
                           Text(
-                            _questionData?.meaning ?? 'No meaning available',
+                            capitalizeFirstLetter(_questionData?.meaning ?? 'No meaning available'),
                             style: TextStyle(
                               fontSize: 16,
                               color: Color(0xFF515151),
-                              fontFamily: 'Poppins Regular',
+                              fontFamily: AppConstants.commonFont,
                             ),
                           ),
                           SizedBox(height: 20),
@@ -247,7 +216,7 @@ if (userLanguage?.toLowerCase() != 'english') ...[
     style: TextStyle(
       fontSize: 18,
       fontWeight: FontWeight.bold,
-      fontFamily: 'Poppins Regular',
+      fontFamily: AppConstants.commonFont,
     ),
   ),
   SizedBox(height: 10),
@@ -264,7 +233,7 @@ if (userLanguage?.toLowerCase() != 'english') ...[
       style: TextStyle(
         fontSize: 16,
         color: Color(0xFF515151),
-        fontFamily: 'Poppins Regular',
+        fontFamily: AppConstants.commonFont,
       ),
     ),
   SizedBox(height: 20),
@@ -274,7 +243,7 @@ if (userLanguage?.toLowerCase() != 'english') ...[
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              fontFamily: 'Poppins Regular',
+                              fontFamily: AppConstants.commonFont,
                             ),
                           ),
                           SizedBox(height: 18),
@@ -291,7 +260,7 @@ if (userLanguage?.toLowerCase() != 'english') ...[
                                 style: TextStyle(
                                   fontSize: 16,
                                   color: Color(0xFF515151),
-                                  fontFamily: 'Poppins Regular',
+                                  fontFamily: AppConstants.commonFont,
                                 ),
                               ),
                               SizedBox(height: 10),
@@ -301,7 +270,7 @@ if (userLanguage?.toLowerCase() != 'english') ...[
                                   style: TextStyle(
                                     fontSize: 16,
                                     color: Color(0xFF515151),
-                                    fontFamily: 'Poppins Regular',
+                                    fontFamily: AppConstants.commonFont,
                                   ),
                                 ),
                               SizedBox(height: 18),
@@ -352,7 +321,7 @@ Widget? _buildNativeMeaningBasedOnLanguage(NativeMeaning nativeMeaning, String? 
     style: TextStyle(
       fontSize: 16,
       color: Color(0xFF515151),
-      fontFamily: 'Poppins Regular',
+      fontFamily: AppConstants.commonFont,
     ),
   ) : null;
 }
@@ -362,7 +331,7 @@ String? _getExampleBasedOnLanguage(Example example, String? userLanguage) {
   if (userLanguage?.toLowerCase() == 'english') {
     return null;
   }
-  print("aljkclaksm ${userLanguage}");
+
 
   final language = userLanguage?.toLowerCase() ?? 'english';
   

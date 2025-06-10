@@ -3,6 +3,8 @@ import 'package:animated_toggle_switch/animated_toggle_switch.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:picturo_app/screens/languageselectionpage.dart';
 
+import '../utils/common_file.dart';
+
 class GenderAgeScreen extends StatefulWidget {
   const GenderAgeScreen({super.key});
 
@@ -84,7 +86,7 @@ Widget build(BuildContext context) {
                       child: Text(
                         'Basic Details',
                         style: TextStyle(
-                          fontFamily: 'Poppins Medium',
+                          fontFamily: AppConstants.commonFont,
                           fontWeight: FontWeight.bold,
                           fontSize: 20,
                           color: Color(0xFF231065),
@@ -97,7 +99,7 @@ Widget build(BuildContext context) {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        fontFamily: 'Poppins Medium',
+                        fontFamily: AppConstants.commonFont,
                         color: Color(0xFF231065)
                       ),
                     ),
@@ -109,7 +111,7 @@ Widget build(BuildContext context) {
                       decoration: InputDecoration(
                         hintText: "Eg: 16",
                         hintStyle: const TextStyle(
-                          fontFamily: 'Poppins Medium',
+                          fontFamily: AppConstants.commonFont,
                           color: Color(0xFF9B9B9B),
                         ),
                         
@@ -125,12 +127,12 @@ Widget build(BuildContext context) {
                         ),
                       ),
                       keyboardType: TextInputType.number,
-                      style: const TextStyle(fontFamily: 'Poppins Medium'),
+                      style: const TextStyle(fontFamily: AppConstants.commonFont),
                     ),
                     SizedBox(height: 25),
                     Text(
                       "Qualification",
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold,fontFamily: 'Poppins Medium',color: Color(0xFF231065)),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold,fontFamily: AppConstants.commonFont,color: Color(0xFF231065)),
                     ),
                     SizedBox(height: 10),
                     // Replace the existing Qualification TextField with this:
@@ -139,7 +141,7 @@ Widget build(BuildContext context) {
                       decoration: InputDecoration(
                         hintText: "Select qualification",
                         hintStyle: const TextStyle(
-                          fontFamily: 'Poppins Medium',
+                          fontFamily: AppConstants.commonFont,
                           color: Color(0xFF9B9B9B),
                         ),
                         enabledBorder: OutlineInputBorder(
@@ -160,7 +162,7 @@ Widget build(BuildContext context) {
                           child: Text(
                             qualification,
                             style: TextStyle(
-                              fontFamily: 'Poppins Medium',
+                              fontFamily: AppConstants.commonFont,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -175,7 +177,7 @@ Widget build(BuildContext context) {
                     SizedBox(height: 25),
                     Text(
                       "Your Language Proficiency",
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold,fontFamily: 'Poppins Medium',color: Color(0xFF231065)),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold,fontFamily: AppConstants.commonFont,color: Color(0xFF231065)),
                     ),
                     SizedBox(height: 10),
                     DropdownButtonFormField<String>(
@@ -194,7 +196,7 @@ Widget build(BuildContext context) {
                       items: ["Beginner", "Intermediate", "Proficient"].map((String level) {
                         return DropdownMenuItem<String>(
                           value: level,
-                          child: Text(level,style:TextStyle(fontFamily: 'Poppins Medium',fontWeight: FontWeight.bold),),
+                          child: Text(level,style:TextStyle(fontFamily: AppConstants.commonFont,fontWeight: FontWeight.bold),),
                         );
                       }).toList(),
                       onChanged: (value) {
@@ -206,7 +208,7 @@ Widget build(BuildContext context) {
                     SizedBox(height: 25),
                     Text(
                       "Purpose of Learning",
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold,fontFamily: 'Poppins Medium',color: Color(0xFF231065)),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold,fontFamily: AppConstants.commonFont,color: Color(0xFF231065)),
                     ),
                     SizedBox(height: 10),
                     TextField(
@@ -214,7 +216,7 @@ Widget build(BuildContext context) {
                       decoration: InputDecoration(
                         hintText: "eg. to learn",
                         hintStyle: const TextStyle(
-                          fontFamily: 'Poppins Medium',
+                          fontFamily: AppConstants.commonFont,
                           color: Color(0xFF9B9B9B),
                         ),
                         filled: true,
@@ -229,14 +231,14 @@ Widget build(BuildContext context) {
                         ),
                       ),
                       keyboardType: TextInputType.text,
-                      style: const TextStyle(fontFamily: 'Poppins Medium'),
+                      style: const TextStyle(fontFamily: AppConstants.commonFont),
                     ),
                     const SizedBox(height: 30),
                     const Text(
                       "Gender",
                       style: TextStyle(
                         fontSize: 16,
-                        fontFamily: 'Poppins Medium',
+                        fontFamily: AppConstants.commonFont,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF231065),
                       ),
@@ -256,7 +258,7 @@ Widget build(BuildContext context) {
                               local.value ? 'Male' : 'Female',
                               style: TextStyle(
                                 color: Color.lerp(Colors.black, Colors.white, local.animationValue),
-                                fontFamily: 'Poppins Medium',
+                                fontFamily: AppConstants.commonFont,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
                               ),
@@ -305,7 +307,7 @@ Widget build(BuildContext context) {
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 18,
-                                fontFamily: 'Poppins Medium',
+                                fontFamily: AppConstants.commonFont,
                               ),
                             ),
                           ),

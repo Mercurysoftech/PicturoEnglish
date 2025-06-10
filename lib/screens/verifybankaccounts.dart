@@ -6,7 +6,9 @@ import 'package:picturo_app/screens/accountdetailsshow.dart';
 import 'package:picturo_app/services/api_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:dio/dio.dart'; // Import Dio for API calls
+import 'package:dio/dio.dart';
+
+import '../utils/common_file.dart'; // Import Dio for API calls
 
 class VerifyBankAccount extends StatefulWidget {
   const VerifyBankAccount({super.key});
@@ -240,7 +242,7 @@ class _VerifyBankAccountState extends State<VerifyBankAccount> {
                     ),
                     child: Text(
                       "Verify",
-                      style: TextStyle(color: Colors.white, fontFamily: 'Poppins Medium'),
+                      style: TextStyle(color: Colors.white, fontFamily: AppConstants.commonFont),
                     ),
                   ),
                 ),

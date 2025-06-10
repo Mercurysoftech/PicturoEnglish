@@ -7,6 +7,7 @@ import 'package:picturo_app/screens/successfullyverification.dart';
 import 'package:picturo_app/services/api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../utils/common_file.dart';
 import 'genderandagepage.dart'; // For the Timer
 
 class VerificationScreen extends StatefulWidget {
@@ -163,7 +164,7 @@ void _showMessage(String message) {
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF231065),
-                fontFamily: 'Poppins Medium',
+                fontFamily: AppConstants.commonFont,
               ),
             ),
             const SizedBox(height: 16),
@@ -173,7 +174,7 @@ void _showMessage(String message) {
               style: const TextStyle(
                 fontSize: 16,
                 color: Colors.black54,
-                fontFamily: 'Poppins Medium',
+                fontFamily: AppConstants.commonFont,
               ),
             ),
             const SizedBox(height: 40),
@@ -190,7 +191,7 @@ void _showMessage(String message) {
                     keyboardType: TextInputType.number,
                     maxLength: 1,
                     style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.normal, fontFamily: 'Poppins Medium'),
+                        fontSize: 20, fontWeight: FontWeight.normal, fontFamily: AppConstants.commonFont),
                     decoration: InputDecoration(
                       counterText: "",
                       border: OutlineInputBorder(
@@ -226,7 +227,7 @@ void _showMessage(String message) {
               child: const Text(
                 'Verify',
                 style: TextStyle(
-                    fontSize: 18, color: Colors.white, fontFamily: 'Poppins Medium', fontWeight: FontWeight.bold),
+                    fontSize: 18, color: Colors.white, fontFamily: AppConstants.commonFont, fontWeight: FontWeight.bold),
               ),
             ),
             const SizedBox(height: 30),
@@ -239,7 +240,7 @@ void _showMessage(String message) {
                     'Resend OTP',
                     style: TextStyle(
                       color: _remainingTime == 0 ? Color(0xFF49329A) : Colors.black54,
-                      fontFamily: 'Poppins Medium',
+                      fontFamily: AppConstants.commonFont,
                     ),
                   ),
                 ),
@@ -247,7 +248,7 @@ void _showMessage(String message) {
                   'Estimated time ${_remainingTime ~/ 60}:${_remainingTime % 60 < 10 ? '0' : ''}${_remainingTime % 60}',
                   style: const TextStyle(
                     color: Colors.black54,
-                    fontFamily: 'Poppins Medium',
+                    fontFamily: AppConstants.commonFont,
                   ),
                 ),
               ],

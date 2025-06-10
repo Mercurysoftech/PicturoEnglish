@@ -5,6 +5,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:picturo_app/classes/svgfiles.dart';
 import 'package:picturo_app/screens/actionsnaptopics.dart';
 
+import '../utils/common_app_bar.dart';
+import '../utils/common_file.dart';
+
 
 class ActionSnapApp extends StatefulWidget {
   const ActionSnapApp({super.key});
@@ -45,49 +48,7 @@ class _ActionSnapAppState extends State<ActionSnapApp> {
     child:
     Scaffold(
       backgroundColor: const Color(0xFFF8F2E7),
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(80), // Increased app bar height
-        child: AppBar(
-          backgroundColor: Color(0xFF49329A),
-          leading: Padding(
-            padding: const EdgeInsets.only(top: 15.0, left: 24.0), // Adjust top padding
-            child: IconButton(
-              icon: Icon(Icons.arrow_back_ios, color: Colors.white, size: 26),
-              onPressed: () {       
-        Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => ActionSnapTopicsScreen(
-                                      ),
-                                    ),
-                                  );
-      },
-            ),
-          ),
-          title: Padding(
-            padding: const EdgeInsets.only(top: 15.0), // Adjust top padding
-            child: Row(
-              children: [
-                Text(
-                  'Action Snap',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Poppins Regular',
-                  ),
-                ),
-              ],
-            ),
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-            ),
-          ),
-        ),
-      ),
+      appBar: CommonAppBar(title:"Action Snap" ,isBackbutton: true,),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -109,7 +70,7 @@ class _ActionSnapAppState extends State<ActionSnapApp> {
               SizedBox(height: 10),
               Text("Jump",
                   style: TextStyle(
-                    fontFamily: 'Poppins Medium',
+                    fontFamily: AppConstants.commonFont,
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF49329A),

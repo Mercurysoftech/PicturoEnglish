@@ -9,6 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../utils/common_file.dart';
+
 class TransactionHistoryPage extends StatefulWidget {
   const TransactionHistoryPage({Key? key}) : super(key: key);
 
@@ -114,11 +116,11 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage> {
                   const SizedBox(height: 10),
                   Text(
                     dateOnly,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Poppins Medium'),
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: AppConstants.commonFont),
                   ),
                   const Text(
                     '2025',
-                    style: TextStyle(fontSize: 12, color: Colors.grey, fontFamily: 'Poppins Medium'),
+                    style: TextStyle(fontSize: 12, color: Colors.grey, fontFamily: AppConstants.commonFont),
                   ),
                   const SizedBox(height: 8),
                 ],

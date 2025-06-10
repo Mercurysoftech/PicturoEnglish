@@ -11,6 +11,8 @@ import 'package:picturo_app/services/api_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../utils/common_file.dart';
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -126,7 +128,7 @@ class _LoginScreenState extends State<LoginScreen> {
           } else if (profileResponse.location.isEmpty) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const LocationGetPage()),
+              MaterialPageRoute(builder: (context) => const LocationGetPage(isFromProfile: false,)),
             );
           } else {
             _showMessage("Login successful!");
@@ -194,12 +196,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                           Text(
                             "Welcome back",
                             style: TextStyle(
                               fontSize: 26,
                               fontWeight: FontWeight.bold,
-                              fontFamily: 'Poppins Medium',
+                              fontFamily: AppConstants.commonFont,
                               color: Color(0xFF231065),
                             ),
                           ),
@@ -208,7 +210,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             "Sign In to continue",
                             style: TextStyle(
                               fontSize: 15,
-                              fontFamily: 'Poppins Medium',
+                              fontFamily: AppConstants.commonFont,
                               color: Colors.grey[600],
                             ),
                           ),
@@ -354,12 +356,12 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               child: _isLoading
                                   ? const CircularProgressIndicator(color: Colors.white)
-                                  : const Text(
+                                  :  Text(
                                       "Sign In",
                                       style: TextStyle(
                                         fontSize: 16,
                                         color: Colors.white,
-                                        fontFamily: 'Poppins Medium',
+                                        fontFamily: AppConstants.commonFont,
                                       ),
                                     ),
                             ),
@@ -371,15 +373,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                 text: "Don’t have an account? ",
                                 style: TextStyle(
                                   color: Colors.grey[600],
-                                  fontFamily: 'Poppins Medium',
+                                  fontFamily: AppConstants.commonFont,
                                   fontSize: 15,
                                 ),
                                 children: [
                                   TextSpan(
                                     text: "Sign Up",
-                                    style: const TextStyle(
+                                    style:  TextStyle(
                                       color: Color(0xFF49329A),
-                                      fontFamily: 'Poppins Medium',
+                                      fontFamily: AppConstants.commonFont,
                                       fontSize: 15,
                                       fontWeight: FontWeight.bold,
                                     ),

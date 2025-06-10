@@ -6,6 +6,7 @@ class ProfileProvider with ChangeNotifier {
   UserResponse? _user;
   String? _avatarUrl;
   bool _isLoading = false;
+  bool _onceLoaded = false;
   final String baseUrl = "https://picturoenglish.com/admin/";
   ApiService? _apiService;
 
@@ -13,6 +14,7 @@ class ProfileProvider with ChangeNotifier {
   UserResponse? get user => _user;
   String? get avatarUrl => _avatarUrl;
   bool get isLoading => _isLoading;
+  bool get onceLoaded => _onceLoaded;
 
   // Individual property getters for convenience
   int? get userId => _user?.id;
@@ -33,6 +35,7 @@ class ProfileProvider with ChangeNotifier {
 
       _apiService = await ApiService.create();
       await fetchProfile();
+      _onceLoaded=true;
 
   }
 

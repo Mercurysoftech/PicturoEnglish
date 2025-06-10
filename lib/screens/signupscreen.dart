@@ -3,7 +3,9 @@ import 'package:picturo_app/screens/genderandagepage.dart';
 import 'package:picturo_app/screens/loginscreen.dart';
 import 'package:picturo_app/screens/verificationscreen.dart';
 import 'package:picturo_app/services/api_service.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // Import your ApiService
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../utils/common_file.dart'; // Import your ApiService
 
 class Signupscreen extends StatefulWidget {
   const Signupscreen({super.key});
@@ -290,7 +292,7 @@ class _SignupscreenState extends State<Signupscreen> {
                                   "Sign Up",
                                   style: TextStyle(
                                     fontSize: 18,
-                                    fontFamily: 'Poppins Medium',
+                                    fontFamily: AppConstants.commonFont,
                                     color: Colors.white,
                                   ),
                                 ),
@@ -306,14 +308,14 @@ class _SignupscreenState extends State<Signupscreen> {
                               child: Text.rich(
                                 TextSpan(
                                   text: "Already have an account? ",
-                                  style: TextStyle(color: Colors.grey, fontFamily: 'Poppins Medium', fontSize: 15),
+                                  style: TextStyle(color: Colors.grey, fontFamily: AppConstants.commonFont, fontSize: 15),
                                   children: [
                                     TextSpan(
                                       text: "Sign In",
                                       style: TextStyle(
                                         color: Color(0xFF49329A),
                                         fontWeight: FontWeight.bold,
-                                        fontFamily: 'Poppins Medium',
+                                        fontFamily: AppConstants.commonFont,
                                       ),
                                     ),
                                   ],

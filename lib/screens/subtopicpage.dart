@@ -4,8 +4,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:picturo_app/screens/widgets/cat_progress_bar_widget.dart';
 import 'package:picturo_app/services/api_service.dart';
 import 'package:picturo_app/screens/learnwordspage.dart';
+import 'package:picturo_app/utils/common_file.dart';
+import '../cubits/content_view_per_get/content_view_percentage_cubit.dart';
 import '../cubits/get_sub_topics_list/get_sub_topics_list_cubit.dart';
+import '../main.dart';
 import '../responses/questions_response.dart';
+import '../utils/common_app_bar.dart';
 
 
 class SubtopicPage extends StatefulWidget {
@@ -24,6 +28,7 @@ class _SubtopicPageState extends State<SubtopicPage> {
   void initState() {
     // TODO: implement initState
     context.read<SubtopicCubit>().fetchQuestions(widget.topicId!);
+    context.read<ProgressCubit>().fetchProgress(bookId: widget.bookId??0, topicId: widget.topicId??0);
     super.initState();
   }
 
@@ -31,7 +36,7 @@ class _SubtopicPageState extends State<SubtopicPage> {
   Widget build(BuildContext context) {
     return Scaffold(
         backgroundColor: Colors.white,
-        appBar: _buildAppBar(context),
+        appBar: CommonAppBar(title:widget.title??'',isBackbutton: true,),
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -167,6 +172,7 @@ class _SubtopicPageState extends State<SubtopicPage> {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
+                  fontFamily: AppConstants.commonFont,
                   color: (question.read ?? false) ? Colors.green : const Color(0xFF49329A),
                 ),
               ),
@@ -174,11 +180,11 @@ class _SubtopicPageState extends State<SubtopicPage> {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                question.question ?? '',
+                capitalizeFirstLetter(question.question ?? ''),
                 style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
-                  fontFamily: 'Poppins Regular',
+                  fontFamily: AppConstants.commonFont,
                   color: Colors.black87,
                 ),
               ),

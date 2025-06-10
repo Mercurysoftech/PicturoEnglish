@@ -15,8 +15,8 @@ part 'drag_and_learn_state.dart';
 class DragLearnCubit extends Cubit<DragLearnState> {
   DragLearnCubit() : super(DragLearnLoading());
 
-  Future<void> fetchDragLearnData({required int bookId}) async {
-    emit(DragLearnLoading());
+  Future<void> fetchDragLearnData({required int bookId,bool? isLoading}) async {
+    (isLoading!=null&&isLoading)?null:emit(DragLearnLoading());
     SharedPreferences pref =await SharedPreferences.getInstance();
     String? token = pref.getString("auth_token");
     // try {
@@ -28,13 +28,12 @@ class DragLearnCubit extends Cubit<DragLearnState> {
       },
         body: jsonEncode({"book_id": bookId}),
       );
-
-      log("sldclskdmclksdc ${response.body}");
+      print("sdlkmclskdcm,sl;dcsdl;c,s;dlc, ${response.body}");
     final data = json.decode(response.body);
-    List<dynamic> listData=data['data'];
+
       if (data['status'] == 'success') {
 
-        DragAndLearnLevelModel dataj=DragAndLearnLevelModel.fromJson(listData.first);
+        DragAndLearnLevelModel dataj=DragAndLearnLevelModel.fromJson(data);
 
         emit(DragLearnLoaded(dataj));
       } else {

@@ -18,6 +18,7 @@ import 'package:picturo_app/services/api_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../utils/common_app_bar.dart';
 import 'earnings_ref/earnings_referral.dart';
 import 'locationgetpage.dart';
 
@@ -116,7 +117,15 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     super.initState();
     initializeApiService();
      // Initialize the provider when the screen loads
-    context.read<ProfileProvider>().initialize();
+    Future.delayed(Duration.zero,(){
+      final profileProvider = context.read<ProfileProvider>();
+      print("sldclskdcmsdc ${!profileProvider.onceLoaded}");
+      if(!profileProvider.onceLoaded){
+        context.read<ProfileProvider>().initialize();
+      }
+    });
+
+
 
     // Provider.of<ProfileProvider>(context, listen: false).initialize()
     ApiService.create().then((service) {
@@ -131,44 +140,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
 
     return Scaffold(
       backgroundColor: Color(0xFFE0F7FF),
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(80), // Increased app bar height
-        child: AppBar(
-          backgroundColor: Color(0xFF49329A),
-          leading: Padding(
-            padding: const EdgeInsets.only(top: 15.0, left: 24.0), // Adjust top padding
-            child: IconButton(
-              icon: Icon(Icons.arrow_back_ios, color: Colors.white, size: 24),
-              onPressed: () {
-                Navigator.push(context,
-                            MaterialPageRoute(builder: (context) => Homepage()));
-              },
-            ),
-          ),
-          title: Padding(
-            padding: const EdgeInsets.only(top: 15.0), // Adjust top padding
-            child: Row(
-              children: [
-                Text(
-                  'My Profile',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Poppins Regular',
-                  ),
-                ),
-              ],
-            ),
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-            ),
-          ),
-        ),
-      ),
+      appBar: CommonAppBar(title:"My Profile" ,isBackbutton: true,),
       body: Container(
         height: double.infinity,
         decoration: BoxDecoration(
@@ -196,6 +168,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                       PremiumButton(),
                       SizedBox(height: 10),
                       _buildSettingsOption(Icons.language, "Language", context,profileProvider),
+                          SizedBox(height: 10),
+                      _buildSettingsOption(Icons.location_history, "Location", context,profileProvider),
                           // SizedBox(height: 10),
                       // _buildSettingsOption(Icons.location_city, "Update Location", context,profileProvider),
                           SizedBox(height: 10),
@@ -304,6 +278,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
             _buildDetailRow("User code", user.referralCode), // Replace with actual user code if available
             _buildDetailRow("Numbers of referral", "0"), // Replace with actual referral count if available
             _buildDetailRow("Total earning", "₹ 0"), // Replace with actual earning if available
+            _buildDetailRow("Location", user.location),
           ],
         ),
       ),
@@ -333,8 +308,21 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
             ),
           ),
           // Second Text (Value)
-          Expanded(
-            flex:2, // Equal space
+          (label=='Location')?Expanded(
+            flex:4, // Equal space
+            child: Text(
+              value,
+              maxLines: 4,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF49329A), fontFamily: 'Poppins Regular',
+              ),
+              textAlign: TextAlign.start, // Align text to the end
+              overflow: TextOverflow.ellipsis, // Handle overflow with ellipsis
+            ),
+          ):Expanded(
+            flex:4, // Equal space
             child: Text(
               value,
               maxLines: 1,
@@ -373,13 +361,18 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
             } else if (title == 'Update Location') {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => LocationGetPage()), // Navigate to ChangeLanguagePage
+                MaterialPageRoute(builder: (context) => LocationGetPage(isFromProfile: true,)), // Navigate to ChangeLanguagePage
               );
             } else if (title == 'Language') {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => ChangeLanguagePage()), // Navigate to ChangeLanguagePage
               );
+            }else if (title == 'Location') {
+              Navigator.push(
+                                              context,
+                                              MaterialPageRoute(builder: (context) => LocationGetPage(isFromProfile: true,user: user.user,)),
+                                            );
             } else if(title=='Transaction History'){
               Navigator.push(
                 context,

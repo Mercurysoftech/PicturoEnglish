@@ -5,6 +5,8 @@ import 'package:picturo_app/screens/locationgetpage.dart';
 import 'package:picturo_app/services/api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../utils/common_file.dart';
+
 
 
 class LanguageSelectionApp extends StatefulWidget {
@@ -72,7 +74,7 @@ class _LanguageSelectionAppState extends State<LanguageSelectionApp> {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    fontFamily: 'Poppins Medium',
+                    fontFamily: AppConstants.commonFont,
                     color: Color(0xFF522B8F),
                   ),
                 ),
@@ -112,7 +114,7 @@ class _LanguageSelectionAppState extends State<LanguageSelectionApp> {
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
-                              fontFamily: 'Poppins Medium',
+                              fontFamily: AppConstants.commonFont,
                               color: isSelected ? Colors.white : const Color(
                                   0xFF49329A),
                             ),
@@ -187,7 +189,7 @@ class _LanguageSelectionAppState extends State<LanguageSelectionApp> {
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          fontFamily: 'Poppins Medium',
+                          fontFamily: AppConstants.commonFont,
                           color: Colors.white,
                         ),
                       ),
@@ -197,7 +199,7 @@ class _LanguageSelectionAppState extends State<LanguageSelectionApp> {
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          fontFamily: 'Poppins Medium',
+                          fontFamily: AppConstants.commonFont,
                           color: Colors.white,
                         ),
                       ),
@@ -265,7 +267,7 @@ class _LanguageSelectionAppState extends State<LanguageSelectionApp> {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          fontFamily: 'Poppins Medium',
+                          fontFamily: AppConstants.commonFont,
                           color: selectedLanguage != null ? Color(0xFF49329A) : Colors.grey,
                         ),
                       ),
@@ -304,7 +306,7 @@ class _LanguageSelectionAppState extends State<LanguageSelectionApp> {
     onPressed: () {
       Navigator.pushReplacement(
     context,
-    MaterialPageRoute(builder: (context) => LocationGetPage()),
+    MaterialPageRoute(builder: (context) => LocationGetPage(isFromProfile: false,)),
     // (route) => false,
   );
     },
@@ -324,7 +326,7 @@ class _LanguageSelectionAppState extends State<LanguageSelectionApp> {
       style: TextStyle(
         fontSize: 18,
         fontWeight: FontWeight.bold,
-        fontFamily: 'Poppins Medium',
+        fontFamily: AppConstants.commonFont,
         color: Colors.white,
       ),
     ),
@@ -354,10 +356,10 @@ Widget languageSelectionTile(String title, String language) {
             child: Text(        
               language,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style:  TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                fontFamily: 'Poppins Medium',
+                fontFamily: AppConstants.commonFont,
                 color: Color(0xFF7E65D6),
               ),
             ),

@@ -27,7 +27,7 @@ final GoRouter router = GoRouter(
     GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
     GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
     GoRoute(path: '/gender', builder: (context, state) => const GenderAgeScreen()),
-    GoRoute(path: '/location', builder: (context, state) => const LocationGetPage()),
+    GoRoute(path: '/location', builder: (context, state) => const LocationGetPage(isFromProfile: true,)),
     GoRoute(path: '/home', builder: (context, state) => const Homepage()),
   ],
 );

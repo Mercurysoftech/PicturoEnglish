@@ -9,6 +9,9 @@ import 'package:picturo_app/services/api_service.dart'; // Import your API servi
 import 'package:picturo_app/screens/subtopicpage.dart';
 
 import '../cubits/get_topics_list_cubit/get_topic_list_cubit.dart';
+import '../main.dart';
+import '../utils/common_app_bar.dart';
+import '../utils/common_file.dart';
 
 class TopicsScreen extends StatefulWidget {
   final String title;
@@ -73,46 +76,10 @@ class _TopicsScreenState extends State<TopicsScreen> {
       child:
     Scaffold(
       backgroundColor: Color(0xFFE0F7FF),
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(80),
-        child: AppBar(
-          backgroundColor: Color(0xFF49329A),
-          leading: Padding(
-            padding: const EdgeInsets.only(top: 15.0, left: 24.0),
-            child: IconButton(
-              icon: Icon(Icons.arrow_back_ios, color: Colors.white, size: 26),
-              onPressed: () {
-                Navigator.pop(context); // Navigate back
-              },
-            ),
-          ),
-          title: Padding(
-            padding: const EdgeInsets.only(top: 15.0),
-            child: Row(
-              children: [
-                Text(
-                  widget.title,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Poppins Regular',
-                  ),
-                ),
-              ],
-            ),
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-            ),
-          ),
-        ),
-      ),
+      appBar: CommonAppBar(title:widget.title,isBackbutton: true,),
       body: BlocBuilder<TopicCubit, TopicState>(
   builder: (context, state) {
-    print("sdjclskcsdc ${state.runtimeType}");
+
     if(state is TopicLoaded){
       List<Map<String,dynamic>> topics=state.topics;
       return Container(
@@ -186,7 +153,6 @@ class _TopicsScreenState extends State<TopicsScreen> {
     );
   }
 }
-
 class TopicCard extends StatefulWidget {
   final String title;
   final String image;
@@ -204,12 +170,12 @@ class TopicCard extends StatefulWidget {
 }
 
 class _TopicCardState extends State<TopicCard> {
-
   @override
   Widget build(BuildContext context) {
     return Container(
+      height: 150, // fixed height for consistency
+      width: 150,
       decoration: BoxDecoration(
-        color: widget.isSelected ? Color(0xFFDDF6D6) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: widget.isSelected ? Border.all(color: Colors.green, width: 2) : null,
         boxShadow: [
@@ -222,63 +188,59 @@ class _TopicCardState extends State<TopicCard> {
       ),
       child: Stack(
         children: [
-          Center(
-            child:
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-
-            ClipRRect(
+          // Background image
+          ClipRRect(
             borderRadius: BorderRadius.circular(12),
-      child: CachedNetworkImage(
-        filterQuality: FilterQuality.low,
-        useOldImageOnUrlChange: true,
-        imageUrl: "https://picturoenglish.com/admin/${widget.image}",
-        height: 120,
-        width: 125,
-        fit: BoxFit.cover,
-
-        placeholder: (context, url) => Center(
-          child: CircularProgressIndicator(strokeWidth: 0.7,),
-        ),
-        errorWidget: (context, url, error) => const Center(
-          child: Icon(
-            Icons.broken_image,
-            size: 50,
-            color: Colors.grey,
-          ),
-        ),
-      ),),
-                const SizedBox(height: 12),
-                Flexible(
-                  child: Text(
-                    widget.title,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'Poppins Medium',
-                    ),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
+            child: CachedNetworkImage(
+              imageUrl: "https://picturoenglish.com/admin/${widget.image}",
+              fit: BoxFit.cover,
+              height: double.infinity,
+              width: double.infinity,
+              placeholder: (context, url) => const SizedBox(),
+              errorWidget: (context, url, error) => const Center(
+                child: Icon(Icons.broken_image, size: 50, color: Colors.grey),
+              ),
             ),
           ),
+
+          // Semi-transparent overlay for text readability
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              color: Colors.black.withOpacity(0.4),
+            ),
           ),
+
+          // Title text
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text(
+                capitalizeFirstLetter(widget.title),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: AppConstants.commonFont,
+                  color: Colors.white,
+                ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+
+          // Check icon if selected
           if (widget.isSelected)
             Positioned(
-              top: 4,
-              right: 1,
-              child: Icon(Icons.check_circle, color: Colors.green, size: 24),
+              top: 6,
+              right: 6,
+              child: const Icon(Icons.check_circle, color: Colors.green, size: 24),
             ),
         ],
       ),
     );
   }
 }
+
 

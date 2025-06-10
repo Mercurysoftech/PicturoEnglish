@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'api_service.dart';
+
 
 class ChatBotApiService {
   final Dio _dio;
@@ -12,14 +14,16 @@ class ChatBotApiService {
    ChatBotApiService._(this._dio);
 
   static Future<ChatBotApiService> create() async {
+    SharedPreferences pref =await SharedPreferences.getInstance();
+    String? token = pref.getString("auth_token");
     final dio = Dio(
       BaseOptions(
-        baseUrl: 'http://147.79.67.167:2027/',
+        baseUrl: "http://37.27.187.66:2030/",
         connectTimeout: Duration(seconds: _timeoutSeconds),
         receiveTimeout: Duration(seconds: _timeoutSeconds),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers:  {
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json"},
       ),
     );
 
@@ -44,15 +48,22 @@ class ChatBotApiService {
     required String language,
     required String scenario,
   }) async {
-    try {
+    // try {
+
+      print("lsdclskcmlskcmslkcsckl ${{
+        'user_message': message,
+        'language': language,
+        'scenario_name': scenario,
+      }}");
       final response = await _dio.post(
-        '/continue_scenario',
-        data: {
-          'user_response': message,
-          // 'language': language,
-          'scenario_name': scenario,
-        },
+        'chat',
+        data: jsonEncode({
+          "message": "$message",
+          "language": "$language",
+          "scenario": "$scenario"
+        }),
       ).timeout(const Duration(seconds: _timeoutSeconds));
+
 
       if (response.statusCode != 200) {
         throw DioException(
@@ -60,52 +71,58 @@ class ChatBotApiService {
           response: response,
           error: 'Invalid status code: ${response.statusCode}',
         );
+      }else{
+        print("sdkmc;sl;sdlcsdc ${response.requestOptions}");
+        return {
+          'audio_base64': response.data['audio_base64'],
+          'reply': response.data['reply'],
+          'speak': response.data['speak'],
+          'status': response.data['status'],
+        };
       }
 
-      if (response.data == null) {
-        throw DioException(
-          requestOptions: response.requestOptions,
-          error: 'Empty response from server',
-        );
-      }
+
+
 
       // Validate response structure
-      if (response.data['reply'] == null || 
-          response.data['status'] == null) {
-        throw DioException(
-          requestOptions: response.requestOptions,
-          error: 'Invalid response format',
-        );
-      }
+      // print("sdlkcms;lkc;klsdc hh ${response.data['message'] == null ||
+      //     response.data['status'] == null}");
+      // if (response.data['message'] == null ||
+      //     response.data['status'] == null) {
+      //   throw DioException(
+      //     requestOptions: response.requestOptions,
+      //     error: 'Invalid response format',
+      //   );
+      // }
+     print("sdljcnslcmslkcmsdckl ${{
+       'audio_base64': response.data['audio_base64'],
+       'reply': response.data['message'],
+       'status': response.data['status'],
+     }}");
 
-      return {
-        'audio_base64': response.data['audio_base64'],
-        'reply': response.data['reply'],
-        'status': response.data['status'],
-      };
-    } on DioException catch (e) {
-      print('DioError in getChatbotResponse: ${e.message}');
-      if (e.response != null) {
-        print('Response data: ${e.response?.data}');
-        print('Response headers: ${e.response?.headers}');
-      }
-      return {
-        'error': _handleDioError(e),
-        'status': 'error',
-      };
-    } on TimeoutException catch (e) {
-      print('Timeout in getChatbotResponse: $e');
-      return {
-        'error': 'Request timed out. Please try again.',
-        'status': 'timeout',
-      };
-    } catch (e) {
-      print('Unexpected error in getChatbotResponse: $e');
-      return {
-        'error': 'An unexpected error occurred. Please try again.',
-        'status': 'error',
-      };
-    }
+    // } on DioException catch (e) {
+    //   print('DioError in getChatbotResponse: ${e}');
+    //   if (e.response != null) {
+    //     print('Response data: ${e.response?.data}');
+    //     print('Response headers: ${e.response?.headers}');
+    //   }
+    //   return {
+    //     'error': _handleDioError(e),
+    //     'status': 'error',
+    //   };
+    // } on TimeoutException catch (e) {
+    //   print('Timeout in getChatbotResponse: $e');
+    //   return {
+    //     'error': 'Request timed out. Please try again.',
+    //     'status': 'timeout',
+    //   };
+    // } catch (e) {
+    //   print('Unexpected error in getChatbotResponse: $e');
+    //   return {
+    //     'error': 'An unexpected error occurred. Please try again.',
+    //     'status': 'error',
+    //   };
+    // }
   }
 
   String _handleDioError(DioException error) {

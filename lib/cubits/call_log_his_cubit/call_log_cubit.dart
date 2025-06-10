@@ -22,7 +22,7 @@ class CallLogCubit extends Cubit<CallLogState> {
         Uri.parse('https://picturoenglish.com/api/call_log_list.php'),
         headers: {
           'Accept': 'application/json',
-          "Authorization": "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJsb2NhbGhvc3QiLCJ1c2VyX2lkIjoxNDksInVzZXJuYW1lIjoibmlzYXIifQ.LNwVgSSrV_ZLYK2sVYC2259cXyrrlFkG5uLoKZNCQkE",
+          "Authorization": "Bearer $token",
         },
       );
 

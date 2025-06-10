@@ -11,7 +11,9 @@ import 'package:picturo_app/screens/picturegrammerquest.dart';
 import 'package:picturo_app/screens/picturegrammerquesttopics..dart';
 import 'package:picturo_app/services/api_service.dart';
 
+import '../cubits/game_view_cubit/game_view_cubit.dart';
 import '../cubits/get_avatar_cubit/get_avatar_cubit.dart';
+import '../utils/common_app_bar.dart';
 
 class GamesPage extends StatefulWidget {
   const GamesPage({super.key});
@@ -21,106 +23,28 @@ class GamesPage extends StatefulWidget {
 }
 
 class _GamesPageState extends State<GamesPage> {
-  List<String> _gameNames = []; // Store fetched game names
-  bool _isLoading = true; // Track loading state
+// Store fetched game names
+
   String _errorMessage = ''; // Store error messages
 
   @override
   void initState() {
     super.initState();
-    fetchBooksAndUpdateGrid(); // Fetch data when the widget is initialized
+    context.read<GameCubit>().fetchGamesAndUpdateGrid();
   }
 
-  Future<void> fetchBooksAndUpdateGrid() async {
-    try {
-      // Fetch the games data
-      final apiService = await ApiService.create();
-      GamesResponse gamesResponse = await apiService.fetchGames();
-
-      // Extract the game names from the response
-      List<String> gameNames = gamesResponse.data.map((game) => game.gameName).toList();
-
-      // Update the state with the fetched game names
-      setState(() {
-        _gameNames = gameNames;
-        _isLoading = false; // Data fetching is complete
-      });
-    } catch (e) {
-      setState(() {
-        _errorMessage = "Error fetching games: $e"; // Store the error message
-        _isLoading = false; // Data fetching failed
-      });
-      print("Error fetching games: $e");
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Color(0xFFE5EEFF),
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(80),
-        child: AppBar(
-          automaticallyImplyLeading: false,
-          backgroundColor: Color(0xFF49329A),
-          title: Padding(
-            padding: const EdgeInsets.only(top: 20.0),
-            child: Row(
-              children: [
-                Text(
-                  'Games',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Poppins Regular',
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-  Padding(
-    padding: const EdgeInsets.only(top: 10.0, right: 24.0),
-    child: BlocBuilder<AvatarCubit, AvatarState>(
-      builder: (context, state) {
-        if (state is AvatarLoaded) {
-          return InkWell(
-            onTap: (){
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => MyProfileScreen()),
-              );
-            },
-            child: CircleAvatar(
-              radius: 25,
-              backgroundColor: Color(0xFF49329A),
-              backgroundImage: state.imageProvider,
-            ),
-          );
-        } else if (state is AvatarLoading) {
-          return const CircularProgressIndicator();
-        } else {
-          // Fallback image
-          final fallback = context.read<AvatarCubit>().getFallbackAvatarImage();
-          return CircleAvatar(
-            backgroundImage: fallback,
-            radius: 40,
-          );
-        }
-      },
-    ),
-  ),
-],
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-            ),
-          ),
-        ),
-      ),
-      body: Container(
+      appBar: CommonAppBar(title:"Games" ,isFromHomePage: true,),
+      body: BlocBuilder<GameCubit, GameState>(
+  builder: (context, gameState) {
+    if(gameState is GameLoaded){
+      List<String> gameNames =gameState.gameNames;
+      return Container(
+        margin: EdgeInsets.only(top: 12),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
@@ -133,66 +57,68 @@ class _GamesPageState extends State<GamesPage> {
         ),
         child: Padding(
           padding: const EdgeInsets.only(left: 15,right: 15,top: 5),
-          child: _isLoading
-              ? Center(child: CircularProgressIndicator()) // Show loading indicator
-              : _errorMessage.isNotEmpty
-                  ? Center(child: Text(_errorMessage)) // Show error message
-                  : ListView(
-                      children: [
-                        // Drag and Learn Card
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => DragandLearnTopicScreen(gameName:'Drag and Learn'),
-                              ),
-                            );
-                          },
-                          child: buildBlurImageCard(
-                            'assets/game2.png',
-                            _gameNames.isNotEmpty ? _gameNames[1] : "Drag and Learn", // Use fetched game name
-                            "Match the correct picture and word",
-                          ),
-                        ),
-                        SizedBox(height: 20),
-                        // Picture Grammar Quest Card
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => PictureGrammarQuestScreen(),
-                              ),
-                            );
-                          },
-                          child: buildBlurImageCard(
-                            'assets/game1.png',
-                            _gameNames.length > 1 ? _gameNames[0] : "Picture Grammar Quest", // Use fetched game name
-                            "Find the correct verb, adverb, and adjective",
-                          ),
-                        ),
-                        SizedBox(height: 20),
-                        // Action Snap Card
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ActionSnapTopicsScreen(gameName:'Action Snap',),
-                              ),
-                            );
-                          },
-                          child: buildBlurImageCard(
-                            'assets/game3.png',
-                            _gameNames.length > 2 ? _gameNames[2] : "Action Snap", // Use fetched game name
-                            "Take a correct action verb snaps",
-                          ),
-                        ),
-                      ],
+          child: ListView(
+            children: [
+              // Drag and Learn Card
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => DragandLearnTopicScreen(gameName:'Drag and Learn'),
                     ),
+                  );
+                },
+                child: buildBlurImageCard(
+                  'assets/game2.png',
+                  gameNames.isNotEmpty ? gameNames[1] : "Drag and Learn", // Use fetched game name
+                  "Match the correct picture and word",
+                ),
+              ),
+              SizedBox(height: 20),
+              // Picture Grammar Quest Card
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PictureGrammarQuestScreen(),
+                    ),
+                  );
+                },
+                child: buildBlurImageCard(
+                  'assets/game1.png',
+                  gameNames.length > 1 ? gameNames[0] : "Picture Grammar Quest", // Use fetched game name
+                  "Find the correct verb, adverb, and adjective",
+                ),
+              ),
+              SizedBox(height: 20),
+              // Action Snap Card
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ActionSnapTopicsScreen(gameName:'Action Snap',),
+                    ),
+                  );
+                },
+                child: buildBlurImageCard(
+                  'assets/game3.png',
+                  gameNames.length > 2 ? gameNames[2] : "Action Snap", // Use fetched game name
+                  "Take a correct action verb snaps",
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
+      );
+    }else{
+      return Center(child: CircularProgressIndicator());
+    }
+
+  },
+),
     );
   }
 }

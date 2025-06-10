@@ -14,7 +14,9 @@ import 'package:picturo_app/services/api_service.dart';
 import 'package:provider/provider.dart';
 
 import '../cubits/call_cubit/call_socket_handle_cubit.dart';
-import '../cubits/get_avatar_cubit/get_avatar_cubit.dart'; // Import your API service
+import '../cubits/get_avatar_cubit/get_avatar_cubit.dart';
+import '../cubits/user_friends_cubit/user_friends_cubit.dart';
+import '../utils/common_app_bar.dart'; // Import your API service
 
 class ChatListPage extends StatefulWidget {
   const ChatListPage({super.key});
@@ -43,27 +45,30 @@ class _ChatListPageState extends State<ChatListPage>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _searchController.addListener(_onSearchChanged);
+  
+
     _fetchAllUsers();
   }
 
   
   Future<void> _fetchAllUsers() async {
     // try {
-      final apiService = await ApiService.create();
-      final UsersResponse response = await apiService.fetchAllUsers(); 
-      final FriendsResponse friendsResponse = await apiService.fetchFriends();
+    //   final apiService = await ApiService.create();
+    //   final UsersResponse response = await apiService.fetchAllUsers();
+    //   final FriendsResponse friendsResponse = await apiService.fetchFriends();
       setState(() {
-        allUsers = response.data;
-        friends = friendsResponse.data;
-       context.read<CallSocketHandleCubit>().updateFriendsList(friends);
-         allUsersCount = allUsers.length;
+        // allUsers = response.data;
+        // friends = friendsResponse.data;
+
+         // allUsersCount = allUsers.length;
 
          // Filter out current user from friends count
         final currentUserId = Provider.of<UserProvider>(context, listen: false).userId;
-        friendsCount = friends.where((f) => f.friendId.toString() != currentUserId.toString()).length;
+        context.read<UserFriendsCubit>().fetchAllUsersAndFriends(currentUserId);
+        // friendsCount = friends.where((f) => f.friendId.toString() != currentUserId.toString()).length;
 
-        isLoading = false; 
-       
+        // isLoading = false;
+
 
       });
       print('All Users: $allUsers'); // Debugging line
@@ -98,83 +103,37 @@ class _ChatListPageState extends State<ChatListPage>
 
     });
   }
-
+  bool updatedOne=false;
 
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Color(0xFFE0F7FF),
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(80), 
-        child: AppBar(
-          automaticallyImplyLeading: false,
-          backgroundColor: Color(0xFF49329A),
-          title: Padding(
-            padding: const EdgeInsets.only(top: 20.0), 
-            child: Row(
-              children: [
-                Text(
-                  'Chats',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Poppins Regular',
-                  ),
-                ),
-              ],
-            ),
-          ),
-actions: [
-  Padding(
-    padding: const EdgeInsets.only(top: 10.0, right: 24.0),
-    child: BlocBuilder<AvatarCubit, AvatarState>(
-      builder: (context, state) {
-        if (state is AvatarLoaded) {
-
-          return InkWell(
-            onTap: (){
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => MyProfileScreen()),
-              );
-            },
-            child: CircleAvatar(
-              radius: 25,
-              backgroundColor: Color(0xFF49329A),
-              backgroundImage: state.imageProvider,
-            ),
-          );
-        } else if (state is AvatarLoading) {
-          return const CircularProgressIndicator();
-        } else {
-          // Fallback image
-          final fallback = context.read<AvatarCubit>().getFallbackAvatarImage();
-          return CircleAvatar(
-            backgroundImage: fallback,
-            radius: 40,
-          );
+      appBar: CommonAppBar(title:"Chats" ,isFromHomePage: true,),
+      body: BlocBuilder<UserFriendsCubit, UserFriendsState>(
+  builder: (context, userListFrntState) {
+    if(userListFrntState is UserFriendsLoaded){
+      Future.delayed(Duration.zero,(){
+        if(updatedOne==false){
+          allUsers=userListFrntState.allUsers;
+          friends=userListFrntState.friends;
+          context.read<CallSocketHandleCubit>().updateFriendsList(friends);
+          friendsCount=userListFrntState.friendsCount;
+          allUsersCount=userListFrntState.allUsersCount;
+          setState(() {
+            isLoading=false;
+          });
+          updatedOne=true;
         }
-      },
-    ),
-  ),
-],
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-            ),
-          ),
-        ),
-      ),
-      body: Container(
+      });
+      return Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
               Color(0xFFE0F7FF),
               Color(0xFFEAE4FF),
-            ], 
+            ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -190,7 +149,7 @@ actions: [
                   borderRadius: BorderRadius.circular(25),
                   border: Border.all(
                     color: Color(0xFF49329A),
-                    width: 1, 
+                    width: 1,
                   ),
                 ),
                 child: TextField(
@@ -205,6 +164,9 @@ actions: [
               ),
             ),
             TabBar(
+              onTap: (bal){
+                _searchController.clear();
+              },
               labelStyle: TextStyle(fontFamily: 'Poppins Regular',fontWeight: FontWeight.bold),
               controller: _tabController,
               indicatorColor: Color(0xFF49329A),
@@ -226,7 +188,15 @@ actions: [
             ),
           ],
         ),
-      ),
+      );
+    }else{
+      return Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+  },
+),
     );
   }
 
@@ -541,9 +511,10 @@ Future<String> _getAvatarUrl(int avatarId) async {
   final userProvider = Provider.of<UserProvider>(context, listen: false);
   final currentUserId = userProvider.userId; // Get current user ID
 
+
   List<User> displayUsers = _searchController.text.isEmpty
       ? allUsers
-      : filteredAllUsers;
+      : allUsers.where((f) => f.username?.toLowerCase().contains(_searchController.text.toLowerCase())??false ).toList();
 
   if (displayUsers.isEmpty) {
     return Center(
@@ -566,10 +537,10 @@ Future<String> _getAvatarUrl(int avatarId) async {
   } else {
     return ListView.builder(
       padding: EdgeInsets.fromLTRB(15, 0, 15, 15),
-      itemCount: allUsers.length,
+      itemCount: displayUsers.length,
       itemBuilder: (context, index) {
-        print('Users: ${allUsers[index]}');
-        return _buildUserRequestTile(context, allUsers[index]);
+
+        return _buildUserRequestTile(context, displayUsers[index]);
       },
     );
   }

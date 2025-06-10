@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 
@@ -9,20 +11,25 @@ class TopicCubit extends Cubit<TopicState> {
   TopicCubit() : super(TopicLoading());
 
   Future<void> fetchTopics(int topicId) async {
-    // emit(TopicLoading());
+    emit(TopicLoading());
     // try {
       final apiService = await ApiService.create();
       final topicsResponse = await apiService.fetchTopics(topicId);
+      if(topicsResponse.status=="success"){
+        final topics = topicsResponse.data.map((topic) {
+          return {
+            'title': topic.topicsName,
+            'id': topic.id,
+            'image': topic.topicsImage,
+          };
+        }).toList();
 
-      final topics = topicsResponse.data.map((topic) {
-        return {
-          'title': topic.topicsName,
-          'id': topic.id,
-          'image': topic.topicsImage,
-        };
-      }).toList();
 
-      emit(TopicLoaded(topics));
+        emit(TopicLoaded(topics));
+      }else{
+        emit(TopicError("message"));
+      }
+
     // } catch (e) {
     //   emit(TopicError("Error fetching topics: $e"));
     // }

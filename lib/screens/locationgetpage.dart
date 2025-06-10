@@ -3,10 +3,17 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:picturo_app/screens/homepage.dart';
 import 'package:picturo_app/services/api_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';  // Import geocoding package
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../responses/my_profile_response.dart';
+import '../utils/common_app_bar.dart';
+import '../utils/common_file.dart';
+import 'myprofilepage.dart';  // Import geocoding package
 
 class LocationGetPage extends StatefulWidget {
-  const LocationGetPage({super.key});
+  const LocationGetPage({super.key, this.user,required this.isFromProfile});
+  final UserResponse? user;
+  final bool isFromProfile;
 
   @override
   _LocationGetPageState createState() => _LocationGetPageState();
@@ -132,19 +139,31 @@ class _LocationGetPageState extends State<LocationGetPage> {
 
   if (result["success"] == true) {
     print('Raw Response: $result');
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (context) => Homepage()),
-          (route) => false,
-    );
+    if(widget.isFromProfile){
+     Navigator.pop(context);
+    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>MyProfileScreen()));
+
+    }else{
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => Homepage()),
+            (route) => false,
+      );
+    }
+
 
   } else {
     _showMessage(result["error"] ?? "Something went wrong. Please try again.");
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (context) => Homepage()),
-          (route) => false,
-    );
+    if(widget.isFromProfile){
+      Navigator.pop(context);
+    }else{
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => Homepage()),
+            (route) => false,
+      );
+    }
+
 
   }
 }
@@ -210,8 +229,7 @@ class _LocationGetPageState extends State<LocationGetPage> {
       });
 
   
-      await _handlePersonalDetails();
-  
+
 
      
 
@@ -235,6 +253,11 @@ class _LocationGetPageState extends State<LocationGetPage> {
   void initState() {
     super.initState();
     // Check permission when the widget is first built
+    if(widget.user!=null){
+      if(widget.user?.location!=null){
+        locationMessage=widget.user?.location??'';
+      }
+    }
     _handleLocationPermission();
     _loadSavedData();
   }
@@ -244,11 +267,7 @@ class _LocationGetPageState extends State<LocationGetPage> {
     double screenHeight = MediaQuery.of(context).size.height;
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-      ),
+      appBar: CommonAppBar(title:"Change Location" ,isBackbutton: true,),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -291,10 +310,36 @@ class _LocationGetPageState extends State<LocationGetPage> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                   child: const Text(
-                    'Get Location',
+                    'Update My Current Location',
                     style: TextStyle(
                       color: Colors.white,
-                      fontFamily: 'Poppins Medium',
+                      fontFamily: AppConstants.commonFont,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              // Spacer(),
+              SizedBox(
+                height: 50,
+              ),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed:(location!='')? ()async{
+                    await _handlePersonalDetails();
+                  }:null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF49329A),
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: const Text(
+                    'Done',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontFamily: AppConstants.commonFont,
                       fontWeight: FontWeight.bold,
                     ),
                   ),

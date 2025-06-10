@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../utils/common_app_bar.dart';
+
 class WalletReferralPage extends StatefulWidget {
   @override
   _WalletReferralPageState createState() => _WalletReferralPageState();
@@ -19,13 +21,7 @@ class _WalletReferralPageState extends State<WalletReferralPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Color(0xFF49329A),
-        title: Text("My Wallet", style: TextStyle(color: Colors.white)),
-        centerTitle: true,
-        elevation: 0,
-        iconTheme: IconThemeData(color: Colors.white),
-      ),
+      appBar: CommonAppBar(title:"My Wallet" ,isBackbutton: true,),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
-import 'package:picturo_app/screens/genderandagepage.dart'; // Import the Lottie package
+import 'package:picturo_app/screens/genderandagepage.dart';
+
+import '../utils/common_file.dart'; // Import the Lottie package
 // Import animation library
 
 class SuccessfullyVerification extends StatefulWidget {
@@ -54,7 +56,7 @@ class _SuccessfullyVerificationState extends State<SuccessfullyVerification> wit
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                fontFamily: 'Poppins Medium',
+                fontFamily: AppConstants.commonFont,
               ),
             ),
             const SizedBox(height: 10),
@@ -62,7 +64,7 @@ class _SuccessfullyVerificationState extends State<SuccessfullyVerification> wit
               'Your account has been created',
               style: TextStyle(
                 fontSize: 14,
-                fontFamily: 'Poppins Medium',
+                fontFamily: AppConstants.commonFont,
               ),
             ),
             const SizedBox(height: 20),
@@ -88,7 +90,7 @@ class _SuccessfullyVerificationState extends State<SuccessfullyVerification> wit
       style: TextStyle(
         fontSize: 18,
         color: Colors.white,
-        fontFamily: 'Poppins Medium',
+        fontFamily: AppConstants.commonFont,
         fontWeight: FontWeight.bold,
       ),
     ),

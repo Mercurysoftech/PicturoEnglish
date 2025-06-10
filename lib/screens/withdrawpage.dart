@@ -7,7 +7,9 @@ import 'package:picturo_app/screens/myprofilepage.dart';
 import 'package:picturo_app/services/api_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:dio/dio.dart'; // Import Dio for API calls
+import 'package:dio/dio.dart';
+
+import '../utils/common_file.dart'; // Import Dio for API calls
 
 class WithdrawlAmountPage extends StatefulWidget {
   const WithdrawlAmountPage({super.key});
@@ -104,10 +106,7 @@ class _WithdrawlAmountPageState extends State<WithdrawlAmountPage> {
             child: IconButton(
               icon: Icon(Icons.arrow_back_ios, color: Colors.white, size: 26),
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => MyProfileScreen()),
-                );
+               Navigator.pop(context);
               },
             ),
           ),
@@ -168,7 +167,7 @@ class _WithdrawlAmountPageState extends State<WithdrawlAmountPage> {
                     ),
                     child: Text(
                       "Withdraw",
-                      style: TextStyle(color: Colors.white, fontFamily: 'Poppins Medium'),
+                      style: TextStyle(color: Colors.white, fontFamily: AppConstants.commonFont),
                     ),
                   ),
                 ),

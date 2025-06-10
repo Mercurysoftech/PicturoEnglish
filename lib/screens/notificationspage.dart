@@ -3,8 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:picturo_app/screens/myprofilepage.dart';
 import 'package:picturo_app/screens/requestspage.dart';
 import 'package:picturo_app/services/api_service.dart';
+import 'package:picturo_app/utils/common_file.dart';
 
 import '../cubits/get_avatar_cubit/get_avatar_cubit.dart';
+import '../utils/common_app_bar.dart';
 
 class NotificationScreen extends StatelessWidget {
   const NotificationScreen({super.key});
@@ -15,60 +17,16 @@ class NotificationScreen extends StatelessWidget {
       length: 2,
       child: Scaffold(
         backgroundColor: Color(0xFFE0F7FF),
-        appBar: PreferredSize(
-        preferredSize: Size.fromHeight(80), // Increased app bar height
-        child: AppBar(
-          automaticallyImplyLeading: false,
-          backgroundColor: Color(0xFF49329A),
-          title: Text('Notifications', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Poppins Regular',),),
-           actions: [
-  Padding(
-    padding: const EdgeInsets.only(top: 10.0, right: 24.0),
-    child: BlocBuilder<AvatarCubit, AvatarState>(
-      builder: (context, state) {
-        if (state is AvatarLoaded) {
-          return InkWell(
-            onTap: (){
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => MyProfileScreen()),
-              );
-            },
-            child: CircleAvatar(
-              radius: 25,
-              backgroundColor: Color(0xFF49329A),
-              backgroundImage: state.imageProvider,
-            ),
-          );
-        } else if (state is AvatarLoading) {
-          return const CircularProgressIndicator();
-        } else {
-          // Fallback image
-          final fallback = context.read<AvatarCubit>().getFallbackAvatarImage();
-          return CircleAvatar(
-            backgroundImage: fallback,
-            radius: 40,
-          );
-        }
-      },
-    ),
-  ),
-],
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-            ),
-          ),
-        ),
-      ),
+          appBar: CommonAppBar(title:"Notification" ,isFromHomePage: true,),
         body: Column(
           children: [
             // TabBar placed outside of AppBar
             TabBar(
-              labelStyle: TextStyle(fontWeight: FontWeight.bold,fontFamily: 'Poppins Regular',),
+              labelStyle: TextStyle(fontWeight: FontWeight.bold,fontFamily: AppConstants.commonFont,),
+
               tabs: [
-                Tab(text: 'Notifications'),
+                Tab(
+                    text: 'Notifications'),
                 Tab(text: 'Requests'),
               ],
             ),

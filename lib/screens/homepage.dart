@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -19,9 +20,13 @@ import 'package:picturo_app/screens/voicecallscreen.dart';
 import 'package:picturo_app/services/api_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import 'package:http/http.dart' as http;
+import '../cubits/call_cubit/call_duration_handler/call_duration_handle_cubit.dart';
 import '../cubits/call_cubit/call_socket_handle_cubit.dart';
 import '../cubits/get_avatar_cubit/get_avatar_cubit.dart';
+import '../main.dart';
+import '../utils/common_app_bar.dart';
+import '../utils/common_file.dart';
 
 class Homepage extends StatefulWidget{
   final int? initialIndex;
@@ -36,6 +41,34 @@ class _HomepageState extends State<Homepage> {
   DateTime? lastPressed;
   ApiService? apiService;
   bool _isLoading = true;
+
+  Future<void> updateFcmToken() async {
+    const String url = 'https://picturoenglish.com/api/update_fcm_token.php';
+    FirebaseMessaging messaging = FirebaseMessaging.instance;
+    String? token = await messaging.getToken();
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final authToken = prefs.getString("auth_token");
+    try {
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $authToken',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'fcm_token': token,
+        }),
+      );
+       print("dsljcnsdklcskldcj ${response.body}");
+      if (response.statusCode == 200) {
+        print('✅ FCM token updated successfully: ${response.body}');
+      } else {
+        print('❌ Failed to update FCM token: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      print('🔥 Error updating FCM token: $e');
+    }
+  }
 
   final List<String> _navIcons = [
     'assets/house_unfilled.png',
@@ -61,7 +94,7 @@ class _HomepageState extends State<Homepage> {
   List<Map<String, dynamic>> _gridItems = [
     {
       'image': 'assets/verbs.png',
-      'text': 'verbs',
+      'text': 'Verbs',
       'gradient': LinearGradient(
         colors: [Colors.cyan, Colors.indigo],
         begin: Alignment.topCenter,
@@ -71,7 +104,7 @@ class _HomepageState extends State<Homepage> {
     },
     {
       'image': 'assets/adverb.png',
-      'text': 'adverb',
+      'text': 'Adverb',
       'gradient': LinearGradient(
         colors: [Color(0xFFDA90FF), Color(0xFF861FBA)],
         begin: Alignment.topCenter,
@@ -125,6 +158,7 @@ class _HomepageState extends State<Homepage> {
   @override
   void initState() {
     getCurrentUserAvatar();
+    updateFcmToken();
     super.initState();
      _selectedIndex = widget.initialIndex ?? 0;
     // Initialize the pages with the required data
@@ -186,18 +220,18 @@ class _HomepageState extends State<Homepage> {
     try {
       // Initialize API service
       apiService = await ApiService.create();
-      
+
       // Fetch profile details
       final userResponse = await apiService!.fetchProfileDetails();
-      
+
       // Update ProfileProvider with the fetched data
       if (mounted) {
         final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-        await profileProvider.updateProfile(userResponse); 
+        await profileProvider.updateProfile(userResponse);
         final userDetails=profileProvider.fetchProfile();
 print('Languages da: ${userResponse.speakingLanguage}');
         // This will update the provider state
-        
+
         // Alternatively, you could directly set the user if needed:
         // profileProvider._user = userResponse;
         // profileProvider.notifyListeners();
@@ -270,9 +304,15 @@ print('Languages da: ${userResponse.speakingLanguage}');
     return true;
   }
 
-  
 
 
+  String formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final hours = twoDigits(duration.inHours);
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    return "$hours:$minutes:$seconds";
+  }
 
   @override
 Widget build(BuildContext context) {
@@ -283,7 +323,48 @@ Widget build(BuildContext context) {
       onWillPop: onWillPop,
       child:  Scaffold(
       backgroundColor: Color(0xFFE0F7FF),
-      body: _pages[_selectedIndex],
+      body: Stack(
+        children: [
+          _pages[_selectedIndex],
+          Positioned(
+              top: 71,
+              right: 82,
+              child: BlocBuilder<CallSocketHandleCubit, CallSocketHandleState>(
+  builder: (context, state) {
+    return (context.watch<CallSocketHandleCubit>().isLiveCallActive)?InkWell(
+      onTap: (){
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => VoiceCallScreen( callerId:context.watch<CallSocketHandleCubit>().targetUserId??0,callerName: "${context.watch<CallSocketHandleCubit>().callerName}", callerImage:'',isIncoming: false),
+          ),);
+      },
+      child: Container(
+              height: 30,
+            margin: EdgeInsets.only(right: 2),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(30),
+              color: Colors.green.withOpacity(0.12),
+            ),
+        child:   Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+          child: Center(
+            child: BlocBuilder<CallTimerCubit, CallTimerState>(
+              builder: (context, state) {
+                return Text(
+                  formatDuration(state.duration),
+                  style: TextStyle(fontSize: 16, color: Colors.green),
+                );
+              },
+            ),
+          ),
+        ),
+            ),
+    ):SizedBox();
+  },
+))
+        ],
+      ),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: Colors.white,
         currentIndex: _selectedIndex,
@@ -341,7 +422,7 @@ Widget build(BuildContext context) {
 // Define the different content widgets for each page
 class HomeContent extends StatefulWidget {
   final List<Map<String, dynamic>> gridItems;
- 
+
 
   const HomeContent({super.key, required this.gridItems});
 
@@ -374,62 +455,7 @@ class _HomeContentState extends State<HomeContent> {
       child:
     Scaffold(
       backgroundColor: Color(0xFFE0F7FF),
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(72),
-        child: AppBar(
-          backgroundColor: Color(0xFF49329A),
-          automaticallyImplyLeading: false,
-          title: Text(
-            'Home',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              fontFamily: 'Poppins Regular',
-            ),
-          ),
-           actions: [
-  Padding(
-    padding: const EdgeInsets.only(top: 10.0,left: 8, right: 24.0),
-    child: BlocBuilder<AvatarCubit, AvatarState>(
-      builder: (context, state) {
-
-        if (state is AvatarLoaded) {
-          return InkWell(
-            onTap: (){
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => MyProfileScreen()),
-              );
-            },
-            child: CircleAvatar(
-              radius: 25,
-              backgroundColor: Color(0xFF49329A),
-              backgroundImage: state.imageProvider,
-            ),
-          );
-        } else if (state is AvatarLoading) {
-          return const CircularProgressIndicator();
-        } else {
-          // Fallback image
-          final fallback = context.read<AvatarCubit>().getFallbackAvatarImage();
-          return CircleAvatar(
-            backgroundImage: fallback,
-            radius: 40,
-          );
-        }
-      },
-    ),
-  ),
-],
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-            ),
-          ),
-        ),
-      ),
+      appBar: CommonAppBar(title:"Home" ,isFromHomePage: true,),
       body: FutureBuilder(
         future: Future.value(widget.gridItems), // Use the gridItems passed to the widget
         builder: (context, snapshot) {
@@ -462,7 +488,7 @@ class _HomeContentState extends State<HomeContent> {
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          fontFamily: 'Poppins Medium',
+                          fontFamily: AppConstants.commonFont,
                           color: Color(0xFF414141),
                         ),
                       ),
@@ -526,10 +552,10 @@ class _HomeContentState extends State<HomeContent> {
                                     SizedBox(width: 15),
                                     Expanded(
                                       child: Text(
-                                        gridItem['text'],
+                                        capitalizeFirstLetter(gridItem['text']),
                                         style: TextStyle(
                                           fontSize: 18,
-                                          fontFamily: 'Poppins Medium',
+                                          fontFamily: AppConstants.commonFont,
                                           fontWeight: FontWeight.bold,
                                           color: Colors.white,
                                         ),

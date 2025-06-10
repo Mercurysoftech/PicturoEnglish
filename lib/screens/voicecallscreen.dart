@@ -5,6 +5,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:picturo_app/cubits/call_cubit/call_socket_handle_cubit.dart';
 
+import '../cubits/call_cubit/call_duration_handler/call_duration_handle_cubit.dart';
+
 
 class VoiceCallScreen extends StatefulWidget {
   final int callerId;
@@ -29,27 +31,19 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
   bool isSpeakerOn = false;
   bool isKeypadVisible = false;
   bool showCallControls = true;
-  Duration callDuration = Duration.zero;
-  Timer? _timer;
+
 
   @override
   void initState() {
     context.read<CallSocketHandleCubit>().resetCubit();
-    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
-      if (mounted) {
-        setState(() {
-          callDuration += Duration(seconds: 1);
-        });
-      }
-    });
+    context.read<CallTimerCubit>().startTimer();
     super.initState();
-    // Start a periodic timer that updates every second
 
   }
 
   @override
   void dispose() {
-    _timer?.cancel(); // Stop the timer when the widget is disposed
+    context.read<CallTimerCubit>().stopTimer();
     super.dispose();
   }
 
@@ -81,7 +75,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
       backgroundColor: Colors.black,
       body: BlocBuilder<CallSocketHandleCubit, CallSocketHandleState>(
         builder: (context, state) {
-          print("lsdkcmlskcmsdlkcmslcksdc ${state.runtimeType}");
+
           if(state is CallRejected){
             Future.delayed(Duration.zero,(){
                 Navigator.pop(context);
@@ -127,12 +121,13 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
                       ),
                       // SizedBox(height: 10),
                       SizedBox(height: 10),
-                      Text(
-                        formatDuration(callDuration),
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                        ),
+                      BlocBuilder<CallTimerCubit, CallTimerState>(
+                        builder: (context, state) {
+                          return Text(
+                            formatDuration(state.duration),
+                            style: TextStyle(fontSize: 16, color: Colors.white),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -176,13 +171,15 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
                 icon: isMuted ? Icons.mic_off : Icons.mic,
                 label: "Mute",
                 isActive: isMuted,
-                onPressed: () => setState(() => isMuted = !isMuted),
+                onPressed: (){
+                  _toggleMute();
+                },
               ),
-              _buildControlButton(
-                icon: Icons.dialpad,
-                label: "Keypad",
-                onPressed: () => setState(() => isKeypadVisible = true),
-              ),
+              // _buildControlButton(
+              //   icon: Icons.dialpad,
+              //   label: "Keypad",
+              //   onPressed: () => setState(() => isKeypadVisible = true),
+              // ),
               _buildControlButton(
                 icon: isSpeakerOn ? Icons.volume_up : Icons.volume_off,
                 label: "Speaker",
@@ -195,32 +192,32 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
           ),
           SizedBox(height: 40),
           // Second row of controls
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildControlButton(
-                icon: Icons.person_add,
-                label: "Add call",
-                onPressed: () {},
-              ),
-              _buildControlButton(
-                icon: Icons.videocam,
-                label: "Video",
-                onPressed: () {},
-              ),
-              _buildControlButton(
-                icon: Icons.record_voice_over,
-                label: "Record",
-                onPressed: () {},
-              ),
-            ],
-          ),
+          // Row(
+          //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          //   children: [
+          //     _buildControlButton(
+          //       icon: Icons.person_add,
+          //       label: "Add call",
+          //       onPressed: () {},
+          //     ),
+          //     _buildControlButton(
+          //       icon: Icons.videocam,
+          //       label: "Video",
+          //       onPressed: () {},
+          //     ),
+          //     _buildControlButton(
+          //       icon: Icons.record_voice_over,
+          //       label: "Record",
+          //       onPressed: () {},
+          //     ),
+          //   ],
+          // ),
           SizedBox(height: 60),
           // End call button
           GestureDetector(
             onTap: (){
               context.read<CallSocketHandleCubit>().endCall(targetUserId:widget.callerId);
-
+              context.read<CallTimerCubit>().resetTimer();
             },
             child: Container(
               padding: EdgeInsets.all(15),

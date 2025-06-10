@@ -18,6 +18,7 @@ import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 import '../cubits/call_cubit/call_socket_handle_cubit.dart';
 import '../responses/friends_response.dart';
+import '../utils/common_file.dart';
 import 'call/calling_widget.dart';
 import 'call/widgets/call_socket_page.dart';
 import 'call/widgets/check_web_call.dart';
@@ -310,26 +311,36 @@ void _handleOnlineStatus(dynamic data) {
 
       final now = _formatTimeTo12Hour(DateTime.now().toIso8601String()); // Get current time in ISO format
       sendMessage(_userId.toString(),receiverId, _messageController.text.trim());
-
-
-
-      final messageData = {
-        "sender_id":_userId,
-        "receiver_id": "$receiverId",
-        "message": _messageController.text
-      };
-
-      bool? response = await _apiService.sendMessagesToAPI(messageMap: messageData);
-      if(response!=null&&response){
-        setState(() {
-          _messages.insert(0, {
-            "senderId": _userId.toString(),
-            "message": _messageController.text.trim(),
-            "timestamp": now,
-            "isOptimistic": true,
-          });
+      setState(() {
+        _messages.insert(0, {
+          "senderId": _userId.toString(),
+          "message": _messageController.text.trim(),
+          "timestamp": now,
+          "isOptimistic": true,
         });
-      }
+      });
+
+
+
+
+      //
+      // final messageData = {
+      //   "sender_id":_userId,
+      //   "receiver_id": "$receiverId",
+      //   "message": _messageController.text
+      // };
+      //
+      // bool? response = await _apiService.sendMessagesToAPI(messageMap: messageData);
+      // if(response!=null&&response){
+      //   setState(() {
+      //     _messages.insert(0, {
+      //       "senderId": _userId.toString(),
+      //       "message": _messageController.text.trim(),
+      //       "timestamp": now,
+      //       "isOptimistic": true,
+      //     });
+      //   });
+      // }
       _messageController.clear();
     }
 }
@@ -461,7 +472,7 @@ void dispose() {
   itemBuilder: (BuildContext context) => <PopupMenuEntry<ChatMenuAction>>[
     const PopupMenuItem<ChatMenuAction>(
       value: ChatMenuAction.block,
-      child: Text('Block User',style: TextStyle(fontFamily: 'Poppins Medium'),),
+      child: Text('Block User',style: TextStyle(fontFamily: AppConstants.commonFont),),
     ),
   ],
 ),
@@ -562,17 +573,17 @@ void dispose() {
     context: context,
     builder: (BuildContext context) {
       return AlertDialog(
-        title: Text('Block User',style: TextStyle(fontFamily: 'Poppins Medium'),),
-        content: Text('Are you sure you want to block ${widget.userName}?',style: TextStyle(fontFamily: 'Poppins Medium'),),
+        title: Text('Block User',style: TextStyle(fontFamily: AppConstants.commonFont),),
+        content: Text('Are you sure you want to block ${widget.userName}?',style: TextStyle(fontFamily: AppConstants.commonFont),),
         actions: <Widget>[
           TextButton(
-            child: Text('Cancel',style: TextStyle(fontFamily: 'Poppins Medium'),),
+            child: Text('Cancel',style: TextStyle(fontFamily: AppConstants.commonFont),),
             onPressed: () {
               Navigator.of(context).pop();
             },
           ),
           TextButton(
-            child: Text('Block', style: TextStyle(color: Colors.red,fontFamily: 'Poppins Medium'),),
+            child: Text('Block', style: TextStyle(color: Colors.red,fontFamily: AppConstants.commonFont),),
             onPressed: () {
               // Add your block user logic here
               _blockUser();

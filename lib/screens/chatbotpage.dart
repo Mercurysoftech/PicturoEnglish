@@ -36,7 +36,8 @@ class _ChatBotScreenState extends State<ChatBotScreen> with TickerProviderStateM
   bool _isRecording = false;
   bool _isAudioMuted = false;
   final AudioPlayer _audioPlayer = AudioPlayer();
-  String? _lastAudioBase64;
+
+  String? selectedScenario;
 
   @override
   void initState() {
@@ -192,9 +193,9 @@ class _ChatBotScreenState extends State<ChatBotScreen> with TickerProviderStateM
   }
 }
 
-  Future _sendMessage(String userLanguage) async { 
+  Future _sendMessage({required String userLanguage,required String scenario}) async {
   final message = _messageController.text.trim();
-  if (message.isEmpty) return;
+
   
   if (_isListening) {
     _stopListening();
@@ -219,7 +220,7 @@ class _ChatBotScreenState extends State<ChatBotScreen> with TickerProviderStateM
     final response = await _apiService.getChatbotResponse(
       message: message,
       language: userLanguage,
-      scenario: 'restaurant'
+      scenario: scenario
     ).timeout(const Duration(seconds: 30));
 
     if (response.containsKey('reply')) {
@@ -286,48 +287,9 @@ class _ChatBotScreenState extends State<ChatBotScreen> with TickerProviderStateM
   }
 }
 
-void _showSuccessfulResponse(Map<String, dynamic> response) {
-  String botMessage = response['reply']?.toString() ?? "I didn't get that. Please try again.";
-  String? audioBase64 = response['audio_base64']?.toString();
 
-  // Clean the message
-  botMessage = botMessage
-    .replaceAll(RegExp(r'-{2,}'), '')
-    .replaceAll(RegExp(
-      r'[\u{1F600}-\u{1F64F}'
-      r'\u{1F300}-\u{1F5FF}'
-      r'\u{1F680}-\u{1F6FF}'
-      r'\u{1F1E0}-\u{1F1FF}'
-      r'\u{2600}-\u{26FF}'
-      r'\u{2700}-\u{27BF}'
-      r']+', 
-      unicode: true), '')
-    .trim();
 
-  setState(() {
-    _messages.insert(0, {
-      'message': botMessage,
-      'isMe': false,
-      'timestamp': _getCurrentTime(),
-      'audioBase64': audioBase64,
-    });
-  });
 
-  if (audioBase64 != null && !_isAudioMuted) {
-    _playAudioWithRetry(audioBase64);
-  }
-}
-
-void _showErrorResponse(String errorMessage) {
-  setState(() {
-    _messages.insert(0, {
-      'message': errorMessage,
-      'isMe': false,
-      'timestamp': _getCurrentTime(),
-      'isError': true, // Optional: style error messages differently
-    });
-  });
-}
 
 Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async {
   if (_isAudioMuted || base64Audio.isEmpty) return;
@@ -531,7 +493,8 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
               ChatBotQuickReplies(
                 onSend: (message) {
                   _messageController.text = message;
-                  _sendMessage(userLanguage);
+                  selectedScenario=message;
+                  _sendMessage(scenario:selectedScenario??"" ,userLanguage: userLanguage);
                 },
               ),
 
@@ -574,7 +537,7 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
                               }
                             : null,
                         onTap: _messageController.text.isNotEmpty
-                            ? () => _sendMessage(userLanguage)
+                            ? () =>     _sendMessage(scenario:selectedScenario??"" ,userLanguage: userLanguage)
                             : null,
                         child: AnimatedBuilder(
                           animation: Listenable.merge([_scaleAnimation, _colorAnimation]),
@@ -611,7 +574,7 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
                     ),
                   ),
                 ),
-                onSubmitted: (_) => _sendMessage(userLanguage),
+                onSubmitted: (_) =>  _sendMessage(scenario:selectedScenario??"" ,userLanguage: userLanguage),
               ),
             ),
           ],
@@ -624,15 +587,14 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
 
 class ChatBotQuickReplies extends StatelessWidget {
   final List<String> predefinedQuestions = [
-    "Teach me 5 new English words",
-    "Explain this grammar rule",
-    // "Help me practice speaking",
-    "Correct my sentence",
+    "Restaurant",
+    "Shop",
+    "Travel",
   ];
 
   final void Function(String message) onSend;
 
-  ChatBotQuickReplies({required this.onSend});
+  ChatBotQuickReplies({super.key, required this.onSend});
 
   @override
   Widget build(BuildContext context) {

@@ -3,6 +3,8 @@ import 'package:picturo_app/screens/dragandlearnpage.dart';
 import 'package:picturo_app/screens/picturegrammerquest.dart';
 import 'package:picturo_app/screens/actionsnappage.dart';
 
+import '../utils/common_app_bar.dart';
+
 class ActionSnapTopicsScreen extends StatefulWidget {
   String? gameName;
   ActionSnapTopicsScreen({super.key, this.gameName});
@@ -38,27 +40,7 @@ class _ActionSnapTopicsScreenState extends State<ActionSnapTopicsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Color(0xFFF8F9FA),
-      appBar: AppBar(
-        backgroundColor: Color(0xFF49329A),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          widget.gameName!,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.5,
-          ),
-        ),
-        centerTitle: true,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
-        ),
-        elevation: 0,
-        ),
+      appBar: CommonAppBar(title:"${widget.gameName}" ,isBackbutton: true,),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         child: Column(

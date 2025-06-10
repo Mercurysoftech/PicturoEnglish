@@ -719,7 +719,7 @@ Future<TopicsResponse> fetchTopics(int bookId) async {
         "Content-Type": "application/json",
       }),
     );
-
+    dev.log("sdkjlclksdcmsd ${response.data}");
     // Debugging: Print the raw API response
 
 

@@ -5,6 +5,10 @@ import 'package:picturo_app/screens/picturegrammerquest.dart';
 import 'package:picturo_app/screens/actionsnappage.dart';
 import 'package:picturo_app/screens/widgets/drag_and_learn_level.dart';
 
+import '../utils/common_app_bar.dart';
+import '../utils/common_file.dart';
+import 'games/drag_and_learn_topics.dart';
+
 class DragandLearnTopicScreen extends StatefulWidget {
   String? gameName;
   DragandLearnTopicScreen({super.key, this.gameName});
@@ -52,43 +56,7 @@ class _DragandLearnTopicScreenState extends State<DragandLearnTopicScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Color(0xFFF5F7FA),
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(80), // Increased app bar height
-        child: AppBar(
-          backgroundColor: Color(0xFF49329A),
-          leading: Padding(
-            padding: const EdgeInsets.only(top: 15.0, left: 24.0), // Adjust top padding
-            child: IconButton(
-              icon: Icon(Icons.arrow_back_ios, color: Colors.white, size: 26),
-              onPressed: () {
-                Navigator.pop(context);
-      },
-            ),
-          ),
-          title: Padding(
-            padding: const EdgeInsets.only(top: 15.0), // Adjust top padding
-            child: Row(
-              children: [
-                Text(
-                  'Drag and Learn',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Poppins Regular',
-                  ),
-                ),
-              ],
-            ),
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-            ),
-          ),
-        ),
-      ),
+      appBar: CommonAppBar(title:"Drag and Learn",isBackbutton: true,),
       body: Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
         child: Column(
@@ -101,7 +69,7 @@ class _DragandLearnTopicScreenState extends State<DragandLearnTopicScreen> {
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  fontFamily: 'Poppins Regular',
+                  fontFamily: AppConstants.commonFont,
                   color: Color(0xFF414141),
                 ),
             ),
@@ -137,15 +105,11 @@ class _DragandLearnTopicScreenState extends State<DragandLearnTopicScreen> {
         borderRadius: BorderRadius.circular(12),
         onTap: () {
 
-            // Navigator.push(
-            //   context,
-            //   MaterialPageRoute(builder: (context) => DragAndLearnApp()),
-            // );
-
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => DragLearnPage(bookId: bookId+1,)),
+              MaterialPageRoute(builder: (context) => DLGameTopicsPage(title:title ,topicId: bookId+1,)),
             );
+
         },
         child: Container(
           padding: EdgeInsets.all(16),
@@ -175,7 +139,7 @@ class _DragandLearnTopicScreenState extends State<DragandLearnTopicScreen> {
                         color: color,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        fontFamily: 'Poppins Regular',
+                        fontFamily: AppConstants.commonFont,
                       ),
                     ),
                     SizedBox(height: 4),
@@ -184,7 +148,7 @@ class _DragandLearnTopicScreenState extends State<DragandLearnTopicScreen> {
                       style: TextStyle(
                         color: Colors.grey[700],
                         fontSize: 12,
-                        fontFamily: 'Poppins Regular',
+                        fontFamily: AppConstants.commonFont,
                       ),
                     ),
                   ],

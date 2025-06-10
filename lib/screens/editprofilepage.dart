@@ -4,6 +4,8 @@ import 'package:picturo_app/screens/chooseavatarpage.dart';
 import 'package:picturo_app/services/api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../utils/common_app_bar.dart';
+
 class EditProfile extends StatefulWidget {
    final int? profileId;
    final String? userName;
@@ -197,41 +199,7 @@ if (_mobileController.text.isNotEmpty) {
 
     return Scaffold(
       backgroundColor: Color(0xFFE3F1FF),
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(80), // Increased app bar height
-        child: AppBar(
-          backgroundColor: Color(0xFF49329A),
-          leading: Padding(
-            padding: const EdgeInsets.only(top: 15.0, left: 24.0), // Adjust top padding
-            child: IconButton(
-              icon: Icon(Icons.arrow_back_ios, color: Colors.white, size: 26),
-              onPressed: () => Navigator.pop(context),
-            ),
-          ),
-          title: Padding(
-            padding: const EdgeInsets.only(top: 15.0), // Adjust top padding
-            child: Row(
-              children: [
-                Text(
-                  'Edit Profile',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Poppins Regular',
-                  ),
-                ),
-              ],
-            ),
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-            ),
-          ),
-        ),
-      ),
+      appBar: CommonAppBar(title:"Edit Profile" ,isBackbutton: true,),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(

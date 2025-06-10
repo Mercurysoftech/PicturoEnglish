@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:picturo_app/classes/svgfiles.dart';
+import 'package:picturo_app/cubits/faq_details_cubit/faq_details_cubit.dart';
+import 'package:picturo_app/cubits/helper_user_message_cubit/helper_user_message_cubit.dart';
 import 'package:picturo_app/screens/chatmessagelayout.dart';
+
+import '../cubits/get_user_helper_messages/get_user_helper_msg_cubit.dart';
 
 class HelperBotScreen extends StatefulWidget {
   const HelperBotScreen({super.key});
@@ -11,8 +16,9 @@ class HelperBotScreen extends StatefulWidget {
 }
 
 class _HelperBotScreenState extends State<HelperBotScreen> {
-  final List<Map<String, String>> messages = [];
+   List<Map<String, String>> messages = [];
   final ScrollController _scrollController = ScrollController();
+  final TextEditingController _messageController=TextEditingController();
 
   final Map<String, String> qaPairs = {
     "How do I reset my password?": 
@@ -67,15 +73,91 @@ class _HelperBotScreenState extends State<HelperBotScreen> {
     });
   }
 
+  // void _showQuestionsBottomSheet() {
+  //   showModalBottomSheet(
+  //     backgroundColor: Colors.white,
+  //     context: context,
+  //     isScrollControlled: true, // Allows the sheet to take more height
+  //     builder: (context) {
+  //       return Container(
+  //         padding: EdgeInsets.all(16),
+  //         height: MediaQuery.of(context).size.height * 0.85, // Increased height to 85% of screen
+  //         decoration: BoxDecoration(
+  //           color: Colors.white,
+  //           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+  //         ),
+  //         child: Column(
+  //           crossAxisAlignment: CrossAxisAlignment.start,
+  //           children: [
+  //             Center(
+  //               child: Container(
+  //                 width: 40,
+  //                 height: 4,
+  //                 margin: EdgeInsets.only(bottom: 16),
+  //                 decoration: BoxDecoration(
+  //                   color: Colors.grey[300],
+  //                   borderRadius: BorderRadius.circular(2),
+  //                 ),
+  //               ),
+  //             ),
+  //             Text(
+  //               'Frequently Asked Questions',
+  //               style: TextStyle(
+  //                 fontSize: 20,
+  //                 fontWeight: FontWeight.bold,
+  //                 color: Color(0xFF49329A),
+  //             ),
+  //             ),
+  //             SizedBox(height: 16),
+  //             Expanded(
+  //               child: ListView.builder(
+  //                 itemCount: qaPairs.length,
+  //                 itemBuilder: (context, index) {
+  //                   final question = qaPairs.keys.elementAt(index);
+  //                   return Card(
+  //                     color: Colors.white,
+  //                     elevation: 0,
+  //                     margin: EdgeInsets.symmetric(vertical: 6),
+  //                     shape: RoundedRectangleBorder(
+  //                       borderRadius: BorderRadius.circular(12)),
+  //                     child: ListTile(
+  //                       contentPadding: EdgeInsets.symmetric(
+  //                         horizontal: 16, vertical: 12),
+  //                       title: Text(
+  //                         question,
+  //                         style: TextStyle(
+  //                           fontSize: 16,
+  //                           fontWeight: FontWeight.w500,
+  //                         ),
+  //                       ),
+  //                       trailing: Icon(Icons.arrow_forward_ios, size: 16),
+  //                       onTap: () {
+  //                         Navigator.pop(context);
+  //                         _addMessage(question, true);
+  //                         // Simulate bot response after a short delay
+  //                         Future.delayed(Duration(seconds: 1), () {
+  //                           _addMessage(qaPairs[question]!, false);
+  //                         });
+  //                       },
+  //                     ),
+  //                   );
+  //                 },
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //       );
+  //     },
+  //   );
+  // }
   void _showQuestionsBottomSheet() {
     showModalBottomSheet(
-      backgroundColor: Colors.white,
       context: context,
-      isScrollControlled: true, // Allows the sheet to take more height
+      isScrollControlled: true,
       builder: (context) {
         return Container(
+          height: MediaQuery.of(context).size.height * 0.85,
           padding: EdgeInsets.all(16),
-          height: MediaQuery.of(context).size.height * 0.85, // Increased height to 85% of screen
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -94,47 +176,64 @@ class _HelperBotScreenState extends State<HelperBotScreen> {
                   ),
                 ),
               ),
-              Text(
-                'Frequently Asked Questions',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF49329A),
-              ),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Frequently Asked Questions',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF49329A),
+                    ),
+                  ),
+                  InkWell(
+                      onTap: (){
+                        Navigator.pop(context);
+                      },
+                      child: Icon(Icons.cancel_outlined,color: Colors.red,)),
+                ],
               ),
               SizedBox(height: 16),
               Expanded(
-                child: ListView.builder(
-                  itemCount: qaPairs.length,
-                  itemBuilder: (context, index) {
-                    final question = qaPairs.keys.elementAt(index);
-                    return Card(
-                      color: Colors.white,
-                      elevation: 0,
-                      margin: EdgeInsets.symmetric(vertical: 6),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                      child: ListTile(
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
-                        title: Text(
-                          question,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        trailing: Icon(Icons.arrow_forward_ios, size: 16),
-                        onTap: () {
-                          Navigator.pop(context);
-                          _addMessage(question, true);
-                          // Simulate bot response after a short delay
-                          Future.delayed(Duration(seconds: 1), () {
-                            _addMessage(qaPairs[question]!, false);
-                          });
+                child: BlocBuilder<FAQCubit, FAQState>(
+                  builder: (context, state) {
+                    if (state is FAQLoading) {
+                      return Center(child: CircularProgressIndicator());
+                    } else if (state is FAQLoaded) {
+                      final faqs = state.faqs;
+                      return ListView.builder(
+                        itemCount: faqs.length,
+                        itemBuilder: (context, index) {
+                          final faq = faqs[index];
+                          return Card(
+                            margin: EdgeInsets.symmetric(vertical: 6),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                            child: ListTile(
+                              contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 12),
+                              title: Text(
+                                faq.question,
+                                style: TextStyle(
+                                    fontSize: 16, fontWeight: FontWeight.w500),
+                              ),
+                              trailing: Icon(Icons.arrow_forward_ios, size: 16),
+                              onTap: () {
+                                Navigator.pop(context);
+                                _addMessage(faq.question, true);
+                                Future.delayed(Duration(seconds: 1), () {
+                                  _addMessage(faq.answer, false);
+                                });
+                              },
+                            ),
+                          );
                         },
-                      ),
-                    );
+                      );
+                    } else if (state is FAQError) {
+                      return Center(child: Text(state.message));
+                    } else {
+                      return SizedBox.shrink();
+                    }
                   },
                 ),
               ),
@@ -145,15 +244,18 @@ class _HelperBotScreenState extends State<HelperBotScreen> {
     );
   }
 
+
   @override
   void initState() {
     super.initState();
     // Add initial greeting messages
+    context.read<UserSupportCubit>().fetchUserSupport();
+    context.read<FAQCubit>().fetchFAQs();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _addMessage("Hello! How can I help you today?", false);
     });
   }
-
+   bool oldMsgUpdate=false;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -210,7 +312,19 @@ class _HelperBotScreenState extends State<HelperBotScreen> {
           ),
         ),
       ),
-      body: Container(
+      body: BlocBuilder<UserSupportCubit, UserSupportState>(
+  builder: (context, state) {
+    if(state is UserSupportLoaded){
+      if(oldMsgUpdate==false){
+        Future.delayed(Duration.zero,(){
+          messages.addAll(state.supports);
+          setState(() {
+            oldMsgUpdate=true;
+          });
+        });
+
+      }
+      return Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
@@ -231,8 +345,8 @@ class _HelperBotScreenState extends State<HelperBotScreen> {
                 itemBuilder: (context, index) {
                   final message = messages[index];
                   return Align(
-                    alignment: message['isMe'] == 'true' 
-                        ? Alignment.centerRight 
+                    alignment: message['isMe'] == 'true'
+                        ? Alignment.centerRight
                         : Alignment.centerLeft,
                     child: ChatMessageLayout(
                       isMeChatting: message['isMe'] == 'true',
@@ -244,9 +358,71 @@ class _HelperBotScreenState extends State<HelperBotScreen> {
                 },
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.only(top: 10,bottom: 36, left: 10,right: 90),
+              child: BlocConsumer<HelperUserMessageCubit, HelperUserMessageState>(listener: (context,state){
+                if(state is HelperUserMessageLoaded){
+                  Future.delayed(Duration.zero,(){
+                    setState(() {
+                      context.read<UserSupportCubit>().fetchUserSupport();
+                      oldMsgUpdate=false;
+                      _messageController.clear();
+                    });
+                  });
+                }
+              },
+                builder: (context, sendMessageState) {
+                  return TextField(
+                    controller: _messageController,
+                    decoration: InputDecoration(
+                      hintText: 'Message',
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 16),
+                      suffixIcon: Padding(
+                        padding: const EdgeInsets.only(right: 5),
+                        child: Material(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(30),
+                          child:InkWell(
+                              onTap: (){
+                                if(_messageController.text.isNotEmpty){
+                                  context.read<HelperUserMessageCubit>().sendUserMessage(_messageController.text);
+                                }
+                              },
+                              child: Icon(Icons.send)),
+                        ),
+                      ),
+                    ),
+
+                  );
+                },
+              ),
+            ),
           ],
         ),
-      ),
+      );
+    }else if (state is UserSupportLoading){
+      return Center(
+        child: SizedBox(
+          height: 30,
+          width: 30,
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }else{
+      return Center(
+        child: Text("Something Went Wrong Please Try Again"),
+      );
+    }
+
+  },
+),
     );
   }
 }

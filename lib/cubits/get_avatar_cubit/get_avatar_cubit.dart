@@ -1,4 +1,5 @@
 // avatar_cubit.dart
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/material.dart';
@@ -31,7 +32,7 @@ class AvatarCubit extends Cubit<AvatarState> {
 
     final avatarUrl= 'http://picturoenglish.com/admin/${avatar.avatarUrl}';
 
-      final imageProvider = NetworkImage(avatarUrl);
+      final imageProvider = CachedNetworkImageProvider(avatarUrl);
       emit(AvatarLoaded(imageProvider));
     } catch (e) {
       emit(AvatarError('Error loading avatar: ${e.toString()}'));

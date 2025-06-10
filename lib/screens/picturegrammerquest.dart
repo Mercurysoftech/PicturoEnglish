@@ -1,62 +1,35 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:picturo_app/screens/grammerquestscreen.dart';
 import 'package:picturo_app/screens/homepage.dart';
 
-class PictureGrammarQuestScreen extends StatelessWidget {
-  final double progress = 0.1;
-  final List<Map<String, dynamic>> levels = [
-    {'number': 1, 'text': 'He ran quickly through the dark alley', 'locked': false},
-    {'number': 2, 'text': 'She spoke softly to the nervous child', 'locked': true},
-    {'number': 3, 'text': 'They worked diligently on the complicated project', 'locked': true},
-    {'number': 4, 'text': 'The dog barked loudly at the strange visitor', 'locked': true},
-    {'number': 5, 'text': 'She waited patiently for the delayed train', 'locked': true},
-    {'number': 6, 'text': 'He smiled cheerfully at his beautiful wife', 'locked': true},
-    {'number': 7, 'text': 'He answered confidently despite the tricky question', 'locked': true},
-  ];
+import '../cubits/games_cubits/quest_game/quest_game_qtn_list_cubit.dart';
+import '../utils/common_app_bar.dart';
+
+class PictureGrammarQuestScreen extends StatefulWidget {
   final String? title;
 
   PictureGrammarQuestScreen({super.key, this.title});
 
   @override
+  State<PictureGrammarQuestScreen> createState() => _PictureGrammarQuestScreenState();
+}
+
+class _PictureGrammarQuestScreenState extends State<PictureGrammarQuestScreen> {
+  final double progress = 0;
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    context.read<GrammarQuestCubit>().fetchGrammarQuestions();
+    super.initState();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(80),
-        child: AppBar(
-          backgroundColor: Color(0xFF49329A),
-          leading: Padding(
-            padding: const EdgeInsets.only(top: 15.0, left: 24.0),
-            child: IconButton(
-              icon: Icon(Icons.arrow_back_ios, color: Colors.white, size: 26),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => Homepage()),
-                );
-              },
-            ),
-          ),
-          title: Padding(
-            padding: const EdgeInsets.only(top: 15.0),
-            child: Text(
-              'Picture Grammar Quest',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'Poppins Regular',
-              ),
-            ),
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-            ),
-          ),
-        ),
-      ),
+      appBar: CommonAppBar(title:"Picture Grammar Quest" ,isBackbutton: true,),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -91,20 +64,29 @@ class PictureGrammarQuestScreen extends StatelessWidget {
                 ],
               ),
             ),
-            ListView.builder(
+      BlocBuilder<GrammarQuestCubit, GrammarQuestState>(
+        builder: (context, state) {
+          if (state is GrammarQuestLoading) {
+            return Center(child: CircularProgressIndicator());
+          } else if (state is GrammarQuestFailed) {
+            return Center(child: Text("Error: ${state.message}"));
+          } else if (state is GrammarQuestLoaded) {
+            final levels = state.questions;
+            return ListView.builder(
               shrinkWrap: true,
               physics: NeverScrollableScrollPhysics(),
               padding: EdgeInsets.symmetric(horizontal: 16),
               itemCount: levels.length,
               itemBuilder: (context, index) {
-                final level = levels[index];
+                final question = levels[index];
+                final bool locked = index > state.level; // only first unlocked
                 return GestureDetector(
                   onTap: () {
-                    if (!level['locked']) {
+                    if (!locked) {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => GrammarQuestScreen(title: level['text']),
+                          builder: (context) => GrammarQuestScreen( index: index,questions: levels,level:state.level,questId: question.id,title: question.gameQus),
                         ),
                       );
                     }
@@ -113,7 +95,7 @@ class PictureGrammarQuestScreen extends StatelessWidget {
                     margin: EdgeInsets.only(bottom: 20),
                     padding: EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: level['locked'] ? Colors.grey[400] : Colors.white,
+                      color: locked ? Colors.grey[300] : Colors.white,
                       borderRadius: BorderRadius.circular(10),
                       boxShadow: [
                         BoxShadow(
@@ -124,8 +106,23 @@ class PictureGrammarQuestScreen extends StatelessWidget {
                       ],
                     ),
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
+                        if (locked)
+                          Icon(Icons.lock, color: Colors.white),
+                        if (!locked)
+                          (state.level>index)?Icon(Icons.check_circle,color: Colors.green,):Icon(Icons.question_mark_outlined, color: Colors.red),
+                        const SizedBox(width: 18,),
+                        Expanded(
+                          child: Text(
+                            "Level",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              fontFamily: 'Poppins Regular',
+                              color: locked ? Colors.black38 : Colors.black,
+                            ),
+                          ),
+                        ),
                         Container(
                           width: 36,
                           height: 36,
@@ -138,7 +135,7 @@ class PictureGrammarQuestScreen extends StatelessWidget {
                           ),
                           alignment: Alignment.center,
                           child: Text(
-                            level['number'].toString(),
+                            "${index + 1}",
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -147,25 +144,17 @@ class PictureGrammarQuestScreen extends StatelessWidget {
                           ),
                         ),
                         SizedBox(width: 16),
-                        Expanded(
-                          child: Text(
-                            level['text'],
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                              fontFamily: 'Poppins Regular',
-                              color: level['locked'] ? Colors.black54 : Colors.black,
-                            ),
-                          ),
-                        ),
-                        if (level['locked'])
-                          Icon(Icons.lock, color: Colors.white),
+
                       ],
                     ),
                   ),
                 );
               },
-            ),
+            );
+          }
+          return SizedBox.shrink();
+        },
+      ),
           ],
         ),
       ),

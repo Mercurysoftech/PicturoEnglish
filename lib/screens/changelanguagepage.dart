@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
 import '../responses/my_profile_response.dart';
+import '../utils/common_file.dart';
 
 class ChangeLanguagePage extends StatefulWidget {
   const ChangeLanguagePage({super.key});
@@ -22,6 +23,7 @@ class _ChangeLanguagePageState extends State<ChangeLanguagePage> {
   final double _scale = 1.0;  // This controls the scaling effect
   List<LanguageData> languages = []; // Store fetched languages
   UserResponse? userResponse;
+  bool loading=false;
   @override
   void initState() {
     super.initState();
@@ -87,7 +89,7 @@ class _ChangeLanguagePageState extends State<ChangeLanguagePage> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                fontFamily: 'Poppins Medium',
+                fontFamily: AppConstants.commonFont,
                 color: Color(0xFF522B8F),
               ),
             ),
@@ -101,16 +103,10 @@ class _ChangeLanguagePageState extends State<ChangeLanguagePage> {
                   padding: const EdgeInsets.symmetric(vertical: 5),
                   child: GestureDetector(
                     onTap: () async {
-                      final apiService = await ApiService.create();
-                      final bool languageResponse = await apiService.setUserNativeLanguage(language.language);
-                      if(languageResponse){
-                        setState(() {
-                          selectedLanguage = language.language;
-                        });
-                        SharedPreferences prefs = await SharedPreferences.getInstance();
-                        await prefs.setString('selectedLanguage', language.language);
 
-                      }
+                      setState(() {
+                        selectedLanguage = language.language;
+                      });
                       Navigator.pop(context);
 
                     },
@@ -128,7 +124,7 @@ class _ChangeLanguagePageState extends State<ChangeLanguagePage> {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          fontFamily: 'Poppins Medium',
+                          fontFamily: AppConstants.commonFont,
                           color: isSelected ? Colors.white : const Color(0xFF49329A),
                         ),
                       ),
@@ -153,7 +149,7 @@ class _ChangeLanguagePageState extends State<ChangeLanguagePage> {
 
   @override
   Widget build(BuildContext context) {
-    print("sdjklcsldkc ${selectedLanguage}");
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: PreferredSize(
@@ -241,7 +237,7 @@ class _ChangeLanguagePageState extends State<ChangeLanguagePage> {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          fontFamily: 'Poppins Medium',
+                          fontFamily: AppConstants.commonFont,
                           color: selectedLanguage != null ? Color(0xFF49329A) : Colors.grey,
                         ),
                       ),
@@ -277,11 +273,29 @@ class _ChangeLanguagePageState extends State<ChangeLanguagePage> {
           Padding(
   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
   child: ElevatedButton(
-    onPressed: () {
-      Navigator.push(
-                                      context,
-                                      MaterialPageRoute(builder: (context) => LocationGetPage()),
-                                    );
+    onPressed: (loading)?(){}:() async{
+
+      if(selectedLanguage!=null){
+        setState(() {
+          loading=true;
+        });
+        final apiService = await ApiService.create();
+        final bool languageResponse = await apiService.setUserNativeLanguage(selectedLanguage??'');
+        print("sdlkslkdcmsc ${languageResponse}");
+        if(languageResponse){
+
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.setString('selectedLanguage', selectedLanguage??'');
+          Navigator.pop(context);
+        }
+        setState(() {
+          loading=false;
+        });
+      }else{
+        Fluttertoast.showToast(msg: "Please Choose any Languages");
+      }
+
+
     },
     style: ElevatedButton.styleFrom(
       backgroundColor: const Color(0xFF49329A),
@@ -294,12 +308,18 @@ class _ChangeLanguagePageState extends State<ChangeLanguagePage> {
       // Adjust elevation when the button is pressed for a 'pressed' effect
       shadowColor: Colors.purple.withOpacity(0.5),
     ),
-    child: const Text(
+    child: (loading)?SizedBox(
+      height: 18,
+      width: 18,
+      child: CircularProgressIndicator(
+        strokeWidth: 0.8,
+      ),
+    ):const Text(
       "Done",
       style: TextStyle(
         fontSize: 18,
         fontWeight: FontWeight.bold,
-        fontFamily: 'Poppins Medium',
+        fontFamily: AppConstants.commonFont,
         color: Colors.white,
       ),
     ),
@@ -331,7 +351,7 @@ Widget languageSelectionTile(String title, String language) {
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                fontFamily: 'Poppins Medium',
+                fontFamily: AppConstants.commonFont,
                 color: Color(0xFF7E65D6),
               ),
             ),
