@@ -9,7 +9,7 @@ import '../utils/common_app_bar.dart';
 class PictureGrammarQuestScreen extends StatefulWidget {
   final String? title;
 
-  PictureGrammarQuestScreen({super.key, this.title});
+  const PictureGrammarQuestScreen({super.key, this.title});
 
   @override
   State<PictureGrammarQuestScreen> createState() => _PictureGrammarQuestScreenState();
@@ -20,7 +20,6 @@ class _PictureGrammarQuestScreenState extends State<PictureGrammarQuestScreen> {
 
   @override
   void initState() {
-    // TODO: implement initState
     context.read<GrammarQuestCubit>().fetchGrammarQuestions();
     super.initState();
   }
@@ -72,7 +71,13 @@ class _PictureGrammarQuestScreenState extends State<PictureGrammarQuestScreen> {
             return Center(child: Text("Error: ${state.message}"));
           } else if (state is GrammarQuestLoaded) {
             final levels = state.questions;
-            return ListView.builder(
+            return GridView.builder(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 0.85,
+              ),
               shrinkWrap: true,
               physics: NeverScrollableScrollPhysics(),
               padding: EdgeInsets.symmetric(horizontal: 16),
@@ -105,16 +110,18 @@ class _PictureGrammarQuestScreenState extends State<PictureGrammarQuestScreen> {
                         ),
                       ],
                     ),
-                    child: Row(
+                    alignment: Alignment.center,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         if (locked)
                           Icon(Icons.lock, color: Colors.white),
                         if (!locked)
                           (state.level>index)?Icon(Icons.check_circle,color: Colors.green,):Icon(Icons.question_mark_outlined, color: Colors.red),
-                        const SizedBox(width: 18,),
+                        const SizedBox(height: 10,),
                         Expanded(
                           child: Text(
-                            "Level",
+                            "Level ${index + 1}",
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w800,
@@ -123,27 +130,6 @@ class _PictureGrammarQuestScreenState extends State<PictureGrammarQuestScreen> {
                             ),
                           ),
                         ),
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Color(0xFF49329A),
-                              width: 2,
-                            ),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            "${index + 1}",
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF49329A),
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 16),
 
                       ],
                     ),

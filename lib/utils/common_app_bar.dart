@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:picturo_app/screens/widgets/commons.dart';
 
 import '../cubits/get_avatar_cubit/get_avatar_cubit.dart';
 import '../screens/myprofilepage.dart';
@@ -27,13 +28,16 @@ class CommonAppBar extends StatelessWidget implements PreferredSize {
             },
           ),
         ):null,
-        title: Text(
-          title,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            fontFamily: AppConstants.commonFont,
+        title: Padding(
+          padding: EdgeInsets.only(left: isFromHomePage==true?10.0:0),
+          child: Text(
+            title.toTitleCase(),
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              fontFamily: AppConstants.commonFont,
+            ),
           ),
         ),
         actions: (isFromHomePage!=null&&isFromHomePage==true)? [

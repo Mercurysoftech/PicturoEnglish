@@ -22,7 +22,6 @@ class _DragLearnPageState extends State<DragLearnPage> {
 
 @override
   void initState() {
-    // TODO: implement initState
   context.read<DragLearnCubit>().fetchDragLearnData(bookId:widget.bookId);
   super.initState();
   }

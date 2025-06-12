@@ -75,22 +75,26 @@ class RelaxView extends StatelessWidget {
             children: [
               SlideTransition(
                 position: relaxAnimation,
-                child: Text(
-                  "Play Game & Learn",
-                  style: TextStyle(fontSize: 26.0, fontWeight: FontWeight.bold),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 28.0),
+                  child: Text(
+                    "Play Game & Learn",
+                    style: TextStyle(fontSize: 26.0, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
+              SizedBox(height: 10,),
               SlideTransition(
                 position: textAnimation,
                 child: Padding(
-                  padding:
-                      EdgeInsets.only(left: 64, right: 64, top: 16, bottom: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 38.0),
                   child: Text(
                     "Play interactive games that make learning grammar fun while improving your skills through engaging challenges and real-time feedback.",
                     textAlign: TextAlign.center,
                   ),
                 ),
               ),
+
               SlideTransition(
                 position: imageAnimation,
                 child: Container(
@@ -101,66 +105,63 @@ class RelaxView extends StatelessWidget {
                   ),
                 ),
               ),
-
-              Padding(
-                padding: EdgeInsets.only(top: 52,
-                    bottom: 16),
-                child: Row(mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    InkWell(
-                      onTap: () {
-                        animationController.animateTo(0.0);
-                      },
-                      child: Container(
-                        height: 58,
-                        padding: EdgeInsets.only(
-                          left: 56.0,
-                          right: 56.0,
-                          top: 16,
-                          bottom: 16,
-                        ),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(38.0),
-                          color: Colors.grey.withOpacity(0.12),
-                        ),
-                        child: Text(
-                          "Prev",
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.black,
-                          ),
+              SizedBox(height: 30,),
+              Row(mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  InkWell(
+                    onTap: () {
+                      animationController.animateTo(0.0);
+                    },
+                    child: Container(
+                      height: 58,
+                      padding: EdgeInsets.only(
+                        left: 56.0,
+                        right: 56.0,
+                        top: 16,
+                        bottom: 16,
+                      ),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(38.0),
+                        color: Colors.grey.withOpacity(0.12),
+                      ),
+                      child: Text(
+                        "Prev",
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.black,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 22,),
-                    InkWell(
-                      onTap: () {
-                        animationController.animateTo(0.4);
-                      },
-                      child: Container(
-                        height: 58,
-                        padding: EdgeInsets.only(
-                          left: 56.0,
-                          right: 56.0,
-                          top: 16,
-                          bottom: 16,
-                        ),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(38.0),
-                          color: Color(0xff132137),
-                        ),
-                        child: Text(
-                          "Next",
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.white,
-                          ),
+                  ),
+                  const SizedBox(width: 22,),
+                  InkWell(
+                    onTap: () {
+                      animationController.animateTo(0.4);
+                    },
+                    child: Container(
+                      height: 58,
+                      padding: EdgeInsets.only(
+                        left: 56.0,
+                        right: 56.0,
+                        top: 16,
+                        bottom: 16,
+                      ),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(38.0),
+                        color: Color(0xff132137),
+                      ),
+                      child: Text(
+                        "Next",
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.white,
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
+              // Spacer(),
             ],
           ),
         ),

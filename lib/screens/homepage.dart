@@ -1,19 +1,15 @@
 import 'dart:convert';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_callkit_incoming/entities/call_event.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import 'package:picturo_app/providers/profileprovider.dart';
 import 'package:picturo_app/responses/books_response.dart';
 import 'package:picturo_app/screens/chatbotpage.dart';
 import 'package:picturo_app/screens/chatlistpage.dart';
-import 'package:picturo_app/screens/chatscreenpage.dart';
 import 'package:picturo_app/screens/gamespage.dart';
-import 'package:picturo_app/screens/myprofilepage.dart';
 import 'package:picturo_app/screens/notificationspage.dart';
 import 'package:picturo_app/screens/topicspage.dart';
 import 'package:picturo_app/screens/voicecallscreen.dart';
@@ -373,19 +369,24 @@ Widget build(BuildContext context) {
             _selectedIndex = index;
           });
         },
+
         items: List.generate(4, (index) {
           return BottomNavigationBarItem(
             icon: Image.asset(
               _selectedIndex == index
                   ? _navIconsSelected[index]
                   : _navIcons[index],
-              width: 30,
-              height: 30,
+              width: 23,
+              height: 28,
+              color:_selectedIndex==index? Color(0xFF49329A).withValues(alpha: .7):Colors.grey.shade500,
             ),
             label: _navLabels[index],
           );
         }),
         selectedItemColor: Color(0xFF49329A),
+        selectedLabelStyle: TextStyle(
+          fontWeight: FontWeight.w800
+        ),
         unselectedItemColor: Colors.grey,
       ),
       floatingActionButton: _selectedIndex == 0
@@ -400,13 +401,13 @@ Widget build(BuildContext context) {
                 );
             },
             child: Container(
-              width: 65, // Maintain the size of the button
-              height: 65, // Keep the FAB size
+              width: 45, // Maintain the size of the button
+              height: 45, // Keep the FAB size
               alignment: Alignment.center, // Center the image within the button
               child: Image.asset(
                 'assets/fluent_bot-28-filled.png', // Replace with the image you want to use
-                width: 35, // Image size, smaller than the button
-                height: 35, // Image size, smaller than the button
+                width: 28, // Image size, smaller than the button
+                height: 28, // Image size, smaller than the button
               ),
             ),
           ),
@@ -520,12 +521,12 @@ class _HomeContentState extends State<HomeContent> {
                                       ? null
                                       : gridItem['gradient'],
                                   color: gridItem['text'] == 'The essential language process'
-                                      ? Colors.grey.withOpacity(0.34)
+                                      ? Colors.grey.withValues(alpha: 0.34)
                                       : null,
                                   borderRadius: BorderRadius.circular(20),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.2),
+                                      color: Colors.black.withValues(alpha: 0.2),
                                       spreadRadius: 1,
                                       blurRadius: 6,
                                       offset: Offset(0, 3),
@@ -556,7 +557,7 @@ class _HomeContentState extends State<HomeContent> {
                                         style: TextStyle(
                                           fontSize: 18,
                                           fontFamily: AppConstants.commonFont,
-                                          fontWeight: FontWeight.bold,
+                                          fontWeight: FontWeight.w800,
                                           color: Colors.white,
                                         ),
                                       ),

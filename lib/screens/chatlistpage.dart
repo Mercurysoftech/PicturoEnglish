@@ -164,16 +164,20 @@ class _ChatListPageState extends State<ChatListPage>
               ),
             ),
             TabBar(
-              onTap: (bal){
-                _searchController.clear();
-              },
-              labelStyle: TextStyle(fontFamily: 'Poppins Regular',fontWeight: FontWeight.bold),
+              onTap: (_) => _searchController.clear(),
               controller: _tabController,
+              isScrollable: true,
               indicatorColor: Color(0xFF49329A),
+              labelStyle: TextStyle(
+                fontFamily: 'Poppins Regular',
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+              labelPadding: EdgeInsets.symmetric(horizontal: 20), // more breathing room
               tabs: [
-                Tab(text: "Friends ($friendsCount)"),
-                Tab(text: "All Users ($allUsersCount)"),
-                Tab(text: "Calls"),
+                Tab(child: FittedBox(child: Text("Friends ($friendsCount)"))),
+                Tab(child: FittedBox(child: Text("All Users ($allUsersCount)"))),
+                Tab(child: FittedBox(child: Text("Calls"))),
               ],
             ),
             Expanded(
@@ -199,6 +203,8 @@ class _ChatListPageState extends State<ChatListPage>
 ),
     );
   }
+  String formatUserCount(int count) => count > 99 ? '99+' : '$count';
+
 
 
   String formatTo12Hour(String dateTimeStr) {
