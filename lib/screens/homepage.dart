@@ -13,6 +13,7 @@ import 'package:picturo_app/screens/gamespage.dart';
 import 'package:picturo_app/screens/notificationspage.dart';
 import 'package:picturo_app/screens/topicspage.dart';
 import 'package:picturo_app/screens/voicecallscreen.dart';
+import 'package:picturo_app/screens/widgets/commons.dart';
 import 'package:picturo_app/services/api_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -434,7 +435,15 @@ class HomeContent extends StatefulWidget {
 class _HomeContentState extends State<HomeContent> {
 
 
+@override
+  void initState() {
+    super.initState();
+    SharedPrefsService().setCoin(10000);
+  }
 
+  setCoin()async{
+
+  }
   @override
   Widget build(BuildContext context) {
      DateTime? lastPressed;

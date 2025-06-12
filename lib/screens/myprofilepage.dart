@@ -13,6 +13,7 @@ import 'package:picturo_app/screens/homepage.dart';
 import 'package:picturo_app/screens/loginscreen.dart';
 import 'package:picturo_app/screens/premiumscreenpage.dart';
 import 'package:picturo_app/screens/transactionhistory.dart';
+import 'package:picturo_app/screens/widgets/commons.dart';
 import 'package:picturo_app/screens/withdrawpage.dart';
 import 'package:picturo_app/services/api_service.dart';
 import 'package:provider/provider.dart';
@@ -111,7 +112,6 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
   }
 }
 
-
   @override
   void initState() {
     super.initState();
@@ -125,8 +125,6 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
       }
     });
 
-
-
     // Provider.of<ProfileProvider>(context, listen: false).initialize()
     ApiService.create().then((service) {
       _apiService = service;
@@ -137,10 +135,13 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final profileProvider = Provider.of<ProfileProvider>(context);
-
     return Scaffold(
       backgroundColor: Color(0xFFE0F7FF),
-      appBar: CommonAppBar(title:"My Profile" ,isBackbutton: true,),
+      appBar: CommonAppBar(title:"My Profile" ,isBackbutton: true,
+        actions: [
+          CoinBadge(),
+          SizedBox(width: 20,)
+      ],),
       body: Container(
         height: double.infinity,
         decoration: BoxDecoration(
@@ -736,3 +737,51 @@ class SlashPainter extends CustomPainter {
   @override
   bool shouldRepaint(CustomPainter oldDelegate) => false;
 }
+
+
+class CoinBadge extends StatefulWidget {
+  const CoinBadge({super.key});
+
+  @override
+  State<CoinBadge> createState() => _CoinBadgeState();
+}
+
+class _CoinBadgeState extends State<CoinBadge> {
+  int _coinCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCoinCount();
+  }
+
+  Future<void> _loadCoinCount() async {
+    int? coins = await SharedPrefsService().getCoin();
+    setState(() {
+      _coinCount = coins;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 10.0),
+      child: Badge(
+        label: Text(
+          _coinCount.toString(),
+          style: const TextStyle(
+            color: Color(0xFF49329A),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        child: const Icon(
+          Icons.workspace_premium,
+          color: Colors.yellow,
+          size: 30,
+        ),
+      ),
+    );
+  }
+}
+

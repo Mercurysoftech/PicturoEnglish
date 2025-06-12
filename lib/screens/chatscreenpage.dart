@@ -6,10 +6,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:intl/intl.dart';
 import 'package:picturo_app/classes/svgfiles.dart';
 import 'package:picturo_app/screens/chatmessagelayout.dart';
+import 'package:picturo_app/screens/myprofilepage.dart';
 import 'package:picturo_app/screens/voicecallscreen.dart';
+import 'package:picturo_app/screens/widgets/commons.dart';
 import 'package:picturo_app/services/api_service.dart';
 import 'package:picturo_app/socket/socketservice.dart';
 import 'package:provider/provider.dart';
@@ -440,12 +443,62 @@ void dispose() {
               padding: const EdgeInsets.only(top: 10.0),
               child: Row(
                 children: [
+                  CoinBadge(),
+                  SizedBox(width: 5,),
                   Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (context)=>CallingScreen(friendDetails: widget.friendDetails,callerName: "${widget.friendDetails.friendName}",avatarUrl: widget.friendDetails.friendProfilePic,)));
+                      onTap: () async{
+                        final coinCount= await SharedPrefsService().getCoin();
+                        if (coinCount >0) {
+                          showDialog(
+                          context: context,
+                          builder: (context){
+                            return AlertDialog(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10)
+                              ),
+                              backgroundColor: Colors.white,
+                              title: Text("Are you Sure want make a call",style: TextStyle(fontSize: 16,),textAlign: TextAlign.center,),
+                              content: Text("Every call use 1 coin",textAlign: TextAlign.center,),
+                              actions: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    TextButton(
+                                        onPressed: (){
+                                          Navigator.pop(context);
+                                        },
+                                        style: ButtonStyle(
+                                          padding: WidgetStateProperty.all(EdgeInsets.symmetric(horizontal: 20)),
+                                        ),
+                                        child: Text("Cancel")
+                                    ),
+                                    SizedBox(
+                                      child: TextButton(
+                                        style: ButtonStyle(
+                                          padding: WidgetStateProperty.all(EdgeInsets.symmetric(horizontal: 20)),
+                                          backgroundColor: WidgetStateProperty.all(Color(0xFF49329A))
+                                        ),
+                                          onPressed: ()async{
+
+                                            Navigator.push(context, MaterialPageRoute(builder: (context)=>CallingScreen(friendDetails: widget.friendDetails,callerName: "${widget.friendDetails.friendName}",avatarUrl: widget.friendDetails.friendProfilePic,)));
+                                            await SharedPrefsService().useCoin(1);
+                                            Navigator.pop(context);
+                                          },
+                                          child: Text("Call",style: TextStyle(color: Colors.white ),)
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              ],
+                            );
+                          }
+                        );
                         // Navigator.push(context, MaterialPageRoute(builder: (context)=>CallScreen( userId: '${widget.friendDetails.friendId}',)));
+                        }else if(coinCount <=0){
+                          Fluttertoast.showToast(msg: 'Not enough coin');
+                        }
 
                       },
 
@@ -461,7 +514,6 @@ void dispose() {
                       ),
                     ),
                   ),
-                  SizedBox(width: 10),
                  PopupMenuButton<ChatMenuAction>(
   icon: Icon(Icons.more_vert, color: Colors.white, size: 28),
   onSelected: (ChatMenuAction result) {

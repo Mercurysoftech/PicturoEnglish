@@ -6,11 +6,12 @@ import '../cubits/get_avatar_cubit/get_avatar_cubit.dart';
 import '../screens/myprofilepage.dart';
 import 'common_file.dart';
 class CommonAppBar extends StatelessWidget implements PreferredSize {
-   CommonAppBar({super.key,required this.title,this.isFromHomePage,this.isBackbutton,this.onBackButtonTap});
+   CommonAppBar({super.key,required this.title,this.isFromHomePage,this.isBackbutton,this.onBackButtonTap,this.actions});
   final String title;
    bool? isFromHomePage;
    bool? isBackbutton;
    Function()? onBackButtonTap;
+   final List<Widget>? actions;
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +41,7 @@ class CommonAppBar extends StatelessWidget implements PreferredSize {
             ),
           ),
         ),
-        actions: (isFromHomePage!=null&&isFromHomePage==true)? [
+        actions: (isFromHomePage!=null&&isFromHomePage==true && actions==null)? [
         Padding(
             padding: const EdgeInsets.only(top: 10.0,left: 8, right: 24.0),
             child: BlocBuilder<AvatarCubit, AvatarState>(
@@ -81,7 +82,7 @@ class CommonAppBar extends StatelessWidget implements PreferredSize {
               },
             ),
           ),
-        ]:null,
+        ]:actions,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.only(
             bottomLeft: Radius.circular(20),

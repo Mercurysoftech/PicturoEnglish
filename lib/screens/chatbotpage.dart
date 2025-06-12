@@ -9,7 +9,9 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:picturo_app/classes/svgfiles.dart';
 import 'package:picturo_app/providers/profileprovider.dart';
 import 'package:picturo_app/screens/chatbotmessagelayout%20.dart';
+import 'package:picturo_app/screens/myprofilepage.dart';
 import 'package:picturo_app/screens/threedotloading.dart';
+import 'package:picturo_app/screens/widgets/commons.dart';
 import 'package:picturo_app/services/chatbotapiservice.dart';
 import 'package:provider/provider.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
@@ -434,6 +436,10 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
               ],
             ),
           ),
+          actions: [
+            CoinBadge(),
+            SizedBox(width: 25,)
+          ],
           shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.only(
               bottomLeft: Radius.circular(20),
@@ -511,8 +517,7 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
                     borderRadius: BorderRadius.circular(30),
                     borderSide: BorderSide.none,
                   ),
-                  contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 16),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                   suffixIcon: Padding(
                     padding: const EdgeInsets.only(right: 5),
                     child: Material(
@@ -537,7 +542,12 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
                               }
                             : null,
                         onTap: _messageController.text.isNotEmpty
-                            ? () =>     _sendMessage(scenario:selectedScenario??"" ,userLanguage: userLanguage)
+                            ? () async{
+                          _sendMessage(scenario:selectedScenario??"" ,userLanguage: userLanguage);
+                          await SharedPrefsService().useCoin(1);
+                          setState(() {
+                          });
+                        }
                             : null,
                         child: AnimatedBuilder(
                           animation: Listenable.merge([_scaleAnimation, _colorAnimation]),

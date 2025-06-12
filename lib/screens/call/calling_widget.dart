@@ -30,7 +30,6 @@ class _CallingScreenState extends State<CallingScreen> {
 
   @override
   void initState() {
-    // TODO: implement initState
     //
     // context.read<CallSocketHandleCubit>().checkConnected();
     connectCall();
@@ -181,7 +180,7 @@ class _CallingScreenState extends State<CallingScreen> {
                         vertical: 12,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
+                        color: Colors.white.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: Colors.white24),
                       ),
@@ -216,8 +215,6 @@ class _CallingScreenState extends State<CallingScreen> {
                   onTap: () {
                     context.read<CallSocketHandleCubit>().endCall(targetUserId:widget.friendDetails.friendId??0);
                     // context.read<CallSocketHandleCubit>().checkConnected();
-
-
                   },
                   child: Container(
                     decoration: BoxDecoration(

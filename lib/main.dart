@@ -232,7 +232,8 @@ class MyApp extends StatelessWidget {
 
     return BlocProvider(
   create: (context) => TopicCubit(),
-  child: MaterialApp(navigatorKey: navigatorKey,
+  child: MaterialApp(
+      navigatorKey: navigatorKey,
       // builder: (context, child) {
       //   return Stack(
       //     children: [
@@ -262,7 +263,7 @@ class MyApp extends StatelessWidget {
         '/profile':(context)=> MyProfileScreen(),
         '/location':(context)=> LocationGetPage(isFromProfile: false,),
         '/language':(context)=> LanguageSelectionApp(),
-      }
+      },
     ),
 );
   }

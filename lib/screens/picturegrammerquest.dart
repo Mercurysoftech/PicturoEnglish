@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:picturo_app/screens/grammerquestscreen.dart';
 import 'package:picturo_app/screens/homepage.dart';
+import 'package:picturo_app/screens/widgets/commons.dart';
 
 import '../cubits/games_cubits/quest_game/quest_game_qtn_list_cubit.dart';
 import '../utils/common_app_bar.dart';
@@ -86,14 +88,58 @@ class _PictureGrammarQuestScreenState extends State<PictureGrammarQuestScreen> {
                 final question = levels[index];
                 final bool locked = index > state.level; // only first unlocked
                 return GestureDetector(
-                  onTap: () {
-                    if (!locked) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => GrammarQuestScreen( index: index,questions: levels,level:state.level,questId: question.id,title: question.gameQus),
-                        ),
+                  onTap: () async{
+                    final int coinCount= await SharedPrefsService().getCoin();
+                    if (!locked && coinCount > 0) {
+                      showDialog(
+                          context: context,
+                          builder: (context){
+                            return AlertDialog(
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10)
+                              ),
+                              backgroundColor: Colors.white,
+                              title: Text("Are you Sure want Start",style: TextStyle(fontSize: 16,),textAlign: TextAlign.center,),
+                              content: Text("Every level use 1 coin",textAlign: TextAlign.center,),
+                              actions: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    TextButton(
+                                        onPressed: (){
+                                          Navigator.pop(context);
+                                        },
+                                        style: ButtonStyle(
+                                          padding: WidgetStateProperty.all(EdgeInsets.symmetric(horizontal: 20)),
+                                        ),
+                                        child: Text("Cancel")
+                                    ),
+                                    SizedBox(
+                                      child: TextButton(
+                                          style: ButtonStyle(
+                                              padding: WidgetStateProperty.all(EdgeInsets.symmetric(horizontal: 20)),
+                                              backgroundColor: WidgetStateProperty.all(Color(0xFF49329A))
+                                          ),
+                                          onPressed: ()async{
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) => GrammarQuestScreen( index: index,questions: levels,level:state.level,questId: question.id,title: question.gameQus),
+                                              ),
+                                            );                                            await SharedPrefsService().useCoin(1);
+                                            Navigator.pop(context);
+                                          },
+                                          child: Text(" Start",style: TextStyle(color: Colors.white ),)
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              ],
+                            );
+                          }
                       );
+                    }else if(coinCount <=0){
+                      Fluttertoast.showToast(msg: 'Not enough Coin');
                     }
                   },
                   child: Container(

@@ -81,6 +81,7 @@ class _TopicsScreenState extends State<TopicsScreen> {
   builder: (context, state) {
 
     if(state is TopicLoaded){
+      print(state.topics);
       List<Map<String,dynamic>> topics=state.topics;
       return Container(
         decoration: BoxDecoration(
