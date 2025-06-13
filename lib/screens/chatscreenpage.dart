@@ -449,56 +449,63 @@ void dispose() {
                     color: Colors.transparent,
                     child: InkWell(
                       onTap: () async{
-                        final coinCount= await SharedPrefsService().getCoin();
-                        if (coinCount >0) {
-                          showDialog(
-                          context: context,
-                          builder: (context){
-                            return AlertDialog(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10)
-                              ),
-                              backgroundColor: Colors.white,
-                              title: Text("Are you Sure want make a call",style: TextStyle(fontSize: 16,),textAlign: TextAlign.center,),
-                              content: Text("Every call use 1 coin",textAlign: TextAlign.center,),
-                              actions: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
-                                    TextButton(
-                                        onPressed: (){
-                                          Navigator.pop(context);
-                                        },
-                                        style: ButtonStyle(
-                                          padding: WidgetStateProperty.all(EdgeInsets.symmetric(horizontal: 20)),
-                                        ),
-                                        child: Text("Cancel")
-                                    ),
-                                    SizedBox(
-                                      child: TextButton(
-                                        style: ButtonStyle(
-                                          padding: WidgetStateProperty.all(EdgeInsets.symmetric(horizontal: 20)),
-                                          backgroundColor: WidgetStateProperty.all(Color(0xFF49329A))
-                                        ),
-                                          onPressed: ()async{
+                        // insert coinCount=0;
+                        // setState(()  {
+                        //  coinCount= await SharedPrefsService().getCoin();
+                        // });
+                        // if (coinCount >0) {
+                        //   showDialog(
+                        //   context: context,
+                        //   builder: (context){
+                        //     return AlertDialog(
+                        //       shape: RoundedRectangleBorder(
+                        //         borderRadius: BorderRadius.circular(10)
+                        //       ),
+                        //       backgroundColor: Colors.white,
+                        //       title: Text("Are you Sure want make a call",style: TextStyle(fontSize: 16,),textAlign: TextAlign.center,),
+                        //       content: Text("Every call use 1 coin",textAlign: TextAlign.center,),
+                        //       actions: [
+                        //         Row(
+                        //           mainAxisAlignment: MainAxisAlignment.end,
+                        //           children: [
+                        //             TextButton(
+                        //                 onPressed: (){
+                        //                   Navigator.pop(context);
+                        //                 },
+                        //                 style: ButtonStyle(
+                        //                   padding: WidgetStateProperty.all(EdgeInsets.symmetric(horizontal: 20)),
+                        //                 ),
+                        //                 child: Text("Cancel")
+                        //             ),
+                        //             SizedBox(
+                        //               child: TextButton(
+                        //                 style: ButtonStyle(
+                        //                   padding: WidgetStateProperty.all(EdgeInsets.symmetric(horizontal: 20)),
+                        //                   backgroundColor: WidgetStateProperty.all(Color(0xFF49329A))
+                        //                 ),
+                        //                   onPressed: ()async{
+                        //
+                        //                     Navigator.push(context, MaterialPageRoute(builder: (context)=>CallingScreen(friendDetails: widget.friendDetails,callerName: "${widget.friendDetails.friendName}",avatarUrl: widget.friendDetails.friendProfilePic,)));
+                        //                     await SharedPrefsService().useCoin(1);
+                        //                     Navigator.pop(context);
+                        //                   },
+                        //                   child: Text("Call",style: TextStyle(color: Colors.white ),)
+                        //               ),
+                        //             ),
+                        //           ],
+                        //         )
+                        //       ],
+                        //     );
+                        //   });
+                        Fluttertoast.showToast(msg: "Every call use 1 coin");
+                              Navigator.push(context, MaterialPageRoute(builder: (context)=>CallingScreen(friendDetails: widget.friendDetails,callerName: "${widget.friendDetails.friendName}",avatarUrl: widget.friendDetails.friendProfilePic,)));
 
-                                            Navigator.push(context, MaterialPageRoute(builder: (context)=>CallingScreen(friendDetails: widget.friendDetails,callerName: "${widget.friendDetails.friendName}",avatarUrl: widget.friendDetails.friendProfilePic,)));
-                                            await SharedPrefsService().useCoin(1);
-                                            Navigator.pop(context);
-                                          },
-                                          child: Text("Call",style: TextStyle(color: Colors.white ),)
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              ],
-                            );
-                          }
-                        );
+
                         // Navigator.push(context, MaterialPageRoute(builder: (context)=>CallScreen( userId: '${widget.friendDetails.friendId}',)));
-                        }else if(coinCount <=0){
-                          Fluttertoast.showToast(msg: 'Not enough coin');
-                        }
+                        // }
+                        // else if(coinCount <=0){
+                        //   Fluttertoast.showToast(msg: 'Not enough coin');
+                        // }
 
                       },
 

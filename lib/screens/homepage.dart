@@ -438,7 +438,7 @@ class _HomeContentState extends State<HomeContent> {
 @override
   void initState() {
     super.initState();
-    SharedPrefsService().setCoin(10000);
+    SharedPrefsService().setCoin(1000);
   }
 
   setCoin()async{
