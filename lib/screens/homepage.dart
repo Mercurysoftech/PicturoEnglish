@@ -21,6 +21,7 @@ import 'package:http/http.dart' as http;
 import '../cubits/call_cubit/call_duration_handler/call_duration_handle_cubit.dart';
 import '../cubits/call_cubit/call_socket_handle_cubit.dart';
 import '../cubits/get_avatar_cubit/get_avatar_cubit.dart';
+import '../cubits/get_coins_cubit/coins_cubit.dart';
 import '../main.dart';
 import '../utils/common_app_bar.dart';
 import '../utils/common_file.dart';
@@ -438,7 +439,8 @@ class _HomeContentState extends State<HomeContent> {
 @override
   void initState() {
     super.initState();
-    SharedPrefsService().setCoin(1000);
+
+    context.read<CoinCubit>().setCoin(1000);
   }
 
   setCoin()async{

@@ -59,7 +59,7 @@ class ApiService {
       data: jsonEncode({"email": email, "password": password}),
     );
 // Debugging
-
+  print("sldnclsdkc $response        ${{"email": email, "password": password}}");
     if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
       final Map<String, dynamic> data = response.data;
 

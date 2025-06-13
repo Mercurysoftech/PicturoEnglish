@@ -222,7 +222,7 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
   void muteACall(bool isMuted){
     if (_localStream != null) {
       final audioTrack = _localStream!.getAudioTracks().first;
-      audioTrack.enabled = isMuted;
+      audioTrack.enabled = false;
 
     }
   }

@@ -219,7 +219,8 @@ class _ChatListPageState extends State<ChatListPage>
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ChatScreen(friendDetails: user,
+            builder: (context) => ChatScreen(
+              friendDetails: user,
               avatarWidget: _buildUserAvatar(user.friendProfilePic??0),
               profileId: user.friendProfilePic??0,
             userName: user.friendName??'',

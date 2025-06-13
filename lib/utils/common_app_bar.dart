@@ -44,45 +44,54 @@ class CommonAppBar extends StatelessWidget implements PreferredSize {
         actions: (isFromHomePage!=null&&isFromHomePage==true && actions==null)? [
         Padding(
             padding: const EdgeInsets.only(top: 10.0,left: 8, right: 24.0),
-            child: BlocBuilder<AvatarCubit, AvatarState>(
-              builder: (context, state) {
+            child: Row(
+              children: [
+                // CoinBadge(),
+                // const SizedBox(width:20),
+                BlocBuilder<AvatarCubit, AvatarState>(
+                  builder: (context, state) {
 
-                if (state is AvatarLoaded) {
-                  return InkWell(
-                    onTap: (){
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => MyProfileScreen()),
+                    if (state is AvatarLoaded) {
+                      return InkWell(
+                        onTap: (){
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => MyProfileScreen()),
+                          );
+                        },
+                        child: CircleAvatar(
+                          radius: 25,
+                          backgroundColor: Color(0xFF49329A),
+                          backgroundImage: state.imageProvider,
+                        ),
                       );
-                    },
-                    child: CircleAvatar(
-                      radius: 25,
-                      backgroundColor: Color(0xFF49329A),
-                      backgroundImage: state.imageProvider,
-                    ),
-                  );
-                } else if (state is AvatarLoading) {
-                  return const CircularProgressIndicator();
-                } else {
-                  // Fallback image
-                  final fallback = context.read<AvatarCubit>().getFallbackAvatarImage();
-                  return InkWell(
-                    onTap: (){
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => MyProfileScreen()),
+                    } else if (state is AvatarLoading) {
+                      return const CircularProgressIndicator();
+                    } else {
+                      // Fallback image
+                      final fallback = context.read<AvatarCubit>().getFallbackAvatarImage();
+                      return InkWell(
+                        onTap: (){
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => MyProfileScreen()),
+                          );
+                        },
+                        child: CircleAvatar(
+                          backgroundImage: fallback,
+                          radius: 40,
+                        ),
                       );
-                    },
-                    child: CircleAvatar(
-                      backgroundImage: fallback,
-                      radius: 40,
-                    ),
-                  );
-                }
-              },
+                    }
+                  },
+                ),
+              ],
             ),
           ),
-        ]:actions,
+        ]:[
+          CoinBadge(),
+          SizedBox(width: 25,)
+        ],
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.only(
             bottomLeft: Radius.circular(20),

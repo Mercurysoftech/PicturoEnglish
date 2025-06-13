@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:picturo_app/cubits/drag_and_learn_cubit/drag_and_learn_cubit.dart';
 
+import '../../cubits/get_coins_cubit/coins_cubit.dart';
 import '../../models/dragand_learn_model.dart';
 import '../../utils/common_app_bar.dart';
 import '../../utils/common_file.dart';
@@ -60,7 +61,7 @@ class _DragLearnPageState extends State<DragLearnPage> {
                   return InkWell(
                     onTap: isEnabled
                         ? () async{
-                      final int coinCount= await SharedPrefsService().getCoin();
+                      final int coinCount= await  context.read<CoinCubit>().getCoin();
                       if (isEnabled && coinCount > 0) {
                         showDialog(
                             context: context,
@@ -92,13 +93,18 @@ class _DragLearnPageState extends State<DragLearnPage> {
                                                 backgroundColor: WidgetStateProperty.all(Color(0xFF49329A))
                                             ),
                                             onPressed: ()async{
+                                              print("sdcsdlkcsdcs;dc");
+
+                                              Navigator.pop(context);
                                               Navigator.push(
                                                 context,
                                                 MaterialPageRoute(
                                                   builder: (context) => DragAndLearnApp(preLevels:data?.levels,levelIndex: index,topicId: data?.topicId,bookId: widget.bookId,level: level),
                                                 ),
-                                              );                                           await SharedPrefsService().useCoin(1);
-                                              Navigator.pop(context);
+                                              );
+
+                                              context.read<CoinCubit>().useCoin(1);
+
                                             },
                                             child: Text(" Start",style: TextStyle(color: Colors.white ),)
                                         ),

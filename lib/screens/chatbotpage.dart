@@ -16,6 +16,8 @@ import 'package:picturo_app/services/chatbotapiservice.dart';
 import 'package:provider/provider.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
+import '../cubits/get_coins_cubit/coins_cubit.dart';
+
 class ChatBotScreen extends StatefulWidget {
   const ChatBotScreen({super.key});
 
@@ -211,6 +213,7 @@ class _ChatBotScreenState extends State<ChatBotScreen> with TickerProviderStateM
       'isMe': true,
       'timestamp': _getCurrentTime(),
     });
+
     _isLoading = true;
   });
   
@@ -226,6 +229,8 @@ class _ChatBotScreenState extends State<ChatBotScreen> with TickerProviderStateM
     ).timeout(const Duration(seconds: 30));
 
     if (response.containsKey('reply')) {
+      context.read<CoinCubit>().useCoin(1);
+
       String botMessage = response['reply']?.toString() ?? "I didn't get that. Could you try again?";
       String? audioBase64 = response['audio_base64']?.toString();
 
@@ -544,7 +549,7 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
                         onTap: _messageController.text.isNotEmpty
                             ? () async{
                           _sendMessage(scenario:selectedScenario??"" ,userLanguage: userLanguage);
-                          await SharedPrefsService().useCoin(1);
+                          context.read<CoinCubit>().useCoin(1);
                           setState(() {
                           });
                         }

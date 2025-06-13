@@ -45,6 +45,7 @@ import 'cubits/faq_details_cubit/faq_details_cubit.dart';
 import 'cubits/game_view_cubit/game_view_cubit.dart';
 import 'cubits/games_cubits/quest_game/quest_game_qtn_list_cubit.dart';
 import 'cubits/get_avatar_cubit/get_avatar_cubit.dart';
+import 'cubits/get_coins_cubit/coins_cubit.dart';
 import 'cubits/get_sub_topics_list/get_sub_topics_list_cubit.dart';
 import 'cubits/get_topics_list_cubit/get_topic_list_cubit.dart';
 import 'cubits/get_user_helper_messages/get_user_helper_msg_cubit.dart';
@@ -103,6 +104,7 @@ void main() async{
         BlocProvider(create: (context) => ProgressCubit()),
         BlocProvider(create: (context) => GrammarQuestCubit()),
         BlocProvider(create: (context) => CallTimerCubit()),
+        BlocProvider(create: (context) => CoinCubit()),
 
       ],
       child: MyApp(),

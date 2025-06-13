@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:picturo_app/classes/svgfiles.dart';
 import 'package:picturo_app/providers/profileprovider.dart';
@@ -19,6 +20,7 @@ import 'package:picturo_app/services/api_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../cubits/get_coins_cubit/coins_cubit.dart';
 import '../utils/common_app_bar.dart';
 import 'earnings_ref/earnings_referral.dart';
 import 'locationgetpage.dart';
@@ -739,49 +741,44 @@ class SlashPainter extends CustomPainter {
 }
 
 
-class CoinBadge extends StatefulWidget {
+class CoinBadge extends StatelessWidget {
   const CoinBadge({super.key});
 
   @override
-  State<CoinBadge> createState() => _CoinBadgeState();
-}
-
-class _CoinBadgeState extends State<CoinBadge> {
-  int _coinCount = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadCoinCount();
-  }
-
-  Future<void> _loadCoinCount() async {
-    int? coins = await SharedPrefsService().getCoin();
-    setState(() {
-      _coinCount = coins;
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 10.0),
-      child: Badge(
-        label: Text(
-          _coinCount.toString(),
-          style: const TextStyle(
-            color: Color(0xFF49329A),
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        backgroundColor: Colors.white,
-        child: const Icon(
-          Icons.workspace_premium,
-          color: Colors.yellow,
-          size: 30,
-        ),
-      ),
+    return BlocBuilder<CoinCubit, CoinState>(
+      builder: (context, state) {
+        if (state is CoinLoading) {
+          return SizedBox(
+              height: 20,
+              width: 20,
+              child: CircularProgressIndicator(strokeWidth: 0.6,));
+        } else if (state is CoinLoaded) {
+          return Padding(
+            padding: const EdgeInsets.only(right: 10.0),
+            child: Badge(
+              label: Text(
+                "${state.coins}",
+                style: const TextStyle(
+                  color: Color(0xFF49329A),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              backgroundColor: Colors.white,
+              child: const Icon(
+                Icons.workspace_premium,
+                color: Colors.yellow,
+                size: 30,
+              ),
+            ),
+          );
+        } else if (state is CoinError) {
+          return SizedBox();
+        }
+        return Container();
+      },
     );
+
   }
 }
 

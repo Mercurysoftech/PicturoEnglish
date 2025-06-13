@@ -6,6 +6,7 @@ import 'package:picturo_app/screens/homepage.dart';
 import 'package:picturo_app/screens/widgets/commons.dart';
 
 import '../cubits/games_cubits/quest_game/quest_game_qtn_list_cubit.dart';
+import '../cubits/get_coins_cubit/coins_cubit.dart';
 import '../utils/common_app_bar.dart';
 
 class PictureGrammarQuestScreen extends StatefulWidget {
@@ -89,7 +90,7 @@ class _PictureGrammarQuestScreenState extends State<PictureGrammarQuestScreen> {
                 final bool locked = index > state.level; // only first unlocked
                 return GestureDetector(
                   onTap: () async{
-                    final int coinCount= await SharedPrefsService().getCoin();
+                    final int coinCount=  await context.read<CoinCubit>().getCoin();
                     if (!locked && coinCount > 0) {
                       showDialog(
                           context: context,
@@ -126,7 +127,8 @@ class _PictureGrammarQuestScreenState extends State<PictureGrammarQuestScreen> {
                                               MaterialPageRoute(
                                                 builder: (context) => GrammarQuestScreen( index: index,questions: levels,level:state.level,questId: question.id,title: question.gameQus),
                                               ),
-                                            );                                            await SharedPrefsService().useCoin(1);
+                                            );
+                                            context.read<CoinCubit>().useCoin(1);
                                             Navigator.pop(context);
                                           },
                                           child: Text(" Start",style: TextStyle(color: Colors.white ),)

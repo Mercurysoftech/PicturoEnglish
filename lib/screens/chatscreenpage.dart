@@ -497,7 +497,7 @@ void dispose() {
                         //       ],
                         //     );
                         //   });
-                        Fluttertoast.showToast(msg: "Every call use 1 coin");
+                        // Fluttertoast.showToast(msg: "Every call use 1 coin");
                               Navigator.push(context, MaterialPageRoute(builder: (context)=>CallingScreen(friendDetails: widget.friendDetails,callerName: "${widget.friendDetails.friendName}",avatarUrl: widget.friendDetails.friendProfilePic,)));
 
 

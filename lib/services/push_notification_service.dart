@@ -27,7 +27,8 @@ class PushNotificationService {
 
     // Foreground handler
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      print("📲 Foreground message: ${message.notification?.title}");
+      print("📲 Foreground message: ${message.toMap()}");
+
 
       RemoteNotification? notification = message.notification;
       AndroidNotification? android = message.notification?.android;
