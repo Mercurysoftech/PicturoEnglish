@@ -56,7 +56,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
   }
 
   void _toggleMute() {
-    context.read<CallSocketHandleCubit>().muteACall(isMuted);
+    context.watch<CallSocketHandleCubit>().muteACall(isMuted);
       setState(() {
         isMuted = !isMuted;
       });

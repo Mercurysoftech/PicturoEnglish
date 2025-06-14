@@ -173,11 +173,29 @@ class _ChatListPageState extends State<ChatListPage>
                 fontWeight: FontWeight.bold,
                 fontSize: 13,
               ),
-              labelPadding: EdgeInsets.symmetric(horizontal: 20), // more breathing room
+              labelPadding: EdgeInsets.only(right: 20), // more breathing room
               tabs: [
-                Tab(child: FittedBox(child: Text("Friends ($friendsCount)"))),
-                Tab(child: FittedBox(child: Text("All Users ($allUsersCount)"))),
-                Tab(child: FittedBox(child: Text("Calls"))),
+                Tab(child: FittedBox(child: Row(
+                  children: [
+                    Icon(Icons.people,color: Color(0xFF49329A),size: 20,),
+                    SizedBox(width: 3,),
+                    Text("Friends ($friendsCount)",style: TextStyle(color: Color(0xFF49329A)),),
+                  ],
+                ))),
+                Tab(child: FittedBox(child: Row(
+                  children: [
+                    Icon(Icons.language,color:Color(0xFF49329A),size: 20,),
+                    SizedBox(width: 3,),
+                    Text("All Users ($allUsersCount)",style: TextStyle(color: Color(0xFF49329A)),),
+                  ],
+                ))),
+                Tab(child: FittedBox(child: Row(
+                  children: [
+                    Icon(Icons.call,color:Color(0xFF49329A),size: 20,),
+                    SizedBox(width: 3,),
+                    Text("Calls",style: TextStyle(color: Color(0xFF49329A)),),
+                  ],
+                ))),
               ],
             ),
             Expanded(

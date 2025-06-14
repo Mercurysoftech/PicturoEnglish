@@ -276,7 +276,7 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
                             }
                             if (placedImages.values.every((value) => value != null)) {
                               await markLevelAsCompleted(bookId: widget.bookId??0, topicId: widget.topicId??0, level: widget.level?.level??0);
-                              Future.delayed(Duration(milliseconds: 300), _showCongratulationsPopup);
+                              await Future.delayed(Duration(milliseconds: 300), _showCongratulationsPopup);
                             }
                           },
                           builder: (context, candidateData, rejectedData) {
@@ -285,7 +285,8 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(color: Color(0xFFCBBCFF), width: 1),
-                              ),
+                              ),padding: EdgeInsets.all(5),
+                              
                               alignment: Alignment.center,
                               child: placedImages[word] != null
                                   ? ClipRRect(
@@ -295,10 +296,12 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
                                   fit: BoxFit.cover,
                                 ),
                               )
-                                  : Text(
-                                word ?? '',
-                                style: TextStyle(                   fontFamily: AppConstants.commonFont,fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF49329A)),
-                              ),
+                                  : Text(word ?? '',
+                                    textAlign: TextAlign.center,
+
+                                    style: TextStyle(
+                                    fontFamily: AppConstants.commonFont,fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF49329A)),
+                                                                ),
                             );
                           },
                         );

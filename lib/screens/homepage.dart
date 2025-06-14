@@ -102,7 +102,7 @@ class _HomepageState extends State<Homepage> {
     },
     {
       'image': 'assets/adverb.png',
-      'text': 'Adverb',
+      'text': 'Adverbs',
       'gradient': LinearGradient(
         colors: [Color(0xFFDA90FF), Color(0xFF861FBA)],
         begin: Alignment.topCenter,
@@ -112,7 +112,7 @@ class _HomepageState extends State<Homepage> {
     },
     {
       'image': 'assets/adjective.png',
-      'text': 'Adjective',
+      'text': 'Adjectives',
       'gradient': LinearGradient(
         colors: [Color(0xFFFF999B), Color(0xFFA62426)],
         begin: Alignment.topCenter,
@@ -141,9 +141,13 @@ class _HomepageState extends State<Homepage> {
       'page': TopicsScreen(title: 'Idioms',topicId: 5,),
     },
     {
-      'image': '',
+      'image': 'assets/adverb.png',
       'text': 'The essential language process',
-      'gradient': Color(0xff8b8b8b80),
+      'gradient': LinearGradient(
+        colors: [Color(0xFF8B8BC4), Color(0xFF8B8BC4)],
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+      ),
     },
   ];
   String? currentUserId='';
@@ -364,14 +368,15 @@ Widget build(BuildContext context) {
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
         currentIndex: _selectedIndex,
+
         onTap: (index) {
           setState(() {
             _selectedIndex = index;
           });
         },
-
         items: List.generate(4, (index) {
           return BottomNavigationBarItem(
             icon: Image.asset(
@@ -380,7 +385,7 @@ Widget build(BuildContext context) {
                   : _navIcons[index],
               width: 23,
               height: 28,
-              color:_selectedIndex==index? Color(0xFF49329A).withValues(alpha: .7):Colors.grey.shade500,
+              color:_selectedIndex==index? Color(0xFF49329A).withValues(alpha: .8):Colors.grey.shade500,
             ),
             label: _navLabels[index],
           );
@@ -388,6 +393,13 @@ Widget build(BuildContext context) {
         selectedItemColor: Color(0xFF49329A),
         selectedLabelStyle: TextStyle(
           fontWeight: FontWeight.w800
+        ),
+        unselectedFontSize: 13,
+        unselectedLabelStyle: TextStyle(
+              color: Colors.black,
+          fontSize: 12,
+          fontWeight: FontWeight.w700
+
         ),
         unselectedItemColor: Colors.grey,
       ),
@@ -528,12 +540,10 @@ class _HomeContentState extends State<HomeContent> {
                               Container(
                                 margin: EdgeInsets.symmetric(vertical: 10),
                                 decoration: BoxDecoration(
-                                  gradient: gridItem['text'] == 'The essential language process'
-                                      ? null
-                                      : gridItem['gradient'],
-                                  color: gridItem['text'] == 'The essential language process'
-                                      ? Colors.grey.withValues(alpha: 0.34)
-                                      : null,
+                                  gradient:gridItem['gradient'],
+                                  // color: gridItem['text'] == 'The essential language process'
+                                  //     ? Colors.grey.withValues(alpha: 0.34)
+                                  //     : null,
                                   borderRadius: BorderRadius.circular(20),
                                   boxShadow: [
                                     BoxShadow(
@@ -568,7 +578,7 @@ class _HomeContentState extends State<HomeContent> {
                                         style: TextStyle(
                                           fontSize: 18,
                                           fontFamily: AppConstants.commonFont,
-                                          fontWeight: FontWeight.w800,
+                                          fontWeight:(gridItem['text'] == 'The essential language process')?FontWeight.w500: FontWeight.w900,
                                           color: Colors.white,
                                         ),
                                       ),
