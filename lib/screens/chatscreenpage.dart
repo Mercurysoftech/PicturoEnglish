@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:developer';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -91,8 +92,20 @@ class _ChatScreenState extends State<ChatScreen> {
       'autoConnect': false,
     });
     socket.connect();
+    FirebaseMessaging messaging = FirebaseMessaging.instance;
+    String? token = await messaging.getToken();
+
+
+    log("lskdcsldkcmlskdc ");
     socket.onConnect((_) {
-      socket.emit('register', userId);
+      print("lsdkclskdmcsdkcmsdlkcmsdldckmsdc ${ {
+        "user_id": userId,
+        "fcm_token": "$token"
+      }}");
+      socket.emit('register', {
+        "user_id": userId,
+        "fcm_token": token
+      });
     });
     socket.on('newMessage', (data) {
       _handleIncomingMessage(data);
@@ -125,8 +138,12 @@ class _ChatScreenState extends State<ChatScreen> {
 
   }
 
+
   void sendMessage(String senderId, String receiverId, String message) {
+    print("lsdkcmlskdcmsd ${socket.connected}");
+    final messageId = "msg_${DateTime.now().millisecondsSinceEpoch}";
     socket.emit('sendMessage', {
+      "message_id":messageId,
       'sender_id': senderId,
       'receiver_id': receiverId,
       'message': message,
