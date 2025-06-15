@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:picturo_app/classes/services/notification_service.dart';
@@ -70,19 +71,18 @@ class MyHttpOverrides extends HttpOverrides {
 }
 void main() async{
   WidgetsFlutterBinding.ensureInitialized();
-  initLocalNotification();
+
   await NotificationService().init();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   // Request notification permissions
   await NotificationService().requestPermissions();
   
   // Initialize notifications
-  await _initializeNotifications();
+
   HttpOverrides.global = MyHttpOverrides();
   runApp(
     MultiProvider(
@@ -111,49 +111,7 @@ void main() async{
     ),
   );
 }
-Future<void> initLocalNotification() async {
-  const AndroidInitializationSettings initializationSettingsAndroid =
-  AndroidInitializationSettings('@mipmap/ic_launcher'); // make sure the icon exists
 
-  const InitializationSettings initializationSettings = InitializationSettings(
-    android: initializationSettingsAndroid,
-  );
-
-  await flutterLocalNotificationsPlugin.initialize(
-    initializationSettings,
-    onDidReceiveNotificationResponse: (NotificationResponse response) {
-
-      //   if (response.actionId == 'ongoing_call_channel') {
-      //         stopCallDurationNotification();
-      //         Map<String,dynamic> msgData= jsonDecode(response.payload??"{}");
-      //         Call call=Call.fromMap(msgData);
-      //         BuildContext? context=NavigationService.instance.navigationKey.currentContext;
-      //         if(context!=null){
-      //           Navigator.push(context, MaterialPageRoute(builder: (context)=>CometchatCallMainPage(isAudioOnly: false, sessionId:call.sessionId==null?'': call.sessionId.toString(),)));
-      //         }else{
-      //           NavigationService.instance.pushNamedIfNotCurrent(AppRoute.callingPage, args:call.sessionId);
-      //         }
-      //         // 🚨 Hangup clicked!
-      //       }else{
-      //         Map<String,dynamic> msgData= jsonDecode(response.payload??"{}");
-      //
-      //         RemoteMessage gg=RemoteMessage.fromMap(msgData);
-      //         openNotification(gg, NavigationService.instance.navigationKey);
-      //       }
-      // Navigate or perform action
-    },
-  );
-}
-Future<void> _initializeNotifications() async {
-  const AndroidInitializationSettings initializationSettingsAndroid =
-      AndroidInitializationSettings('@mipmap/ic_launcher');
-
-  await flutterLocalNotificationsPlugin.initialize(
-    const InitializationSettings(
-      android: initializationSettingsAndroid,
-    ),
-  );
-}
 class DraggableFloatingButton extends StatefulWidget {
   final VoidCallback onTap;
 
@@ -225,8 +183,87 @@ class _DraggableFloatingButtonState extends State<DraggableFloatingButton> {
     );
   }
 }
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  String? _currentUuid;
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    checkAndNavigationCallingPage();
+    super.initState();
+  }
+
+
+
+  Future<dynamic> getCurrentCall() async {
+
+    var calls = await FlutterCallkitIncoming.activeCalls();
+    if (calls is List) {
+      if (calls.isNotEmpty) {
+
+        bool accepted=calls[0]['accepted'];
+
+        if(accepted){
+          setState(() {
+            _currentUuid = calls[0]['id'];
+          });
+        }
+
+
+        return calls[0];
+      } else {
+        _currentUuid = "";
+        return null;
+      }
+    }
+  }
+
+  Future<void> checkAndNavigationCallingPage() async {
+
+    var currentCall = await getCurrentCall();
+    BuildContext? contextx=navigatorKey.currentContext;
+    print("sldkcmsldkcmlskmcsdc  .. ${_currentUuid} ${currentCall} ---- ${contextx}");
+    if(contextx!=null){
+      if(currentCall!=null){
+        int userCurrentId=int.parse(_currentUuid??"0");
+        int target=int.parse(currentCall["extra"]['userId']??"0");
+        context.read<CallSocketHandleCubit>().acceptCall(target, userCurrentId);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => VoiceCallScreen(callerId:target,callerName: "${currentCall['nameCaller']}", callerImage:'',isIncoming: false),
+          ),);
+
+      }
+
+    }else{
+      if (currentCall != null) {
+        bool accepted=currentCall['accepted'];
+
+        if(accepted){
+          int userCurrentId=int.parse(_currentUuid??"0");
+          int target=int.parse(currentCall["extra"]['userId']??"0");
+          context.read<CallSocketHandleCubit>().acceptCall(target, userCurrentId);
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => VoiceCallScreen(callerId:target,callerName: "${currentCall['nameCaller']}", callerImage:'',isIncoming: false),
+            ),);
+
+
+        }
+
+      }
+    }
+
+  }
 
   @override
   Widget build(BuildContext context) {

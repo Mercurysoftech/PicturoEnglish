@@ -27,6 +27,7 @@ class NotificationService {
     await notificationsPlugin.initialize(
       initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse details) {
+        print("lsadkcmlsdkcmlskdcmlskcmsdlkcmasldkcmslvkj ${details.data}");
         // Handle notification tap if needed
       },
     );

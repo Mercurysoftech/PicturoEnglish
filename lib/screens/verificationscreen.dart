@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:picturo_app/screens/changepasswordpage.dart';
@@ -13,7 +15,8 @@ import 'genderandagepage.dart'; // For the Timer
 class VerificationScreen extends StatefulWidget {
   final String? mobile;
   final String? mailId;
-  const VerificationScreen({super.key, this.mobile, this.mailId});
+  final bool? isForgotOTP;
+  const VerificationScreen({super.key, this.mobile, this.mailId,this.isForgotOTP});
 
   @override
   _VerificationScreenState createState() => _VerificationScreenState();
@@ -34,36 +37,77 @@ final List<FocusNode> _otpFocusNodes = List.generate(4, (index) => FocusNode());
     apiService = await ApiService.create(); // Using the static create method
   }
 
+  Future<void> verifyCode({
+    required String email,
+    required String code,
+  }) async {
+    final url = Uri.parse('http://picturoenglish.com/api/verify_code.php');
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? authToken = prefs.getString('auth_token'); // Make sure this is already saved
+
+    final headers = {
+      'Content-Type': 'application/json',
+    };
+
+    final body = jsonEncode({
+      'email': email,
+      'code': code,
+    });
+
+    try {
+
+      final response = await http.post(url, headers: headers, body: body);
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        print('✅ Success: $responseData');
+
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>ChangePasswordPage(emailId: widget.mailId,)));
+      } else {
+        print('❌ Failed: ${response.statusCode}');
+        Fluttertoast.showToast(msg: "Otp Mismatched",backgroundColor: Colors.red);
+
+      }
+    } catch (e) {
+      Fluttertoast.showToast(msg: "Something Went Wrong ! Otp Mismatched",backgroundColor: Colors.red);
+
+    }
+  }
+
+
   Future<void> _verifyOTP() async {
+    print("s;dc;sld,cdsc");
   setState(() {
     _isLoading = true;
   });
-
-  // Combine all OTP digits into one string
   String otp = '';
   for (var controller in _otpControllers) {
     otp += controller.text;
   }
+  if(widget.isForgotOTP!=null){
+    await verifyCode(email: widget.mailId??'',code: otp);
+  }else{
+    final prefs = await SharedPreferences.getInstance();
+    String? otpSended= prefs.getString('otp_verify');
 
-  // Validate OTP length
-
-
-  final email = widget.mailId ?? '';
-
-  final prefs = await SharedPreferences.getInstance();
-  String? otpSended= prefs.getString('otp_verify');
-
-  if(otpSended!=null){
-    if(otpSended==otp){
-      Fluttertoast.showToast(msg: "Otp Verified",backgroundColor: Colors.green);
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => GenderAgeScreen()),
-      );
-    }else{
-      Fluttertoast.showToast(msg: "Otp Mismatched",backgroundColor: Colors.red);
+    if(otpSended!=null){
+      if(otpSended==otp){
+        Fluttertoast.showToast(msg: "Otp Verified",backgroundColor: Colors.green);
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => GenderAgeScreen()),
+        );
+      }else{
+        Fluttertoast.showToast(msg: "Otp Mismatched",backgroundColor: Colors.red);
+      }
     }
+
   }
+  setState(() {
+    _isLoading = false;
+  });
+  // Combine all OTP digits into one string
 
 }
 
@@ -216,7 +260,7 @@ void _showMessage(String message) {
             ),
             const SizedBox(height: 40),
             ElevatedButton(
-              onPressed: _verifyOTP,
+              onPressed: (_isLoading)?(){}: _verifyOTP,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF49329A),
                 minimumSize: const Size(double.infinity, 50),
@@ -224,7 +268,11 @@ void _showMessage(String message) {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              child: const Text(
+              child: (_isLoading)?SizedBox(
+                height: 18,
+                width: 18,
+                child: CircularProgressIndicator(strokeWidth: 0.8,color: Colors.white,),
+              ):const Text(
                 'Verify',
                 style: TextStyle(
                     fontSize: 18, color: Colors.white, fontFamily: AppConstants.commonFont, fontWeight: FontWeight.bold),

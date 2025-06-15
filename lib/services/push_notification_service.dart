@@ -27,7 +27,7 @@ class PushNotificationService {
 
     // Foreground handler
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      print("📲 Foreground message: ${message.toMap()}");
+      print("📲 Foreground message ___ : ${message.toMap()}");
 
 
       RemoteNotification? notification = message.notification;
@@ -53,6 +53,7 @@ class PushNotificationService {
 
     // App opened from terminated state
     FirebaseMessaging.instance.getInitialMessage().then((message) {
+      print("lsdkcmslkdcmsldc ${message?.toMap()}");
       if (message != null) {
         Navigator.pushNamed(context, '/targetPage', arguments: message.data['route']);
       }
@@ -60,6 +61,8 @@ class PushNotificationService {
 
     // App opened from background state
     FirebaseMessaging.onMessageOpenedApp.listen((message) {
+      print("lsdkcmslkdcmsldc Opened  ${message?.toMap()}");
+
       Navigator.pushNamed(context, '/targetPage', arguments: message.data['route']);
     });
   }

@@ -49,7 +49,8 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
     for (var word in words) {
       placedImages[word] = null;
     }
-    availableImages = List.from(images);
+
+    availableImages = List.from(images)..shuffle();
 
     _startCountdown();
   }
