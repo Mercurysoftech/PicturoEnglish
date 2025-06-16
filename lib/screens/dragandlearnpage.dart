@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../cubits/drag_and_learn_cubit/drag_and_learn_cubit.dart';
+import '../cubits/get_coins_cubit/coins_cubit.dart';
 import '../models/dragand_learn_model.dart';
 import '../utils/common_file.dart';
 
@@ -29,6 +30,7 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
 
   late AudioPlayer _bgPlayer;
   late AudioPlayer _effectPlayer;
+  late AudioPlayer _effectDropPlayer;
 
   bool showCountdown = true;
   int countdown = 3;
@@ -37,9 +39,10 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
   void initState() {
 
     super.initState();
-
+    context.read<CoinCubit>().useCoin(1);
     _bgPlayer = AudioPlayer();
     _effectPlayer = AudioPlayer();
+    _effectDropPlayer = AudioPlayer();
 
     if (widget.level?.questions != null) {
       words = widget.level!.questions!.map((q) => q.question).toList();
@@ -152,11 +155,15 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
 
   void _playEffect(String fileName) async {
     await _effectPlayer.play(AssetSource('audio/$fileName'));
+  }  
+  void _playDropEffect(String fileName) async {
+    await _effectDropPlayer.play(AssetSource('audio/$fileName'));
   }
 
   void _stopAllSounds() {
     _bgPlayer.stop();
     _effectPlayer.stop();
+    _effectDropPlayer.stop();
   }
 
   @override
@@ -264,9 +271,8 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
                           onWillAcceptWithDetails: (data) => true,
                           onAccept: (imagePath) async{
                             int wordIndex = words.indexOf(word);
-                            print("sldkcmlskmdclskmc ${widget.level?.questions?[wordIndex].question}");
+                            _playDropEffect('drop.mp3');
                            await markQuestionAsRead(bookId: widget.bookId??0, topicId: widget.topicId??0, questionId: widget.level?.questions?[wordIndex].id??0, isRead: true);
-                            _playEffect('drop.mp3');
 
                             int imageIndex = images.indexOf(imagePath);
                             if (wordIndex == imageIndex) {

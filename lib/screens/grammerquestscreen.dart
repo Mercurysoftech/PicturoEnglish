@@ -1,12 +1,15 @@
 import 'dart:convert';
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../cubits/games_cubits/quest_game/quest_game_qtn_list_cubit.dart';
+import '../cubits/get_coins_cubit/coins_cubit.dart';
 import '../utils/common_app_bar.dart';
+import '../utils/common_file.dart';
 class GrammarQuestScreen extends StatefulWidget {
   final String? title;
   final int questId;
@@ -37,83 +40,150 @@ class _GrammarQuestScreenState extends State<GrammarQuestScreen> {
   Color word3TextColor = Colors.black; // Default text color
   bool loading=false;
 
+  late AudioPlayer _bgPlayer;
+  bool showCountdown = true;
+  int countdown = 3;
+
+@override
+  void initState() {
+    // TODO: implement initState
+  context.read<CoinCubit>().useCoin(1);
+  _bgPlayer = AudioPlayer();
+  _startCountdown();
+  super.initState();
+  }
+
+  void _startCountdown() {
+    Future.doWhile(() async {
+      if (countdown > 1) {
+        await Future.delayed(const Duration(seconds: 1));
+        setState(() {
+          countdown--;
+        });
+        return true;
+      } else {
+        await Future.delayed(const Duration(seconds: 1));
+        setState(() {
+          showCountdown = false;
+        });
+        _playBackgroundMusic();
+        return false;
+      }
+    });
+  }
+  void _playBackgroundMusic() async {
+    await _bgPlayer.setReleaseMode(ReleaseMode.loop);
+    await _bgPlayer.play(AssetSource('audio/quest_gm_bg.mp3'));
+  }
+  void _stopAllSounds() {
+    _bgPlayer.stop();
+
+  }
+  @override
+  void dispose() {
+    // TODO: implement dispose
+    _stopAllSounds();
+    super.dispose();
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Color(0xFFEEEFFF),
       appBar: CommonAppBar(title:"Picture Grammar Quest" ,isBackbutton: true,),
-      body: SingleChildScrollView(
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFFEEEFFF), Color(0xFFFFF0D3), Color(0xFFE7F8FF), Color(0xFFEEEFFF)], // Set your gradient colors here
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-          child: Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: Image.network(
-                    "https://encrypted-tbn1.gstatic.com/images?q=tbn:ANd9GcQi0s-XNjBDXwkLqd6wZJsHXQHi70I-C6swaM8Bix5Gs_ZVcEXB",
-                    height: MediaQuery.of(context).size.width * 0.65, // Responsive height
-                    width: MediaQuery.of(context).size.width * 0.65, // Responsive width
-                    fit: BoxFit.cover,
-                  ),
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFFEEEFFF), Color(0xFFFFF0D3), Color(0xFFE7F8FF), Color(0xFFEEEFFF)], // Set your gradient colors here
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                SizedBox(height: 30),
-                Text(
-                  "${widget.title}",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'Poppins Regular'),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 30),
-                Column(
+              ),
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Column(
                   children: [
-                    buildTextFieldRow(
-                        "Verb", verbController, word1Controller, "ran", word1Color, word1TextColor),
-                    SizedBox(height: 10),
-                    buildTextFieldRow("Adverb", adverbController, word2Controller,
-                        "quickly", word2Color, word2TextColor),
-                    SizedBox(height: 10),
-                    buildTextFieldRow("Adjective", adjectiveController,
-                        word3Controller, "Alley", word3Color, word3TextColor),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Image.network(
+                        "https://encrypted-tbn1.gstatic.com/images?q=tbn:ANd9GcQi0s-XNjBDXwkLqd6wZJsHXQHi70I-C6swaM8Bix5Gs_ZVcEXB",
+                        height: MediaQuery.of(context).size.width * 0.65, // Responsive height
+                        width: MediaQuery.of(context).size.width * 0.65, // Responsive width
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    SizedBox(height: 30),
+                    Text(
+                      "${widget.title}",
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'Poppins Regular'),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 30),
+                    Column(
+                      children: [
+                        buildTextFieldRow(
+                            "Verb", verbController, word1Controller, "ran", word1Color, word1TextColor),
+                        SizedBox(height: 10),
+                        buildTextFieldRow("Adverb", adverbController, word2Controller,
+                            "quickly", word2Color, word2TextColor),
+                        SizedBox(height: 10),
+                        buildTextFieldRow("Adjective", adjectiveController,
+                            word3Controller, "Alley", word3Color, word3TextColor),
+                      ],
+                    ),
+                    SizedBox(height: 50),
+                    SizedBox(
+                      height: 50,
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            checkValues();
+                          });
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xFF49329A),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          padding: EdgeInsets.symmetric(vertical: 14, horizontal: 40),
+                        ),
+                        child:(loading)?SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(strokeWidth: 0.8,color: Colors.white,),
+                        ): Text(
+                          "Submit",
+                          style: TextStyle(fontSize: 16, color: Colors.white, fontFamily: 'Poppins Regular', fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
-                SizedBox(height: 50),
-                SizedBox(
-                  height: 50,
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        checkValues();
-                      });
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFF49329A),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      padding: EdgeInsets.symmetric(vertical: 14, horizontal: 40),
-                    ),
-                    child:(loading)?SizedBox(
-                      height: 18,
-                      width: 18,
-                      child: CircularProgressIndicator(strokeWidth: 0.8,color: Colors.white,),
-                    ): Text(
-                      "Submit",
-                      style: TextStyle(fontSize: 16, color: Colors.white, fontFamily: 'Poppins Regular', fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+          if (showCountdown)
+            Positioned(
+              child: Container(
+                height: double.infinity,
+                color: Colors.black.withOpacity(0.7),
+                child: Center(
+                  child: Text(
+                    "$countdown",
+                    style: TextStyle(
+                      fontSize: 100,
+                      color: Colors.white,
+                      fontFamily: AppConstants.commonFont,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
-        ),
+        ],
       ),
     );
   }
@@ -247,7 +317,7 @@ class _GrammarQuestScreenState extends State<GrammarQuestScreen> {
     );
 
     if (response.statusCode == 200) {
-      print("lkasmclaksmclkadcmlkcmaBody${widget.level} ${widget.questId+1} ${response.body}");
+
       final data = json.decode(response.body);
       final result = data['result'];
 

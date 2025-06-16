@@ -56,11 +56,11 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
   }
 
   void _toggleMute() {
-    context.watch<CallSocketHandleCubit>().muteACall(isMuted);
-      setState(() {
-        isMuted = !isMuted;
-      });
-
+    print("lsdjkclskmclskmcsdccklmlckmw ");
+    setState(() {
+      isMuted = ! isMuted;
+    });
+    context.read<CallSocketHandleCubit>().muteACall(isMuted);
   }
 
   void _toggleSpeaker() async {
@@ -77,6 +77,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
         builder: (context, state) {
 
           if(state is CallRejected){
+            context.read<CallTimerCubit>().stopTimer();
             Future.delayed(Duration.zero,(){
                 Navigator.pop(context);
               context.read<CallSocketHandleCubit>().resetCubit();

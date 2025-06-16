@@ -219,13 +219,31 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
 
     peerConnections[userId.toString()] = pc;
   }
-  void muteACall(bool isMuted){
+  Future<void> muteACall(bool isMuted) async {
+    // Mute/unmute local stream
     if (_localStream != null) {
-      final audioTrack = _localStream!.getAudioTracks().first;
-      audioTrack.enabled = false;
+      for (var track in _localStream!.getAudioTracks()) {
+        track.enabled = !isMuted;
+        print("🎙️ Local audio track ${isMuted ? 'muted' : 'unmuted'}");
+      }
+    }
 
+    // Mute/unmute outgoing audio tracks for each peer connection
+    for (var entry in peerConnections.entries) {
+      final pc = entry.value;
+      final senders = await pc.getSenders(); // Await here ✅
+
+      for (var sender in senders) {
+        final track = sender.track;
+        if (track != null && track.kind == 'audio') {
+          track.enabled = !isMuted;
+          print("🔇 Peer audio track ${isMuted ? 'muted' : 'unmuted'} for user ${entry.key}");
+        }
+      }
     }
   }
+
+
   Future<void> releaseAudioFocus() async {
     final session = await AudioSession.instance;
     await session.setActive(false);

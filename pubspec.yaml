@@ -183,6 +183,7 @@ flutter:
      - assets/audio/bg_music.mp3
      - assets/audio/drop.mp3
      - assets/audio/drag.mp3
+     - assets/audio/quest_gm_bg.mp3
 
      
 

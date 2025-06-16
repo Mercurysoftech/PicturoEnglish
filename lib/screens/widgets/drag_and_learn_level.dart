@@ -103,7 +103,7 @@ class _DragLearnPageState extends State<DragLearnPage> {
                                                 ),
                                               );
 
-                                              context.read<CoinCubit>().useCoin(1);
+
 
                                             },
                                             child: Text(" Start",style: TextStyle(color: Colors.white ),)
