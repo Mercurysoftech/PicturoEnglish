@@ -67,10 +67,7 @@ class _TopicsScreenState extends State<TopicsScreen> {
     return WillPopScope(
       onWillPop: () async {
         // Navigate to the desired page instead of popping the current page
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => Homepage()),
-        );
+       Navigator.pop(context);
         return false; // Prevent default back button behavior
       },
       child:
@@ -217,7 +214,7 @@ class _TopicCardState extends State<TopicCard> {
             child: Padding(
               padding: const EdgeInsets.all(8.0),
               child: Text(
-                capitalizeFirstLetter(widget.title),
+                capitalizeFirstLetter(widget.title=="Action verb"?"Action Verbs":widget.title),
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 13,

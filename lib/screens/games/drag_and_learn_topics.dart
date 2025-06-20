@@ -95,7 +95,7 @@ class _DLGameTopicsPageState extends State<DLGameTopicsPage> {
                                   child: Padding(
                                     padding: const EdgeInsets.only(bottom: 12.0),
                                     child: TopicCard(
-                                      title: topics[index]['title']!,
+                                      title: topics[index]['title']=="Action verb"?"Action Verbs":topics[index]['title']!,
                                       image: topics[index]['image']!,
                                       isSelected: selectedIndex == index,
                                     ),

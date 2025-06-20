@@ -426,7 +426,7 @@ class _ChatListPageState extends State<ChatListPage>
   List<Friends> displayFriends = _searchController.text.isEmpty
       ? friends.where((f) => f.friendId.toString() != currentUserId).toList()
       : filteredFriends.where((f) => f.friendId.toString() != currentUserId).toList();
-  print("sdlclksmcslk ${displayFriends}");
+
   if (displayFriends.isEmpty) {
     return Center(
       child: Text(

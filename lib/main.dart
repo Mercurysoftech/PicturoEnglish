@@ -229,7 +229,7 @@ class _MyAppState extends State<MyApp> {
 
     var currentCall = await getCurrentCall();
     BuildContext? contextx=navigatorKey.currentContext;
-    print("sldkcmsldkcmlskmcsdc  .. ${_currentUuid} ${currentCall} ---- ${contextx}");
+
     if(contextx!=null){
       if(currentCall!=null){
         int userCurrentId=int.parse(_currentUuid??"0");

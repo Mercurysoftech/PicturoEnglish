@@ -141,7 +141,7 @@ class _HomepageState extends State<Homepage> {
       'page': TopicsScreen(title: 'Idioms',topicId: 5,),
     },
     {
-      'image': 'assets/adverb.png',
+      'image': 'assets/waiting.png',
       'text': 'The essential language process',
       'gradient': LinearGradient(
         colors: [Color(0xFF8B8BC4), Color(0xFF8B8BC4)],
@@ -308,14 +308,6 @@ print('Languages da: ${userResponse.speakingLanguage}');
 
 
 
-  String formatDuration(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    final hours = twoDigits(duration.inHours);
-    final minutes = twoDigits(duration.inMinutes.remainder(60));
-    final seconds = twoDigits(duration.inSeconds.remainder(60));
-    return "$hours:$minutes:$seconds";
-  }
-
   @override
 Widget build(BuildContext context) {
 
@@ -325,48 +317,7 @@ Widget build(BuildContext context) {
       onWillPop: onWillPop,
       child:  Scaffold(
       backgroundColor: Color(0xFFE0F7FF),
-      body: Stack(
-        children: [
-          _pages[_selectedIndex],
-          Positioned(
-              top: 71,
-              right: 82,
-              child: BlocBuilder<CallSocketHandleCubit, CallSocketHandleState>(
-  builder: (context, state) {
-    return (context.watch<CallSocketHandleCubit>().isLiveCallActive)?InkWell(
-      onTap: (){
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => VoiceCallScreen( callerId:context.watch<CallSocketHandleCubit>().targetUserId??0,callerName: "${context.watch<CallSocketHandleCubit>().callerName}", callerImage:'',isIncoming: false),
-          ),);
-      },
-      child: Container(
-              height: 30,
-            margin: EdgeInsets.only(right: 2),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(30),
-              color: Colors.green.withOpacity(0.12),
-            ),
-        child:   Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Center(
-            child: BlocBuilder<CallTimerCubit, CallTimerState>(
-              builder: (context, state) {
-                return Text(
-                  formatDuration(state.duration),
-                  style: TextStyle(fontSize: 16, color: Colors.green),
-                );
-              },
-            ),
-          ),
-        ),
-            ),
-    ):SizedBox();
-  },
-))
-        ],
-      ),
+      body: _pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,

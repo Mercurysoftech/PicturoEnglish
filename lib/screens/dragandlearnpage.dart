@@ -112,7 +112,7 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
 
     final body = jsonEncode({
       'book_id': bookId,
-      'topic_id': 1,
+      'topic_id': widget.topicId,
       'level': level,
     });
 
@@ -149,8 +149,10 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
   }
 
   void _playBackgroundMusic() async {
-    await _bgPlayer.setReleaseMode(ReleaseMode.loop);
-    await _bgPlayer.play(AssetSource('audio/bg_music.mp3'));
+    if(!pauseMusic) {
+      await _bgPlayer.setReleaseMode(ReleaseMode.loop);
+      await _bgPlayer.play(AssetSource('audio/bg_music.mp3'));
+    }
   }
 
   void _playEffect(String fileName) async {
@@ -171,6 +173,7 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
     _stopAllSounds();
     super.dispose();
   }
+  bool pauseMusic=false;
 
   void _showCongratulationsPopup() {
     showDialog(
@@ -229,6 +232,25 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
                 },
               ),
             ),
+            actions: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                child: InkWell(
+                    onTap: (){
+                      if(pauseMusic==false){
+                        _bgPlayer.pause();
+                      }else{
+                        _bgPlayer.play(AssetSource('audio/bg_music.mp3'));
+
+                      }
+                      setState(() {
+                        pauseMusic=!pauseMusic;
+                      });
+
+                    },
+                    child: Icon((!pauseMusic)?Icons.volume_up_outlined:Icons.volume_off,color: Colors.white,)),
+              )
+            ],
             title: Padding(
               padding: const EdgeInsets.only(top: 4.0),
               child: Text(

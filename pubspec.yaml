@@ -162,6 +162,7 @@ flutter:
      - assets/run.png
      - assets/walk.png
      - assets/eat.png
+     - assets/waiting.png
      - assets/sleep.png
      - assets/fluent_bot-28-filled.png
      - assets/Emoji.png

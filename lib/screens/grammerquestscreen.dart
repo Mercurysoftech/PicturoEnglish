@@ -72,8 +72,11 @@ class _GrammarQuestScreenState extends State<GrammarQuestScreen> {
     });
   }
   void _playBackgroundMusic() async {
+  if(!pauseMusic){
     await _bgPlayer.setReleaseMode(ReleaseMode.loop);
     await _bgPlayer.play(AssetSource('audio/quest_gm_bg.mp3'));
+  }
+
   }
   void _stopAllSounds() {
     _bgPlayer.stop();
@@ -85,11 +88,30 @@ class _GrammarQuestScreenState extends State<GrammarQuestScreen> {
     _stopAllSounds();
     super.dispose();
   }
+  bool pauseMusic=false;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Color(0xFFEEEFFF),
-      appBar: CommonAppBar(title:"Picture Grammar Quest" ,isBackbutton: true,),
+      appBar: CommonAppBar(title:"Picture Grammar Quest" ,isBackbutton: true,  actions: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+          child: InkWell(
+              onTap: (){
+                if(pauseMusic==false){
+                  _bgPlayer.pause();
+                }else{
+                  _bgPlayer.play(AssetSource('audio/quest_gm_bg.mp3'));
+
+                }
+                setState(() {
+                  pauseMusic=!pauseMusic;
+                });
+
+              },
+              child: Icon((!pauseMusic)?Icons.volume_up_outlined:Icons.volume_off,color: Colors.white,)),
+        )
+      ],),
       body: Stack(
         children: [
           SingleChildScrollView(
