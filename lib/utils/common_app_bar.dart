@@ -47,7 +47,7 @@ class CommonAppBar extends StatelessWidget implements PreferredSize {
         ),
         actions: (actions!=null)?actions:(isFromHomePage!=null&&isFromHomePage==true && actions==null)? [
         Padding(
-            padding: const EdgeInsets.only(top: 8.0,left: 8, right: 28.0),
+            padding: const EdgeInsets.only(top: 7.0,left: 8, right: 28.0),
             child: Row(mainAxisAlignment: MainAxisAlignment.center,crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 BlocBuilder<CallSocketHandleCubit, CallSocketHandleState>(
@@ -95,17 +95,20 @@ class CommonAppBar extends StatelessWidget implements PreferredSize {
                     if (state is AvatarLoaded) {
                       return Column(mainAxisAlignment: MainAxisAlignment.center,crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          InkWell(
-                            onTap: (){
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => MyProfileScreen()),
-                              );
-                            },
-                            child: CircleAvatar(
-                              radius: 14,
-                              backgroundColor: Color(0xFF49329A),
-                              backgroundImage: state.imageProvider,
+                          Padding(
+                            padding: const EdgeInsets.only(left:4.0),
+                            child: InkWell(
+                              onTap: (){
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => MyProfileScreen()),
+                                );
+                              },
+                              child: CircleAvatar(
+                                radius: 15,
+                                backgroundColor: Color(0xFF49329A),
+                                backgroundImage: state.imageProvider,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 2,),
@@ -125,18 +128,21 @@ class CommonAppBar extends StatelessWidget implements PreferredSize {
                     } else {
                       // Fallback image
                       final fallback = context.read<AvatarCubit>().getFallbackAvatarImage();
-                      return Row(
+                      return Column(
                         children: [
-                          InkWell(
-                            onTap: (){
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => MyProfileScreen()),
-                              );
-                            },
-                            child: CircleAvatar(
-                              backgroundImage: fallback,
-                              radius: 20,
+                          Padding(
+                            padding: const EdgeInsets.only(left:4.0),
+                            child: InkWell(
+                              onTap: (){
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => MyProfileScreen()),
+                                );
+                              },
+                              child: CircleAvatar(
+                                backgroundImage: fallback,
+                                radius: 15,
+                              ),
                             ),
                           ),
                           InkWell(
