@@ -110,6 +110,10 @@ class _ChatScreenState extends State<ChatScreen> {
       _handleIncomingMessage(data);
 
     });
+    socket.on('unreadCount', (data) {
+     print("sdkcsldkmcsdcs;c __ ${data}");
+    });
+
     socket.onError((handler){
       print('_____________ ____________ Erroer ${handler.toString()}');
     });

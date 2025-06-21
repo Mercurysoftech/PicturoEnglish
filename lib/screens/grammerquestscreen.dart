@@ -330,13 +330,13 @@ class _GrammarQuestScreenState extends State<GrammarQuestScreen> {
         'Authorization': 'Bearer $token', // Replace with actual token
       },
       body: jsonEncode({
-
-        "sentence_id":(widget.level==1)?1: widget.questId+1,
+        "sentence_id":widget.questId,
         "verb": word1Controller.text.trim(),
         "adverb": word2Controller.text.trim(),
         "adjective": word3Controller.text.trim(),
       }),
     );
+
 
     if (response.statusCode == 200) {
 

@@ -13,6 +13,14 @@ final class CallRejected extends CallSocketHandleState {
   @override
   List<Object> get props => [];
 }
+final class CallOnHold extends CallSocketHandleState {
+  @override
+  List<Object> get props => [];
+}
+final class CallResumed extends CallSocketHandleState {
+  @override
+  List<Object> get props => [];
+}
 final class CallAccepted extends CallSocketHandleState {
   @override
   List<Object> get props => [];

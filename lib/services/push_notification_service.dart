@@ -28,11 +28,8 @@ class PushNotificationService {
     // Foreground handler
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       print("📲 Foreground message ___ : ${message.toMap()}");
-
-
       RemoteNotification? notification = message.notification;
       AndroidNotification? android = message.notification?.android;
-
       if (notification != null && android != null) {
         flutterLocalNotificationsPlugin.show(
           notification.hashCode,

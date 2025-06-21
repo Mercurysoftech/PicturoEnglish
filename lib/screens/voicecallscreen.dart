@@ -82,7 +82,12 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
                 Navigator.pop(context);
               context.read<CallSocketHandleCubit>().resetCubit();
             });
+          }else if(state is CallOnHold){
+            context.read<CallTimerCubit>().pauseTimer();
+          }else if(state is CallResumed){
+            context.read<CallTimerCubit>().resumeTimer();
           }
+
           return Stack(
             children: [
               // Background
@@ -123,9 +128,9 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
                       // SizedBox(height: 10),
                       SizedBox(height: 10),
                       BlocBuilder<CallTimerCubit, CallTimerState>(
-                        builder: (context, state) {
+                        builder: (context, timerState) {
                           return Text(
-                            formatDuration(state.duration),
+                              (state is CallOnHold)?"Call on Hold":formatDuration(timerState.duration),
                             style: TextStyle(fontSize: 16, color: Colors.white),
                           );
                         },

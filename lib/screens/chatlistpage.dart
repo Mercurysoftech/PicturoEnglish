@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
@@ -12,7 +14,7 @@ import 'package:picturo_app/screens/chatscreenpage.dart';
 import 'package:picturo_app/screens/myprofilepage.dart';
 import 'package:picturo_app/services/api_service.dart';
 import 'package:provider/provider.dart';
-
+import 'package:socket_io_client/socket_io_client.dart' as IO;
 import '../cubits/call_cubit/call_socket_handle_cubit.dart';
 import '../cubits/get_avatar_cubit/get_avatar_cubit.dart';
 import '../cubits/user_friends_cubit/user_friends_cubit.dart';
@@ -45,8 +47,7 @@ class _ChatListPageState extends State<ChatListPage>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _searchController.addListener(_onSearchChanged);
-  
-
+    connectSocket();
     _fetchAllUsers();
   }
 
@@ -104,7 +105,25 @@ class _ChatListPageState extends State<ChatListPage>
     });
   }
   bool updatedOne=false;
+  late IO.Socket socket;
+  void connectSocket(){
+    socket = IO.io('https://picturoenglish.com:2025', <String, dynamic>{
+      'transports': ['websocket'],
+      'autoConnect': false,
+    });
+    socket.connect();
+    log("lskdcsldkcmlskdc ");
+    socket.onConnect((_) {
+      log("sdkcsldkmcsdcs  contxdhc");
+    });
+    socket.on('newMessage', (data) {
 
+
+    });
+    socket.on('unreadCount', (data) {
+      print("sdkcsldkmcsdcs;c ((((((((((((((__ ${data}");
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -164,6 +183,7 @@ class _ChatListPageState extends State<ChatListPage>
               ),
             ),
             TabBar(
+              tabAlignment: TabAlignment.center,
               onTap: (_) => _searchController.clear(),
               controller: _tabController,
               isScrollable: true,
@@ -173,6 +193,7 @@ class _ChatListPageState extends State<ChatListPage>
                 fontWeight: FontWeight.bold,
                 fontSize: 13,
               ),
+
               labelPadding: EdgeInsets.only(right: 20), // more breathing room
               tabs: [
                 Tab(child: FittedBox(child: Row(

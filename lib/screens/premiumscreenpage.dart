@@ -366,7 +366,7 @@ Container(
   ),
   child: TextField(
     decoration: InputDecoration(
-      hintText: 'Referral Code (i.e SD2334F)',
+      hintText: 'Referral Code (i.e SD2334F) Optional',
       hintStyle: TextStyle(
         color: Color(0xFFAAAAAA),
         fontFamily: 'Poppins Regular',

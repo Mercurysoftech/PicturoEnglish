@@ -14,6 +14,7 @@ import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import '../../responses/allusers_response.dart';
 import '../../responses/friends_response.dart';
 import '../../services/api_service.dart';
+import 'package:phone_state/phone_state.dart';
 
 part 'call_socket_handle_state.dart';
 
@@ -141,8 +142,36 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
     callSocket.onError((err) {
       print("Socket error: $err");
     });
+
+  }
+  void onNativeCallStart() {
+    print("📞 Native phone call started - putting WebRTC call on hold");
+    _muteLocalAudio(true);
+    emit(CallOnHold());
   }
 
+  void onNativeCallEnd() {
+    print("📞 Native phone call ended - resuming WebRTC call");
+    _muteLocalAudio(false);
+    emit(CallResumed());
+  }
+
+  void _muteLocalAudio(bool isMuted) {
+    if (_localStream != null) {
+      for (var track in _localStream!.getAudioTracks()) {
+        track.enabled = !isMuted;
+      }
+    }
+
+    peerConnections.forEach((key, pc) async {
+      final senders = await pc.getSenders();
+      for (var sender in senders) {
+        if (sender.track != null && sender.track!.kind == 'audio') {
+          sender.track!.enabled = !isMuted;
+        }
+      }
+    });
+  }
   void acceptCall(int targetUser, int currentUserId) async {
     await connectNewUser(targetUser, currentUserId);
     initiateWebRTCCall(targetId: targetUser, currentUserId: currentUserId,);
@@ -167,11 +196,11 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
 
 
 
-
   Future<void> initiateWebRTCCall({
     required int currentUserId,
     required int targetId,
   }) async {
+
     targetUserId = targetId;
     emit(state);
     await connectNewUser(targetId, currentUserId);

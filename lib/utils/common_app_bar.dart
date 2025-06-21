@@ -73,9 +73,9 @@ class CommonAppBar extends StatelessWidget implements PreferredSize {
                             padding: const EdgeInsets.symmetric(horizontal: 8.0),
                             child: Center(
                               child: BlocBuilder<CallTimerCubit, CallTimerState>(
-                                builder: (context, state) {
+                                builder: (context, timerState) {
                                   return Text(
-                                    formatDuration(state.duration),
+                                    (state is CallOnHold)?"Call on Hold":formatDuration(timerState.duration),
                                     style: TextStyle(fontSize: 16, color: Colors.green),
                                   );
                                 },

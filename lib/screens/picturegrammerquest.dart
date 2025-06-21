@@ -164,6 +164,7 @@ class _PictureGrammarQuestScreenState extends State<PictureGrammarQuestScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
+                        const SizedBox(height: 10,),
                         if (locked)
                           Icon(Icons.lock, color: Colors.white),
                         if (!locked)
