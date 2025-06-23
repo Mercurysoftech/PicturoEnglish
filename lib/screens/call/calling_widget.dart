@@ -30,8 +30,7 @@ class _CallingScreenState extends State<CallingScreen> {
 
   @override
   void initState() {
-    //
-    // context.read<CallSocketHandleCubit>().checkConnected();
+
     connectCall();
     super.initState();
   }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../genderandagepage.dart';
+import '../../homepage.dart';
 import '../../loginscreen.dart';
 
 class MoodDiaryVew extends StatelessWidget {
@@ -147,7 +149,12 @@ class MoodDiaryVew extends StatelessWidget {
                       onTap: () async{
                         SharedPreferences pref =await SharedPreferences.getInstance();
                         pref.setBool("isFirstTime", false);
-                        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>LoginScreen()));
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(builder: (context) => Homepage()),
+                              (route) => false,
+                        );
+                        // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>LoginScreen()));
                       },
                       child: Container(
                         height: 58,

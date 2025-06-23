@@ -180,7 +180,7 @@ class _SubtopicPageState extends State<SubtopicPage> {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                capitalizeFirstLetter(question.question ?? ''),
+                "${capitalizeFirstLetter(question.question ?? '')}s",
                 style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w500,

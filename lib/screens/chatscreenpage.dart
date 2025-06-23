@@ -32,15 +32,14 @@ enum ChatMenuAction { //enum class for menu option like "block user"...etc
 }
 
 class ChatScreen extends StatefulWidget {
-  final int profileId;
+
   final String userName;
   final Widget avatarWidget;
   final Friends friendDetails;
   final int userId;
   
   const ChatScreen({
-    super.key, 
-    required this.profileId,
+    super.key,
     required this.userName,
     required this.avatarWidget,
     required this.friendDetails,
@@ -53,7 +52,7 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   late ApiService _apiService;
-  String? _avatarUrl;
+
   bool _isLoading = true;
   final String baseUrl = "https://picturoenglish.com/";
   final TextEditingController _messageController = TextEditingController();
@@ -70,7 +69,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _initializeApiService();
     initSocket();
     _setupTypingListener();
-    _loadAvatar();
+
   }
 
 
@@ -111,6 +110,10 @@ class _ChatScreenState extends State<ChatScreen> {
       _handleIncomingMessage(data);
 
     });
+    socket.on('unreadCount', (data) {
+     print("sdkcsldkmcsdcs;c __ ${data}");
+    });
+
     socket.onError((handler){
       print('_____________ ____________ Erroer ${handler.toString()}');
     });
@@ -163,9 +166,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _initializeApiService() async {
   try {
     _apiService = await ApiService.create();
-    if (widget.profileId != 0) {
-      await _loadAvatar();
-    }
+
 
     await _loadMessages();
   } catch (e) {
@@ -200,34 +201,7 @@ class _ChatScreenState extends State<ChatScreen> {
 }
 
 
-  Future<void> _loadAvatar() async {
-    try {
-      final avatarResponse = await _apiService.fetchAvatars();
-      print('Avatar with ID ${widget.profileId}');
-      
-      // Find the matching avatar
-      final avatar = avatarResponse.data.firstWhere(
-        (a) => a.id == widget.profileId,
-        orElse: () {
-          print('Avatar with ID ${widget.profileId} not found');
-          throw Exception("Avatar not found");
-        },
-      );
-      
-      if (mounted) {
-        setState(() {
-          _avatarUrl = baseUrl + avatar.avatarUrl;
-        });
-      }
-    } catch (e) {
-      print("Error loading avatar: $e");
-      if (mounted) {
-        setState(() {
-          _avatarUrl = null;
-        });
-      }
-    }
-  }
+
 
 
 
@@ -466,64 +440,7 @@ void dispose() {
                     color: Colors.transparent,
                     child: InkWell(
                       onTap: () async{
-                        // insert coinCount=0;
-                        // setState(()  {
-                        //  coinCount= await SharedPrefsService().getCoin();
-                        // });
-                        // if (coinCount >0) {
-                        //   showDialog(
-                        //   context: context,
-                        //   builder: (context){
-                        //     return AlertDialog(
-                        //       shape: RoundedRectangleBorder(
-                        //         borderRadius: BorderRadius.circular(10)
-                        //       ),
-                        //       backgroundColor: Colors.white,
-                        //       title: Text("Are you Sure want make a call",style: TextStyle(fontSize: 16,),textAlign: TextAlign.center,),
-                        //       content: Text("Every call use 1 coin",textAlign: TextAlign.center,),
-                        //       actions: [
-                        //         Row(
-                        //           mainAxisAlignment: MainAxisAlignment.end,
-                        //           children: [
-                        //             TextButton(
-                        //                 onPressed: (){
-                        //                   Navigator.pop(context);
-                        //                 },
-                        //                 style: ButtonStyle(
-                        //                   padding: WidgetStateProperty.all(EdgeInsets.symmetric(horizontal: 20)),
-                        //                 ),
-                        //                 child: Text("Cancel")
-                        //             ),
-                        //             SizedBox(
-                        //               child: TextButton(
-                        //                 style: ButtonStyle(
-                        //                   padding: WidgetStateProperty.all(EdgeInsets.symmetric(horizontal: 20)),
-                        //                   backgroundColor: WidgetStateProperty.all(Color(0xFF49329A))
-                        //                 ),
-                        //                   onPressed: ()async{
-                        //
-                        //                     Navigator.push(context, MaterialPageRoute(builder: (context)=>CallingScreen(friendDetails: widget.friendDetails,callerName: "${widget.friendDetails.friendName}",avatarUrl: widget.friendDetails.friendProfilePic,)));
-                        //                     await SharedPrefsService().useCoin(1);
-                        //                     Navigator.pop(context);
-                        //                   },
-                        //                   child: Text("Call",style: TextStyle(color: Colors.white ),)
-                        //               ),
-                        //             ),
-                        //           ],
-                        //         )
-                        //       ],
-                        //     );
-                        //   });
-                        // Fluttertoast.showToast(msg: "Every call use 1 coin");
                               Navigator.push(context, MaterialPageRoute(builder: (context)=>CallingScreen(friendDetails: widget.friendDetails,callerName: "${widget.friendDetails.friendName}",avatarUrl: widget.friendDetails.friendProfilePic,)));
-
-
-                        // Navigator.push(context, MaterialPageRoute(builder: (context)=>CallScreen( userId: '${widget.friendDetails.friendId}',)));
-                        // }
-                        // else if(coinCount <=0){
-                        //   Fluttertoast.showToast(msg: 'Not enough coin');
-                        // }
-
                       },
 
                       borderRadius: BorderRadius.circular(70),

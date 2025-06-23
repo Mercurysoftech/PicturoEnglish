@@ -18,6 +18,7 @@ import 'package:picturo_app/screens/widgets/commons.dart';
 import 'package:picturo_app/screens/withdrawpage.dart';
 import 'package:picturo_app/services/api_service.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../cubits/get_coins_cubit/coins_cubit.dart';
@@ -188,6 +189,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                       SizedBox(height: 10),
                        _buildSettingsOption(Icons.help_outline, "Help", context,profileProvider),
                        SizedBox(height: 10),
+                          _buildSettingsOption(Icons.share, "Share This App", context,profileProvider),
+                       SizedBox(height: 10),
                       _buildSettingsOption(Icons.delete_outline, "Delete Account", context,profileProvider),
                       SizedBox(height: 10),
                       _buildLogoutButton(),
@@ -356,6 +359,9 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, fontFamily: 'Poppins Regular')),
           trailing: Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 18),
           onTap: () {
+            if(title=="Share This App"){
+              Share.share("https://play.google.com/store/apps/details?id=com.picturo.picturoenglish&pcampaignid=web_share");
+            }else
             if (title == 'Referral Earning') {
               Navigator.push(
                 context,

@@ -7,14 +7,26 @@ part 'call_duration_handle_state.dart';
 
 class CallTimerCubit extends Cubit<CallTimerState> {
   Timer? _timer;
+  bool _isPaused = false;
 
   CallTimerCubit() : super(const CallTimerState());
 
   void startTimer() {
     _timer?.cancel();
+    _isPaused = false;
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      emit(state.copyWith(duration: state.duration + const Duration(seconds: 1)));
+      if (!_isPaused) {
+        emit(state.copyWith(duration: state.duration + const Duration(seconds: 1)));
+      }
     });
+  }
+
+  void pauseTimer() {
+    _isPaused = true;
+  }
+
+  void resumeTimer() {
+    _isPaused = false;
   }
 
   void stopTimer() {
@@ -23,6 +35,7 @@ class CallTimerCubit extends Cubit<CallTimerState> {
 
   void resetTimer() {
     _timer?.cancel();
+    _isPaused = false;
     emit(const CallTimerState(duration: Duration.zero));
   }
 

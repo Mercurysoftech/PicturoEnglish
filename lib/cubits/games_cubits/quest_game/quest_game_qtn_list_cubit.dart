@@ -1,4 +1,5 @@
-import 'dart:math';
+
+import 'dart:developer';
 
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
@@ -16,7 +17,7 @@ class GrammarQuestCubit extends Cubit<GrammarQuestState> {
     emit(GrammarQuestLoading());
     final url = Uri.parse("http://picturoenglish.com/api/grammer_quest.php");
 
-    try {
+    // try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       final token = prefs.getString("auth_token");
 
@@ -31,6 +32,7 @@ class GrammarQuestCubit extends Cubit<GrammarQuestState> {
       if (response.statusCode == 200) {
 
         final List data = json.decode(response.body);
+        log("sdjclskmcsdkcms;ldc __ ${data}");
 
 
         final questions = data.map((e) => GrammarQuestion.fromJson(e)).toList();
@@ -47,8 +49,8 @@ class GrammarQuestCubit extends Cubit<GrammarQuestState> {
       } else {
         emit(GrammarQuestFailed('Server error: ${response.statusCode}'));
       }
-    } catch (e) {
-      emit(GrammarQuestFailed('Error: $e'));
-    }
+    // } catch (e) {
+    //   emit(GrammarQuestFailed('Error: $e'));
+    // }
   }
 }

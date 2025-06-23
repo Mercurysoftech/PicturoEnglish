@@ -30,10 +30,9 @@ class CoinCubit extends Cubit<CoinState> {
     emit(CoinLoading());
     final prefs = await SharedPreferences.getInstance();
     bool isFirst = prefs.getBool(PrefsKeys.isFirstTime) ?? false;
-
-    if (isFirst) {
+    // if (isFirst) {
       await prefs.setInt(PrefsKeys.coin, coin);
-    }
+    // }
     await prefs.setBool(PrefsKeys.isFirstTime, false);
 
     // int updatedCoin = prefs.getInt(PrefsKeys.coin) ?? 0;

@@ -114,6 +114,7 @@ class _PictureGrammarQuestScreenState extends State<PictureGrammarQuestScreen> {
                                           padding: WidgetStateProperty.all(EdgeInsets.symmetric(horizontal: 20)),
                                         ),
                                         child: Text("Cancel")
+
                                     ),
                                     SizedBox(
                                       child: TextButton(
@@ -122,14 +123,15 @@ class _PictureGrammarQuestScreenState extends State<PictureGrammarQuestScreen> {
                                               backgroundColor: WidgetStateProperty.all(Color(0xFF49329A))
                                           ),
                                           onPressed: ()async{
+                                            Navigator.pop(context);
                                             Navigator.push(
                                               context,
                                               MaterialPageRoute(
                                                 builder: (context) => GrammarQuestScreen( index: index,questions: levels,level:state.level,questId: question.id,title: question.gameQus),
                                               ),
                                             );
-                                            context.read<CoinCubit>().useCoin(1);
-                                            Navigator.pop(context);
+
+
                                           },
                                           child: Text(" Start",style: TextStyle(color: Colors.white ),)
                                       ),
@@ -162,6 +164,7 @@ class _PictureGrammarQuestScreenState extends State<PictureGrammarQuestScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
+                        const SizedBox(height: 10,),
                         if (locked)
                           Icon(Icons.lock, color: Colors.white),
                         if (!locked)

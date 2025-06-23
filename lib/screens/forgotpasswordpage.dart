@@ -50,10 +50,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
     if (response["status"] == "success") {
        _showMessage(response["message"]);
+
        Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => VerificationScreen(mailId:_emailController.text.trim()), // Replace with your HomePage
+              builder: (context) => VerificationScreen(isForgotOTP: true,mailId:_emailController.text.trim()), // Replace with your HomePage
             ),
           );
     } else {
@@ -66,6 +67,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   //     _isLoading = false; // Hide loading indicator
   //   });
   // }
+  setState(() {
+    _isLoading = false; // Show loading indicator
+  });
 }
 
 void _showMessage(String message) {
@@ -142,8 +146,12 @@ void _showMessage(String message) {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     )),
-                onPressed: _sendOTP,
-                child: Text(
+                onPressed:(_isLoading)?(){}: _sendOTP,
+                child: (_isLoading)?SizedBox(
+                  height: 18,
+                  width: 18,
+                  child: CircularProgressIndicator(strokeWidth: 0.8,color: Colors.white,),
+                ):Text(
                   "Send OTP",
                   style: TextStyle(color: Color(0xFFFFFFFF), fontSize: 17,fontFamily: 'Poppins Regular',fontWeight: FontWeight.bold),
                 ),

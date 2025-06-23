@@ -55,105 +55,70 @@ class _DragLearnPageState extends State<DragLearnPage> {
 
                   if (!hasEnoughQuestions) return SizedBox();
 
+                  // Check if all previous levels are completed
                   final isEnabled = index == 0 || (data!.levels!.take(index).every((lvl) => lvl.completed ?? false));
 
                   return InkWell(
                     onTap: isEnabled
-                        ? () async {
-                      final int coinCount =
-                      await context.read<CoinCubit>().getCoin();
-                      if (coinCount > 0) {
+                        ? () async{
+                      final int coinCount= await  context.read<CoinCubit>().getCoin();
+                      if (isEnabled && coinCount > 0) {
                         showDialog(
-                          context: context,
-                          builder: (context) {
-                            return AlertDialog(
-                              shape: RoundedRectangleBorder(
-                                  borderRadius:
-                                  BorderRadius.circular(10)),
-                              backgroundColor: Colors.white,
-                              title: const Text(
-                                "Are you Sure want Start",
-                                style: TextStyle(fontSize: 16),
-                                textAlign: TextAlign.center,
-                              ),
-                              content: const Text(
-                                "Every level use 1 coin",
-                                textAlign: TextAlign.center,
-                              ),
-                              actions: [
-                                Row(
-                                  mainAxisAlignment:
-                                  MainAxisAlignment.end,
-                                  children: [
-                                    TextButton(
-                                      onPressed: () {
-                                        Navigator.pop(context);
-                                      },
-                                      style: ButtonStyle(
-                                        padding: WidgetStateProperty.all(
-                                            const EdgeInsets.symmetric(
-                                                horizontal: 20)),
-                                      ),
-                                      child: const Text("Cancel"),
-                                    ),
-                                    TextButton(
-                                      style: ButtonStyle(
-                                        padding: WidgetStateProperty.all(
-                                            const EdgeInsets.symmetric(
-                                                horizontal: 20)),
-                                        backgroundColor:
-                                        WidgetStateProperty.all(
-                                            const Color(0xFF49329A)),
-                                      ),
-                                      onPressed: () async {
-                                        Navigator.pop(context);
-
-                                        final result =
-                                        await Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                DragAndLearnApp(
-                                                  preLevels: data?.levels,
-                                                  levelIndex: index,
-                                                  topicId: data?.topicId,
-                                                  bookId: widget.bookId,
-                                                  level: level,
-                                                ),
+                            context: context,
+                            builder: (context){
+                              return AlertDialog(
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10)
+                                ),
+                                backgroundColor: Colors.white,
+                                title: Text("Are you Sure want Start",style: TextStyle(fontSize: 16,),textAlign: TextAlign.center,),
+                                content: Text("Every level use 1 coin",textAlign: TextAlign.center,),
+                                actions: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      TextButton(
+                                          onPressed: (){
+                                            Navigator.pop(context);
+                                          },
+                                          style: ButtonStyle(
+                                            padding: WidgetStateProperty.all(EdgeInsets.symmetric(horizontal: 20)),
                                           ),
-                                        );
-
-                                        context
-                                            .read<CoinCubit>()
-                                            .useCoin(1);
-
-                                        if (result == true) {
-                                          // Refresh data after level completion
-                                          context
-                                              .read<DragLearnCubit>()
-                                              .fetchDragLearnData(
-                                              bookId:
-                                              widget.bookId);
-                                          Fluttertoast.showToast(
-                                              msg:
-                                              'Level Completed! Next level unlocked.');
-                                        }
-                                      },
-                                      child: const Text(
-                                        " Start",
-                                        style: TextStyle(
-                                            color: Colors.white),
+                                          child: Text("Cancel")
                                       ),
-                                    ),
-                                  ],
-                                )
-                              ],
-                            );
-                          },
+                                      SizedBox(
+                                        child: TextButton(
+                                            style: ButtonStyle(
+                                                padding: WidgetStateProperty.all(EdgeInsets.symmetric(horizontal: 20)),
+                                                backgroundColor: WidgetStateProperty.all(Color(0xFF49329A))
+                                            ),
+                                            onPressed: ()async{
+                                              print("sdcsdlkcsdcs;dc");
+
+                                              Navigator.pop(context);
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) => DragAndLearnApp(preLevels:data?.levels,levelIndex: index,topicId: data?.topicId,bookId: widget.bookId,level: level),
+                                                ),
+                                              );
+
+
+
+                                            },
+                                            child: Text(" Start",style: TextStyle(color: Colors.white ),)
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                ],
+                              );
+                            }
                         );
-                      } else {
+                      }else if(coinCount <=0){
                         Fluttertoast.showToast(msg: 'Not enough Coin');
                       }
+
                     }
                         : null,
                     child: Opacity(

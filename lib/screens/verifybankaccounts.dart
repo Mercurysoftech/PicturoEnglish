@@ -94,7 +94,7 @@ class _VerifyBankAccountState extends State<VerifyBankAccount> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Bank account verified successfully!"))
       );
-      Navigator.push(
+      Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => AccountDetailShow()),
       );
@@ -137,10 +137,7 @@ class _VerifyBankAccountState extends State<VerifyBankAccount> {
             child: IconButton(
               icon: Icon(Icons.arrow_back_ios, color: Colors.white, size: 26),
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => AccountDetailShow()),
-                );
+                Navigator.pop(context);
               },
             ),
           ),

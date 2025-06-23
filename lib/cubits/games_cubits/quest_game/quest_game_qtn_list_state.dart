@@ -34,8 +34,8 @@ class GrammarQuestion {
 
   factory GrammarQuestion.fromJson(Map<String, dynamic> json) {
     return GrammarQuestion(
-      id: json['id'],
-      gameQus: json['game_qus'],
+      id: json['id']??0,
+      gameQus: json['sentence']??'',
     );
   }
 }

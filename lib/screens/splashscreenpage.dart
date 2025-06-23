@@ -53,19 +53,13 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     if (mounted) {
 
      bool? isFirst= prefs.getBool("isFirstTime");
-     if(isFirst==false){
+
        Navigator.of(context).pushReplacement(
          MaterialPageRoute(
            builder: (context) => isLoggedIn ? const Homepage() : const LoginScreen(),
          ),
        );
-     }else{
-       Navigator.of(context).pushReplacement(
-         MaterialPageRoute(
-           builder: (context) => IntroductionAnimationScreen(),
-         ),
-       );
-     }
+
 
 
     }

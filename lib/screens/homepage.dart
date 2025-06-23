@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_callkit_incoming/entities/call_event.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:phone_state/phone_state.dart';
 import 'package:picturo_app/providers/profileprovider.dart';
 import 'package:picturo_app/responses/books_response.dart';
 import 'package:picturo_app/screens/chatbotpage.dart';
@@ -92,7 +94,7 @@ class _HomepageState extends State<Homepage> {
   List<Map<String, dynamic>> _gridItems = [
     {
       'image': 'assets/verbs.png',
-      'text': 'Verbs',
+      'text': 'Verb',
       'gradient': LinearGradient(
         colors: [Colors.cyan, Colors.indigo],
         begin: Alignment.topCenter,
@@ -102,27 +104,27 @@ class _HomepageState extends State<Homepage> {
     },
     {
       'image': 'assets/adverb.png',
-      'text': 'Adverbs',
+      'text': 'Adverb',
       'gradient': LinearGradient(
         colors: [Color(0xFFDA90FF), Color(0xFF861FBA)],
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
       ),
-      'page': TopicsScreen(title: 'Adverb',topicId: 2,),
+      'page': TopicsScreen(title: 'Adverbs',topicId: 2,),
     },
     {
       'image': 'assets/adjective.png',
-      'text': 'Adjectives',
+      'text': 'Adjective',
       'gradient': LinearGradient(
         colors: [Color(0xFFFF999B), Color(0xFFA62426)],
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
       ),
-      'page': TopicsScreen(title: 'Adjective',topicId: 3,),
+      'page': TopicsScreen(title: 'Adjectives',topicId: 3,),
     },
     {
       'image': 'assets/phrasal verb.png',
-      'text': 'Phrasal Verbs',
+      'text': 'Phrasal Verb',
       'gradient': LinearGradient(
         colors: [Color(0xFFFFE09D), Color(0xFFE9A004)],
         begin: Alignment.topCenter,
@@ -132,7 +134,7 @@ class _HomepageState extends State<Homepage> {
     },
     {
       'image': 'assets/idioms.png',
-      'text': 'Idioms',
+      'text': 'Idiom',
       'gradient': LinearGradient(
         colors: [Color(0xFFFF96FF), Color(0xFFAD07AD)],
         begin: Alignment.topCenter,
@@ -141,8 +143,8 @@ class _HomepageState extends State<Homepage> {
       'page': TopicsScreen(title: 'Idioms',topicId: 5,),
     },
     {
-      'image': 'assets/adverb.png',
-      'text': 'The essential language process',
+      'image': 'assets/waiting.png',
+      'text': 'The essential language proces',
       'gradient': LinearGradient(
         colors: [Color(0xFF8B8BC4), Color(0xFF8B8BC4)],
         begin: Alignment.topCenter,
@@ -170,12 +172,25 @@ class _HomepageState extends State<Homepage> {
     _pages.add(NotificationScreen());
 
     initializeServices();
-
+    requestPermission();
     callSocketInit();
     handleCall();
     context.read<CallSocketHandleCubit>().fetchAllUsers();
     // Fetch books data from the API
     fetchBooksAndUpdateGrid();
+  }
+
+  Future<bool> requestPermission() async {
+    var status = await Permission.phone.request();
+
+    return switch (status) {
+      PermissionStatus.denied ||
+      PermissionStatus.restricted ||
+      PermissionStatus.limited ||
+      PermissionStatus.permanentlyDenied =>
+      false,
+      PermissionStatus.provisional || PermissionStatus.granted => true,
+    };
   }
   void handleCall(){
     FlutterCallkitIncoming.onEvent.listen((event) {
@@ -192,7 +207,7 @@ class _HomepageState extends State<Homepage> {
           Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => VoiceCallScreen( callerId:target,callerName: "${data['nameCaller']}", callerImage:'',isIncoming: false),
+                builder: (context) => VoiceCallScreen(callerId:target,callerName: "${data['nameCaller']}", callerImage:'',isIncoming: false),
               ),);
         }
 
@@ -308,14 +323,6 @@ print('Languages da: ${userResponse.speakingLanguage}');
 
 
 
-  String formatDuration(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    final hours = twoDigits(duration.inHours);
-    final minutes = twoDigits(duration.inMinutes.remainder(60));
-    final seconds = twoDigits(duration.inSeconds.remainder(60));
-    return "$hours:$minutes:$seconds";
-  }
-
   @override
 Widget build(BuildContext context) {
 
@@ -323,112 +330,88 @@ Widget build(BuildContext context) {
   // ignore: deprecated_member_use
   return  WillPopScope(
       onWillPop: onWillPop,
-      child:  Scaffold(
-      backgroundColor: Color(0xFFE0F7FF),
-      body: Stack(
-        children: [
-          _pages[_selectedIndex],
-          Positioned(
-              top: 71,
-              right: 82,
-              child: BlocBuilder<CallSocketHandleCubit, CallSocketHandleState>(
-  builder: (context, state) {
-    return (context.watch<CallSocketHandleCubit>().isLiveCallActive)?InkWell(
-      onTap: (){
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => VoiceCallScreen( callerId:context.watch<CallSocketHandleCubit>().targetUserId??0,callerName: "${context.watch<CallSocketHandleCubit>().callerName}", callerImage:'',isIncoming: false),
-          ),);
-      },
-      child: Container(
-              height: 30,
-            margin: EdgeInsets.only(right: 2),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(30),
-              color: Colors.green.withOpacity(0.12),
-            ),
-        child:   Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Center(
-            child: BlocBuilder<CallTimerCubit, CallTimerState>(
-              builder: (context, state) {
-                return Text(
-                  formatDuration(state.duration),
-                  style: TextStyle(fontSize: 16, color: Colors.green),
-                );
-              },
-            ),
-          ),
-        ),
-            ),
-    ):SizedBox();
-  },
-))
-        ],
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        currentIndex: _selectedIndex,
+      child:  StreamBuilder<PhoneState>(
+          stream: PhoneState.stream, // assuming this is a Stream<PhoneState>
+          builder: (context, snapshot) {
+            final state = snapshot.data;
+            print("sldclskdmclksdmc ${state?.status}");
+            if (snapshot.connectionState == ConnectionState.active && state != null) {
+              // Perform logic based on new PhoneState
+              if (state.status == PhoneStateStatus.CALL_STARTED) {
+                // Example: Start a timer
+                context.read<CallSocketHandleCubit>().onNativeCallStart();
+                // context.read<CallTimerCubit>().startTimer();
+              } else if (state.status == PhoneStateStatus.CALL_ENDED) {
+                context.read<CallSocketHandleCubit>().onNativeCallEnd();
+              }
+            }
+            return Scaffold(
+          backgroundColor: Color(0xFFE0F7FF),
+          body: _pages[_selectedIndex],
+          bottomNavigationBar: BottomNavigationBar(
+            type: BottomNavigationBarType.fixed,
+            backgroundColor: Colors.white,
+            currentIndex: _selectedIndex,
 
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-        items: List.generate(4, (index) {
-          return BottomNavigationBarItem(
-            icon: Image.asset(
-              _selectedIndex == index
-                  ? _navIconsSelected[index]
-                  : _navIcons[index],
-              width: 23,
-              height: 28,
-              color:_selectedIndex==index? Color(0xFF49329A).withValues(alpha: .8):Colors.grey.shade500,
-            ),
-            label: _navLabels[index],
-          );
-        }),
-        selectedItemColor: Color(0xFF49329A),
-        selectedLabelStyle: TextStyle(
-          fontWeight: FontWeight.w800
-        ),
-        unselectedFontSize: 13,
-        unselectedLabelStyle: TextStyle(
-              color: Colors.black,
-          fontSize: 12,
-          fontWeight: FontWeight.w700
-
-        ),
-        unselectedItemColor: Colors.grey,
-      ),
-      floatingActionButton: _selectedIndex == 0
-          ? ClipOval(
-        child: Material(
-          color: Color(0xFF49329A), // Transparent background
-          child: InkWell(
-            onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => ChatBotScreen()),
-                );
+            onTap: (index) {
+              setState(() {
+                _selectedIndex = index;
+              });
             },
-            child: Container(
-              width: 45, // Maintain the size of the button
-              height: 45, // Keep the FAB size
-              alignment: Alignment.center, // Center the image within the button
-              child: Image.asset(
-                'assets/fluent_bot-28-filled.png', // Replace with the image you want to use
-                width: 28, // Image size, smaller than the button
-                height: 28, // Image size, smaller than the button
+            items: List.generate(4, (index) {
+              return BottomNavigationBarItem(
+                icon: Image.asset(
+                  _selectedIndex == index
+                      ? _navIconsSelected[index]
+                      : _navIcons[index],
+                  width: 23,
+                  height: 28,
+                  color:_selectedIndex==index? Color(0xFF49329A).withValues(alpha: .8):Colors.grey.shade500,
+                ),
+                label: _navLabels[index],
+              );
+            }),
+            selectedItemColor: Color(0xFF49329A),
+            selectedLabelStyle: TextStyle(
+              fontWeight: FontWeight.w800
+            ),
+            unselectedFontSize: 13,
+            unselectedLabelStyle: TextStyle(
+                  color: Colors.black,
+              fontSize: 12,
+              fontWeight: FontWeight.w700
+
+            ),
+            unselectedItemColor: Colors.grey,
+          ),
+          floatingActionButton: _selectedIndex == 0
+              ? ClipOval(
+            child: Material(
+              color: Color(0xFF49329A), // Transparent background
+              child: InkWell(
+                onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => ChatBotScreen()),
+                    );
+                },
+                child: Container(
+                  width: 45, // Maintain the size of the button
+                  height: 45, // Keep the FAB size
+                  alignment: Alignment.center, // Center the image within the button
+                  child: Image.asset(
+                    'assets/fluent_bot-28-filled.png', // Replace with the image you want to use
+                    width: 28, // Image size, smaller than the button
+                    height: 28, // Image size, smaller than the button
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-      ):null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-  ),
+          ):null,
+          floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+            );
+        }
+      ),
   );
 }
 
@@ -574,7 +557,7 @@ class _HomeContentState extends State<HomeContent> {
                                     SizedBox(width: 15),
                                     Expanded(
                                       child: Text(
-                                        capitalizeFirstLetter(gridItem['text']),
+                                        "${capitalizeFirstLetter(gridItem['text'])}s",
                                         style: TextStyle(
                                           fontSize: 18,
                                           fontFamily: AppConstants.commonFont,

@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../cubits/drag_and_learn_cubit/drag_and_learn_cubit.dart';
+import '../cubits/get_coins_cubit/coins_cubit.dart';
 import '../models/dragand_learn_model.dart';
 import '../utils/common_file.dart';
 
@@ -29,6 +30,7 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
 
   late AudioPlayer _bgPlayer;
   late AudioPlayer _effectPlayer;
+  late AudioPlayer _effectDropPlayer;
 
   bool showCountdown = true;
   int countdown = 3;
@@ -37,9 +39,10 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
   void initState() {
 
     super.initState();
-
+    context.read<CoinCubit>().useCoin(1);
     _bgPlayer = AudioPlayer();
     _effectPlayer = AudioPlayer();
+    _effectDropPlayer = AudioPlayer();
 
     if (widget.level?.questions != null) {
       words = widget.level!.questions!.map((q) => q.question).toList();
@@ -49,7 +52,8 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
     for (var word in words) {
       placedImages[word] = null;
     }
-    availableImages = List.from(images);
+
+    availableImages = List.from(images)..shuffle();
 
     _startCountdown();
   }
@@ -108,7 +112,7 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
 
     final body = jsonEncode({
       'book_id': bookId,
-      'topic_id': 1,
+      'topic_id': widget.topicId,
       'level': level,
     });
 
@@ -145,17 +149,23 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
   }
 
   void _playBackgroundMusic() async {
-    await _bgPlayer.setReleaseMode(ReleaseMode.loop);
-    await _bgPlayer.play(AssetSource('audio/bg_music.mp3'));
+    if(!pauseMusic) {
+      await _bgPlayer.setReleaseMode(ReleaseMode.loop);
+      await _bgPlayer.play(AssetSource('audio/bg_music.mp3'));
+    }
   }
 
   void _playEffect(String fileName) async {
     await _effectPlayer.play(AssetSource('audio/$fileName'));
+  }  
+  void _playDropEffect(String fileName) async {
+    await _effectDropPlayer.play(AssetSource('audio/$fileName'));
   }
 
   void _stopAllSounds() {
     _bgPlayer.stop();
     _effectPlayer.stop();
+    _effectDropPlayer.stop();
   }
 
   @override
@@ -163,6 +173,7 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
     _stopAllSounds();
     super.dispose();
   }
+  bool pauseMusic=false;
 
   void _showCongratulationsPopup() {
     showDialog(
@@ -222,6 +233,25 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
                 },
               ),
             ),
+            actions: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                child: InkWell(
+                    onTap: (){
+                      if(pauseMusic==false){
+                        _bgPlayer.pause();
+                      }else{
+                        _bgPlayer.play(AssetSource('audio/bg_music.mp3'));
+
+                      }
+                      setState(() {
+                        pauseMusic=!pauseMusic;
+                      });
+
+                    },
+                    child: Icon((!pauseMusic)?Icons.volume_up_outlined:Icons.volume_off,color: Colors.white,)),
+              )
+            ],
             title: Padding(
               padding: const EdgeInsets.only(top: 4.0),
               child: Text(
@@ -285,9 +315,8 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
                           onWillAcceptWithDetails: (data) => true,
                           onAccept: (imagePath) async{
                             int wordIndex = words.indexOf(word);
-                            print("sldkcmlskmdclskmc ${widget.level?.questions?[wordIndex].question}");
+                            _playDropEffect('drop.mp3');
                            await markQuestionAsRead(bookId: widget.bookId??0, topicId: widget.topicId??0, questionId: widget.level?.questions?[wordIndex].id??0, isRead: true);
-                            _playEffect('drop.mp3');
 
                             int imageIndex = images.indexOf(imagePath);
                             if (wordIndex == imageIndex) {

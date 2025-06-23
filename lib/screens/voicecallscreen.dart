@@ -38,6 +38,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
     context.read<CallSocketHandleCubit>().resetCubit();
     context.read<CallTimerCubit>().startTimer();
     super.initState();
+
   }
 
   @override
@@ -55,10 +56,11 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
   }
 
   void _toggleMute() {
-    context.watch<CallSocketHandleCubit>().muteACall(isMuted);
+    print("lsdjkclskmclskmcsdccklmlckmw ");
     setState(() {
-      isMuted = !isMuted;
+      isMuted = ! isMuted;
     });
+    context.read<CallSocketHandleCubit>().muteACall(isMuted);
   }
 
   void _toggleSpeaker() async {
@@ -67,19 +69,25 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
       isSpeakerOn = !isSpeakerOn;
     });
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
       body: BlocBuilder<CallSocketHandleCubit, CallSocketHandleState>(
         builder: (context, state) {
-          if (state is CallRejected) {
-            Future.delayed(Duration.zero, () {
-              Navigator.pop(context);
+
+          if(state is CallRejected){
+            context.read<CallTimerCubit>().stopTimer();
+            Future.delayed(Duration.zero,(){
+                Navigator.pop(context);
               context.read<CallSocketHandleCubit>().resetCubit();
             });
+          }else if(state is CallOnHold){
+            context.read<CallTimerCubit>().pauseTimer();
+          }else if(state is CallResumed){
+            context.read<CallTimerCubit>().resumeTimer();
           }
+
           return Stack(
             children: [
               // Background
@@ -106,7 +114,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
                     children: [
                       CircleAvatar(
                         radius: 60,
-                        backgroundImage: AssetImage('assets/avatar_1.png'),
+                        backgroundImage:AssetImage('assets/avatar_1.png'),
                       ),
                       SizedBox(height: 20),
                       Text(
@@ -120,9 +128,9 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
                       // SizedBox(height: 10),
                       SizedBox(height: 10),
                       BlocBuilder<CallTimerCubit, CallTimerState>(
-                        builder: (context, state) {
+                        builder: (context, timerState) {
                           return Text(
-                            formatDuration(state.duration),
+                              (state is CallOnHold)?"Call on Hold":formatDuration(timerState.duration),
                             style: TextStyle(fontSize: 16, color: Colors.white),
                           );
                         },
@@ -165,19 +173,12 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              BlocBuilder<CallSocketHandleCubit, CallSocketHandleState>(
-                builder: (context, state) {
-                  return _buildControlButton(
-                    icon: isMuted ? Icons.mic_off : Icons.mic,
-                    label: "Mute",
-                    isActive: isMuted,
-                    onPressed: () {
-                      setState(() {
-                      context.read<CallSocketHandleCubit>().muteACall(isMuted);
-                      isMuted= !isMuted;
-                      });
-                    },
-                  );
+              _buildControlButton(
+                icon: isMuted ? Icons.mic_off : Icons.mic,
+                label: "Mute",
+                isActive: isMuted,
+                onPressed: (){
+                  _toggleMute();
                 },
               ),
               // _buildControlButton(
@@ -220,9 +221,8 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
           SizedBox(height: 60),
           // End call button
           GestureDetector(
-            onTap: () {
-              context.read<CallSocketHandleCubit>().endCall(
-                  targetUserId: widget.callerId);
+            onTap: (){
+              context.read<CallSocketHandleCubit>().endCall(targetUserId:widget.callerId);
               context.read<CallTimerCubit>().resetTimer();
             },
             child: Container(

@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../responses/my_profile_response.dart';
 import '../utils/common_app_bar.dart';
 import '../utils/common_file.dart';
+import 'introduction_animation/introduction_animation_screen.dart';
 import 'myprofilepage.dart';  // Import geocoding package
 
 class LocationGetPage extends StatefulWidget {
@@ -137,6 +138,7 @@ class _LocationGetPageState extends State<LocationGetPage> {
     context
   );
 
+
   if (result["success"] == true) {
     print('Raw Response: $result');
     if(widget.isFromProfile){
@@ -144,10 +146,10 @@ class _LocationGetPageState extends State<LocationGetPage> {
     Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>MyProfileScreen()));
 
     }else{
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (context) => Homepage()),
-            (route) => false,
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => IntroductionAnimationScreen(),
+        ),
       );
     }
 
