@@ -15,7 +15,7 @@ part 'drag_and_learn_state.dart';
 class DragLearnCubit extends Cubit<DragLearnState> {
   DragLearnCubit() : super(DragLearnLoading());
 
-  Future<void> fetchDragLearnData({required int bookId,bool? isLoading}) async {
+  Future<void> fetchDragLearnData({required int bookId,bool? isLoading,int? levelFrom}) async {
     (isLoading!=null&&isLoading)?null:emit(DragLearnLoading());
     SharedPreferences pref =await SharedPreferences.getInstance();
     String? token = pref.getString("auth_token");
@@ -30,13 +30,18 @@ class DragLearnCubit extends Cubit<DragLearnState> {
       );
       print("sdlkmclskdcm,sl;dcsdl;c,s;dlc, ${response.body}");
     final data = json.decode(response.body);
+    if (data['status'] == 'success') {
+      SharedPreferences pref = await SharedPreferences.getInstance();
+      int savedLevel = pref.getInt("DragAndLearnQuestLevel") ?? 0;
 
-      if (data['status'] == 'success') {
+      if (levelFrom != null && levelFrom > savedLevel) {
+        pref.setInt("DragAndLearnQuestLevel", levelFrom);
+        savedLevel = levelFrom;
+      }
 
-        DragAndLearnLevelModel dataj=DragAndLearnLevelModel.fromJson(data);
-
-        emit(DragLearnLoaded(dataj));
-      } else {
+      DragAndLearnLevelModel dataj = DragAndLearnLevelModel.fromJson(data);
+      emit(DragLearnLoaded(dataj, savedLevel));
+    } else {
         emit(DragLearnFailed("API responded with failure"));
       }
     // } catch (e) {

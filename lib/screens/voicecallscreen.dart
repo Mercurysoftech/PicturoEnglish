@@ -38,7 +38,6 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
     context.read<CallSocketHandleCubit>().resetCubit();
     context.read<CallTimerCubit>().startTimer();
     super.initState();
-
   }
 
   @override
@@ -57,10 +56,9 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
 
   void _toggleMute() {
     context.watch<CallSocketHandleCubit>().muteACall(isMuted);
-      setState(() {
-        isMuted = !isMuted;
-      });
-
+    setState(() {
+      isMuted = !isMuted;
+    });
   }
 
   void _toggleSpeaker() async {
@@ -69,16 +67,16 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
       isSpeakerOn = !isSpeakerOn;
     });
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
       body: BlocBuilder<CallSocketHandleCubit, CallSocketHandleState>(
         builder: (context, state) {
-
-          if(state is CallRejected){
-            Future.delayed(Duration.zero,(){
-                Navigator.pop(context);
+          if (state is CallRejected) {
+            Future.delayed(Duration.zero, () {
+              Navigator.pop(context);
               context.read<CallSocketHandleCubit>().resetCubit();
             });
           }
@@ -108,7 +106,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
                     children: [
                       CircleAvatar(
                         radius: 60,
-                        backgroundImage:AssetImage('assets/avatar_1.png'),
+                        backgroundImage: AssetImage('assets/avatar_1.png'),
                       ),
                       SizedBox(height: 20),
                       Text(
@@ -167,12 +165,19 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildControlButton(
-                icon: isMuted ? Icons.mic_off : Icons.mic,
-                label: "Mute",
-                isActive: isMuted,
-                onPressed: (){
-                  _toggleMute();
+              BlocBuilder<CallSocketHandleCubit, CallSocketHandleState>(
+                builder: (context, state) {
+                  return _buildControlButton(
+                    icon: isMuted ? Icons.mic_off : Icons.mic,
+                    label: "Mute",
+                    isActive: isMuted,
+                    onPressed: () {
+                      setState(() {
+                      context.read<CallSocketHandleCubit>().muteACall(isMuted);
+                      isMuted= !isMuted;
+                      });
+                    },
+                  );
                 },
               ),
               // _buildControlButton(
@@ -215,8 +220,9 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
           SizedBox(height: 60),
           // End call button
           GestureDetector(
-            onTap: (){
-              context.read<CallSocketHandleCubit>().endCall(targetUserId:widget.callerId);
+            onTap: () {
+              context.read<CallSocketHandleCubit>().endCall(
+                  targetUserId: widget.callerId);
               context.read<CallTimerCubit>().resetTimer();
             },
             child: Container(
