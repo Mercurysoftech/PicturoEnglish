@@ -336,6 +336,12 @@ class _GrammarQuestScreenState extends State<GrammarQuestScreen> {
         "adjective": word3Controller.text.trim(),
       }),
     );
+    print("ajdscsldkcmskldmc ${widget.level} ${{
+      "sentence_id":widget.questId,
+      "verb": word1Controller.text.trim(),
+      "adverb": word2Controller.text.trim(),
+      "adjective": word3Controller.text.trim(),
+    }} __  ");
 
 
     if (response.statusCode == 200) {

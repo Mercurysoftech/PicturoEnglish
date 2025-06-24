@@ -84,7 +84,7 @@ class _PremiumScreenState extends State<PremiumScreen> {
 
   void openCheckout() async {
     var options = {
-      'key': 'rzp_test_NPGwHpFZReb6dh', // Replace with your Razorpay API key
+      'key': 'rzp_live_DmO2qslBG6Nr8v', // Replace with your Razorpay API key
       'amount': 20000, // 200 INR in paise (200 * 100)
       'name': 'Picturo Premium',
       'description': 'One-Time Premium Purchase',
