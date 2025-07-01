@@ -354,14 +354,44 @@ class _GrammarQuestScreenState extends State<GrammarQuestScreen> {
         word2Color = result['adverb'] == 'Correct' ? Color(0xFF00C02D) : Color(0xFFC01515);
         word3Color = result['adjective'] == 'Correct' ? Color(0xFF00C02D) : Color(0xFFC01515);
         if( result['verb'] == 'Correct'&&result['adverb'] == 'Correct'&&result['adjective'] == 'Correct'){
-          context.read<GrammarQuestCubit>().fetchGrammarQuestions(levelFrom:widget.level+1);
-          _showCongratulationsPopup();
+          makrAsCompleted();
         }
 
         word1TextColor = result['verb'] == 'Correct' ? Colors.white : Colors.black;
         word2TextColor = result['adverb'] == 'Correct' ? Colors.white : Colors.black;
         word3TextColor = result['adjective'] == 'Correct' ? Colors.white : Colors.black;
       });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error checking sentence.')),
+      );
+    }
+    setState(() {
+      loading=false;
+    });
+  }
+  void makrAsCompleted() async {
+
+    final url = Uri.parse("http://picturoenglish.com/api/grammer_quest_Levelcomplete.php");
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("auth_token");
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token', // Replace with actual token
+      },
+      body: jsonEncode({
+        "level": widget.questId
+      }),
+    );
+    print("ajdscsldkcmskldmc ${{"level": widget.questId}} __  ");
+
+
+    if (response.statusCode == 200) {
+      context.read<GrammarQuestCubit>().fetchGrammarQuestions(levelFrom:widget.level+1);
+      _showCongratulationsPopup();
+
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error checking sentence.')),

@@ -1,6 +1,7 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../responses/allusers_response.dart';
 import '../../responses/friends_response.dart';
@@ -12,7 +13,7 @@ part 'user_friends_state.dart';
 class UserFriendsCubit extends Cubit<UserFriendsState> {
   UserFriendsCubit() : super(UserFriendsInitial());
 
-  Future<void> fetchAllUsersAndFriends(String currentUserId) async {
+  Future<void> fetchAllUsersAndFriends() async {
     (state is UserFriendsInitial)?emit(UserFriendsLoading()):null;
     try {
       final apiService = await ApiService.create();
@@ -23,6 +24,8 @@ class UserFriendsCubit extends Cubit<UserFriendsState> {
       final List<Friends> friends = friendsResponse.data;
 
       final int allUsersCount = allUsers.length;
+      final prefs = await SharedPreferences.getInstance();
+      final currentUserId = prefs.getString('user_id');
       final int friendsCount = friends
           .where((f) => f.friendId.toString() != currentUserId.toString())
           .length;
@@ -36,5 +39,8 @@ class UserFriendsCubit extends Cubit<UserFriendsState> {
     } catch (e) {
       emit(UserFriendsError(e.toString()));
     }
+  }
+  void resetCubit(){
+    emit(UserFriendsInitial());
   }
 }

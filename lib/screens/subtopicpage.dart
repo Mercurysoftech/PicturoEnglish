@@ -140,7 +140,6 @@ class _SubtopicPageState extends State<SubtopicPage> {
             builder: (_) => LearnWordsPage(
               topicId: topicId,
               bookId: bookId.toString(),
-              optionTitle: question.question ?? '',
               questionId: question.id ?? 0,
             ),
           ),

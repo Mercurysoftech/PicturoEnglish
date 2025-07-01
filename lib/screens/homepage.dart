@@ -6,7 +6,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_callkit_incoming/entities/call_event.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:permission_handler/permission_handler.dart';
-
+import 'package:phone_state/phone_state.dart';
+import 'package:picturo_app/cubits/bottom_navigator_index_cubit.dart';
 import 'package:picturo_app/providers/profileprovider.dart';
 import 'package:picturo_app/responses/books_response.dart';
 import 'package:picturo_app/screens/chatbotpage.dart';
@@ -24,20 +25,22 @@ import '../cubits/call_cubit/call_duration_handler/call_duration_handle_cubit.da
 import '../cubits/call_cubit/call_socket_handle_cubit.dart';
 import '../cubits/get_avatar_cubit/get_avatar_cubit.dart';
 import '../cubits/get_coins_cubit/coins_cubit.dart';
+import '../cubits/get_notification/get_notification_cubit.dart';
+import '../cubits/user_friends_cubit/user_friends_cubit.dart';
 import '../main.dart';
 import '../utils/common_app_bar.dart';
 import '../utils/common_file.dart';
 
 class Homepage extends StatefulWidget{
-  final int? initialIndex;
-  const Homepage({super.key, this.initialIndex});
+
+  const Homepage({super.key});
 
   @override
   _HomepageState createState() => _HomepageState();
 }
 
-class _HomepageState extends State<Homepage> {
-  int _selectedIndex = 0;
+class _HomepageState extends State<Homepage> with WidgetsBindingObserver{
+  
   DateTime? lastPressed;
   ApiService? apiService;
   bool _isLoading = true;
@@ -59,7 +62,7 @@ class _HomepageState extends State<Homepage> {
           'fcm_token': token,
         }),
       );
-       print("dsljcnsdklcskldcj ${response.body}");
+
       if (response.statusCode == 200) {
         print('✅ FCM token updated successfully: ${response.body}');
       } else {
@@ -163,9 +166,9 @@ class _HomepageState extends State<Homepage> {
   void initState() {
     getCurrentUserAvatar();
     updateFcmToken();
+    WidgetsBinding.instance.addObserver(this);
     super.initState();
-     _selectedIndex = widget.initialIndex ?? 0;
-    // Initialize the pages with the required data
+ 
     _pages.add(HomeContent(gridItems: _gridItems)); // Pass _gridItems to HomeContent
     _pages.add(ChatListPage());
     _pages.add(GamesPage());
@@ -176,6 +179,7 @@ class _HomepageState extends State<Homepage> {
     callSocketInit();
     handleCall();
     context.read<CallSocketHandleCubit>().fetchAllUsers();
+    context.read<UserFriendsCubit>().resetCubit();
     // Fetch books data from the API
     fetchBooksAndUpdateGrid();
   }
@@ -215,7 +219,7 @@ class _HomepageState extends State<Homepage> {
 
         Map<String,dynamic> data=event?.body??{};
         int target=int.parse(data["extra"]['userId']??"0");
-        context.read<CallSocketHandleCubit>().endCall(targetUserId: target);
+        context.read<CallSocketHandleCubit>().endCall();
 
       }else if(event?.event==Event.actionCallEnded){
 
@@ -324,77 +328,131 @@ print('Languages da: ${userResponse.speakingLanguage}');
 
 
   @override
+  void dispose() {
+    // TODO: implement dispose
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    print('AppLifecycleState changed to: $state');
+
+    if (state == AppLifecycleState.paused) {
+      // App is backgrounded
+      // context.read<CallSocketHandleCubit>().endCall();
+    } else if (state == AppLifecycleState.detached) {
+      // App is about to be destroyed (on Android)
+      context.read<CallSocketHandleCubit>().endCall();
+    }
+    // Optional: handle other states
+    // else if (state == AppLifecycleState.resumed) {}
+    // else if (state == AppLifecycleState.inactive) {}
+  }
+
+  @override
 Widget build(BuildContext context) {
 
 
   // ignore: deprecated_member_use
-  return  WillPopScope(
-      onWillPop: onWillPop,
-      child: Scaffold(
-        backgroundColor: Color(0xFFE0F7FF),
-        body: _pages[_selectedIndex],
-        bottomNavigationBar: BottomNavigationBar(
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.white,
-          currentIndex: _selectedIndex,
-          onTap: (index) {
-            setState(() {
-              _selectedIndex = index;
-            });
-          },
-          items: List.generate(4, (index) {
-            return BottomNavigationBarItem(
-              icon: Image.asset(
-                _selectedIndex == index
-                    ? _navIconsSelected[index]
-                    : _navIcons[index],
-                width: 23,
-                height: 28,
-                color:_selectedIndex==index? Color(0xFF49329A).withValues(alpha: .8):Colors.grey.shade500,
-              ),
-              label: _navLabels[index],
-            );
-          }),
-          selectedItemColor: Color(0xFF49329A),
-          selectedLabelStyle: TextStyle(
-              fontWeight: FontWeight.w800
-          ),
-          unselectedFontSize: 13,
-          unselectedLabelStyle: TextStyle(
-              color: Colors.black,
-              fontSize: 12,
-              fontWeight: FontWeight.w700
+  return  MultiBlocProvider(
+  providers: [
+    BlocProvider(
+  create: (context) => NotificationCubit(),
+)
+  ],
+  child: BlocBuilder<BottomNavigatorIndexCubit, BottomNavigatorIndexState>(
+  builder: (context, bottomNavState) {
+    if(bottomNavState is BottomNavigatorIndexInitial){
+      return StreamBuilder<PhoneState>(
+          stream: PhoneState.stream, // assuming this is a Stream<PhoneState>
+          builder: (context, snapshot) {
+            final state = snapshot.data;
 
-          ),
-          unselectedItemColor: Colors.grey,
-        ),
-        floatingActionButton: _selectedIndex == 0
-            ? ClipOval(
-          child: Material(
-            color: Color(0xFF49329A), // Transparent background
-            child: InkWell(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => ChatBotScreen()),
-                );
-              },
-              child: Container(
-                width: 45, // Maintain the size of the button
-                height: 45, // Keep the FAB size
-                alignment: Alignment.center, // Center the image within the button
-                child: Image.asset(
-                  'assets/fluent_bot-28-filled.png', // Replace with the image you want to use
-                  width: 28, // Image size, smaller than the button
-                  height: 28, // Image size, smaller than the button
+            if (snapshot.connectionState == ConnectionState.active && state != null) {
+              // Perform logic based on new PhoneState
+              if (state.status == PhoneStateStatus.CALL_STARTED) {
+                // Example: Start a timer
+                context.read<CallSocketHandleCubit>().onNativeCallStart();
+                // context.read<CallTimerCubit>().startTimer();
+              } else if (state.status == PhoneStateStatus.CALL_ENDED) {
+                context.read<CallSocketHandleCubit>().onNativeCallEnd();
+              }
+            }
+            return WillPopScope(
+              onWillPop: onWillPop,
+              child: Scaffold(
+                backgroundColor: Color(0xFFE0F7FF),
+                body: _pages[bottomNavState.selectedIndex],
+                bottomNavigationBar: BottomNavigationBar(
+                  type: BottomNavigationBarType.fixed,
+                  backgroundColor: Colors.white,
+                  currentIndex: bottomNavState.selectedIndex,
+                  onTap: (index) {
+                    context.read<BottomNavigatorIndexCubit>().onChageIndex(index);
+                  },
+                  items: List.generate(4, (index) {
+                    return BottomNavigationBarItem(
+                      icon: Image.asset(
+                        bottomNavState.selectedIndex == index
+                            ? _navIconsSelected[index]
+                            : _navIcons[index],
+                        width: 23,
+                        height: 28,
+                        color:bottomNavState.selectedIndex==index? Color(0xFF49329A).withValues(alpha: .8):Colors.grey.shade500,
+                      ),
+                      label: _navLabels[index],
+                    );
+                  }),
+                  selectedItemColor: Color(0xFF49329A),
+                  selectedLabelStyle: TextStyle(
+                      fontWeight: FontWeight.w800
+                  ),
+                  unselectedFontSize: 13,
+                  unselectedLabelStyle: TextStyle(
+                      color: Colors.black,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700
+
+                  ),
+                  unselectedItemColor: Colors.grey,
                 ),
+                floatingActionButton: bottomNavState.selectedIndex == 0
+                    ? ClipOval(
+                  child: Material(
+                    color: Color(0xFF49329A), // Transparent background
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => ChatBotScreen()),
+                        );
+                      },
+                      child: Container(
+                        width: 45, // Maintain the size of the button
+                        height: 45, // Keep the FAB size
+                        alignment: Alignment.center, // Center the image within the button
+                        child: Image.asset(
+                          'assets/fluent_bot-28-filled.png', // Replace with the image you want to use
+                          width: 28, // Image size, smaller than the button
+                          height: 28, // Image size, smaller than the button
+                        ),
+                      ),
+                    ),
+                  ),
+                ):null,
+                floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
               ),
-            ),
-          ),
-        ):null,
-        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      ),
-  );
+            );
+          }
+      );
+    }else{
+      return Scaffold();
+    }
+
+  },
+),
+);
 }
 
 }

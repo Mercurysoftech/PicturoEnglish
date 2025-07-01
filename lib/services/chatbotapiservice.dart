@@ -43,28 +43,25 @@ class ChatBotApiService {
   }
 
 
- Future<Map<String, dynamic>> getChatbotResponse({
+ Future<AiMultiLanguageResponseModel> getChatbotResponse({
     required String message,
     required String language,
     required String scenario,
   }) async {
     // try {
-
       print("lsdclskcmlskcmslkcsckl ${{
-        'user_message': message,
-        'language': language,
-        'scenario_name': scenario,
+        "message": "$message",
       }}");
       final response = await _dio.post(
         'chat',
         data: jsonEncode({
           "message": "$message",
-          "language": "$language",
-          "scenario": "$scenario"
+          "lang": "ta,hi,ml,te",
+          // "scenario": "$scenario"
         }),
       ).timeout(const Duration(seconds: _timeoutSeconds));
 
-
+       print("sjkdcskjdckjsdc ${response.data}");
       if (response.statusCode != 200) {
         throw DioException(
           requestOptions: response.requestOptions,
@@ -72,13 +69,8 @@ class ChatBotApiService {
           error: 'Invalid status code: ${response.statusCode}',
         );
       }else{
-        print("sdkmc;sl;sdlcsdc ${response.requestOptions}");
-        return {
-          'audio_base64': response.data['audio_base64'],
-          'reply': response.data['reply'],
-          'speak': response.data['speak'],
-          'status': response.data['status'],
-        };
+        AiMultiLanguageResponseModel data=AiMultiLanguageResponseModel.fromJson(response.data);
+        return data;
       }
 
 
@@ -151,4 +143,32 @@ class ChatBotApiService {
     }
   }
 
+}
+
+class AiMultiLanguageResponseModel {
+  final String input;
+  final String response;
+  final Map<String, String> translations;
+
+  AiMultiLanguageResponseModel({
+    required this.input,
+    required this.response,
+    required this.translations,
+  });
+
+  factory AiMultiLanguageResponseModel.fromJson(Map<String, dynamic> json) {
+    return AiMultiLanguageResponseModel(
+      input: json['input'],
+      response: json['response'],
+      translations: Map<String, String>.from(json['translations']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'input': input,
+      'response': response,
+      'translations': translations,
+    };
+  }
 }

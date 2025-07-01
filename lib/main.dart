@@ -37,6 +37,7 @@ import 'package:picturo_app/socket/socketservice.dart';
 import 'package:picturo_app/utils/common_file.dart';
 import 'package:provider/provider.dart';
 
+import 'cubits/bottom_navigator_index_cubit.dart';
 import 'cubits/call_cubit/call_duration_handler/call_duration_handle_cubit.dart';
 import 'cubits/call_cubit/call_socket_handle_cubit.dart';
 import 'cubits/call_log_his_cubit/call_log_cubit.dart';
@@ -107,6 +108,7 @@ void main() async{
         BlocProvider(create: (context) => CallTimerCubit()),
         BlocProvider(create: (context) => CoinCubit()),
         BlocProvider(create: (context) => DalLevelUpdateCubit()),
+        BlocProvider(create: (context) => BottomNavigatorIndexCubit()),
 
       ],
       child: MyApp(),

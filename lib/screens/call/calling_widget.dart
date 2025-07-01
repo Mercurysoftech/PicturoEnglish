@@ -1,7 +1,10 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:picturo_app/cubits/call_cubit/call_duration_handler/call_duration_handle_cubit.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../cubits/call_cubit/call_socket_handle_cubit.dart';
@@ -11,11 +14,13 @@ import '../voicecallscreen.dart';
 
 class CallingScreen extends StatefulWidget {
   final String callerName;
+  final int currentUserId;
   final int? avatarUrl;
   final Friends friendDetails;
   const CallingScreen({
     super.key,
     required this.callerName,
+    required this.currentUserId,
     required this.avatarUrl,required this.friendDetails,
   });
 
@@ -26,28 +31,22 @@ class CallingScreen extends StatefulWidget {
 class _CallingScreenState extends State<CallingScreen> {
 
 
-
-
   @override
   void initState() {
-
-    connectCall();
+    context.read<CallSocketHandleCubit>().resetCubit();
+    WidgetsBinding.instance.addPostFrameCallback((val){
+      if(context.mounted){
+        context.read<CallSocketHandleCubit>().emitCallingFunction(
+          targetId: widget.friendDetails.friendId ?? 0,
+          currentUserId: widget.currentUserId,
+          targettedUserName: "${widget.friendDetails.friendName}",
+        );
+      }
+    });
     super.initState();
   }
 
-  void connectCall()async{
-    final prefs = await SharedPreferences.getInstance();
-    String? userId= prefs.getString("user_id");
-    print("sdklmcsdcksdc ${userId}");
 
-    int? profileProvider=userId!=null&&userId!=''?int.parse(userId):null;
-
-    if(profileProvider!=null){
-      await requestPermissions();
-      await context.read<CallSocketHandleCubit>().emitCallingFunction(targetId: widget.friendDetails.friendId??0, currentUserId: profileProvider, targettedUserName: '${widget.callerName}');
-
-    }
-  }
   Future<void> requestPermissions() async {
     final status = await Permission.microphone.request();
 
@@ -118,13 +117,16 @@ class _CallingScreenState extends State<CallingScreen> {
     return Scaffold(
       body: BlocBuilder<CallSocketHandleCubit, CallSocketHandleState>(
   builder: (context, state) {
+
     if(state is CallRejected){
       Future.delayed(Duration.zero,(){
         if(context.mounted){
           Navigator.pop(context);
+          context.read<CallSocketHandleCubit>().resetCubit();
+
         }
       });
-      context.read<CallSocketHandleCubit>().resetCubit();
+
     }else if( state is CallAccepted){
       Future.delayed(Duration.zero,(){
         Navigator.pushReplacement(
@@ -213,7 +215,7 @@ class _CallingScreenState extends State<CallingScreen> {
                 // End Call Button
                 GestureDetector(
                   onTap: () {
-                    context.read<CallSocketHandleCubit>().endCall(targetUserId:widget.friendDetails.friendId??0);
+                    context.read<CallSocketHandleCubit>().endCall();
                     // context.read<CallSocketHandleCubit>().checkConnected();
                   },
                   child: Container(

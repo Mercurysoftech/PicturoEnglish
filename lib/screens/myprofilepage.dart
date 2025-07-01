@@ -21,6 +21,7 @@ import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../cubits/call_cubit/call_socket_handle_cubit.dart';
 import '../cubits/get_coins_cubit/coins_cubit.dart';
 import '../utils/common_app_bar.dart';
 import 'earnings_ref/earnings_referral.dart';
@@ -546,7 +547,10 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
             child: Text("Logout", 
                 style: TextStyle(color: Colors.red,
                 fontFamily: 'Poppins Regular')),
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: (){
+              print("sdkcmscskcsl;dc");
+              Navigator.of(context).pop(true);
+            },
           ),
         ],
       );
@@ -565,14 +569,19 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
 
       // Call logout API
       final response = await apiService!.logoutAccount();
-      
+
       // Close loading indicator
       Navigator.of(context).pop();
 
       // Clear local storage
+      context.read<CallSocketHandleCubit>().disposeLocalRender();
+      context.read<CallSocketHandleCubit>().disposeRemoteRender();
+      context.read<CallSocketHandleCubit>().disposeRenderers();
+      context.read<CallSocketHandleCubit>().disposeScoket();
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('token');  // Clear token
       await prefs.setBool('isLoggedIn', false);
+      await prefs.clear();
 
       // Navigate to login screen
       Navigator.of(context).pushAndRemoveUntil(
@@ -585,7 +594,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
       if (Navigator.of(context).canPop()) {
         Navigator.of(context).pop();
       }
-      
+
       // Show error message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Logout failed: ${e.toString()}')),

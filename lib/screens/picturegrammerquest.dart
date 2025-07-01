@@ -87,7 +87,9 @@ class _PictureGrammarQuestScreenState extends State<PictureGrammarQuestScreen> {
               itemCount: levels.length,
               itemBuilder: (context, index) {
                 final question = levels[index];
-                final bool locked = index > state.level; // only first unlocked
+                final bool locked = index == 0
+                    ? false
+                    : !(levels[index - 1].completed);// only first unlocked
                 return GestureDetector(
                   onTap: () async{
                     final int coinCount=  await context.read<CoinCubit>().getCoin();
@@ -127,7 +129,7 @@ class _PictureGrammarQuestScreenState extends State<PictureGrammarQuestScreen> {
                                             Navigator.push(
                                               context,
                                               MaterialPageRoute(
-                                                builder: (context) => GrammarQuestScreen( index: index,questions: levels,level:state.level,questId: question.id,title: question.gameQus),
+                                                builder: (context) => GrammarQuestScreen( index: index,questions: levels,level:levels[index].level,questId: question.id,title: question.gameQus),
                                               ),
                                             );
 
@@ -168,7 +170,7 @@ class _PictureGrammarQuestScreenState extends State<PictureGrammarQuestScreen> {
                         if (locked)
                           Icon(Icons.lock, color: Colors.white),
                         if (!locked)
-                          (state.level>index)?Icon(Icons.check_circle,color: Colors.green,):Icon(Icons.question_mark_outlined, color: Colors.red),
+                          (levels[index].completed)?Icon(Icons.check_circle,color: Colors.green,):Icon(Icons.question_mark_outlined, color: Colors.red),
                         const SizedBox(height: 10,),
                         Expanded(
                           child: Text(

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -14,6 +15,7 @@ import 'package:picturo_app/screens/threedotloading.dart';
 import 'package:picturo_app/screens/widgets/commons.dart';
 import 'package:picturo_app/services/chatbotapiservice.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import '../cubits/get_coins_cubit/coins_cubit.dart';
@@ -197,10 +199,11 @@ class _ChatBotScreenState extends State<ChatBotScreen> with TickerProviderStateM
   }
 }
 
-  Future _sendMessage({required String userLanguage,required String scenario}) async {
+  Future _sendMessage({required String scenario}) async {
   final message = _messageController.text.trim();
 
-  
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+ String userLanguage= prefs.getString('selectedLanguage')??"";
   if (_isListening) {
     _stopListening();
   }
@@ -221,18 +224,19 @@ class _ChatBotScreenState extends State<ChatBotScreen> with TickerProviderStateM
   _scaleController.reverse();
   _colorController.reverse();
 
-  try {
+  // try {
     final response = await _apiService.getChatbotResponse(
       message: message,
       language: userLanguage,
       scenario: scenario
     ).timeout(const Duration(seconds: 30));
+    print("sldkcmslkdcmlskdc __ ${response}");
 
-    if (response.containsKey('reply')) {
+    // if (response.containsKey('reply')) {
       context.read<CoinCubit>().useCoin(1);
 
-      String botMessage = response['reply']?.toString() ?? "I didn't get that. Could you try again?";
-      String? audioBase64 = response['audio_base64']?.toString();
+      String botMessage = response.response ?? "I didn't get that. Could you try again?";
+      String? audioBase64 = '';
 
       // Clean up the display message
       botMessage = botMessage
@@ -260,6 +264,7 @@ class _ChatBotScreenState extends State<ChatBotScreen> with TickerProviderStateM
           'isMe': false,
           'timestamp': _getCurrentTime(),
           'audioBase64': audioBase64,
+          'translation': response.translations,
         });
         _isLoading = false;
       });
@@ -271,27 +276,27 @@ class _ChatBotScreenState extends State<ChatBotScreen> with TickerProviderStateM
           await _playAudioWithRetry(audioBase64);
         }
       }
-    }else {
-      String errorMessage = response['error']?.toString() ?? 'Failed to get response';
-      setState(() {
-        _messages.add({
-          'message': errorMessage,
-          'isMe': false,
-          'timestamp': _getCurrentTime(),
-        });
-        _isLoading = false;
-      });
-    }
-  } catch (e) {
-    setState(() {
-      _messages.add({
-        'message': 'Error: ${e.toString()}',
-        'isMe': false,
-        'timestamp': _getCurrentTime(),
-      });
-      _isLoading = false;
-    });
-  }
+    // }else {
+    //   String errorMessage = response['error']?.toString() ?? 'Failed to get response';
+    //   setState(() {
+    //     _messages.add({
+    //       'message': errorMessage,
+    //       'isMe': false,
+    //       'timestamp': _getCurrentTime(),
+    //     });
+    //     _isLoading = false;
+    //   });
+    // }
+  // } catch (e) {
+  //   setState(() {
+  //     _messages.add({
+  //       'message': 'Error: ${e.toString()}',
+  //       'isMe': false,
+  //       'timestamp': _getCurrentTime(),
+  //     });
+  //     _isLoading = false;
+  //   });
+  // }
 }
 
 
@@ -372,9 +377,33 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
     }
   }
 }
+  final FlutterTts flutterTts = FlutterTts();
 
+  Future<void> speak(String text) async {
+    await flutterTts.setLanguage("ta-IN");
+    await flutterTts.setSpeechRate(0.5); // adjust speed if needed
+    await flutterTts.setVolume(1.0);
+    await flutterTts.setPitch(1.0);
+    await flutterTts.speak(text);
+    flutterTts.setCompletionHandler(() {
+      setState(() {
+        _isAudioMuted = !_isAudioMuted;
+      });
+
+    });
+
+  }
+  Future<void> stopSpeaking() async {
+    await flutterTts.stop(); // This stops any ongoing speech
+  }
   void _toggleMute(String message) {
     setState(() {
+
+      if(_isAudioMuted==false){
+        speak(message);
+      }else{
+        stopSpeaking();
+      }
       _isAudioMuted = !_isAudioMuted;
       if (_mutedMessages.contains(message)) {
         _mutedMessages.remove(message);
@@ -402,7 +431,7 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
   @override
   Widget build(BuildContext context) {
     final profileProvider = Provider.of<ProfileProvider>(context);
-  final String userLanguage = profileProvider.speakingLanguage ?? 'english';
+
 
     return Scaffold(
       backgroundColor: Color(0xFFE0F7FF),
@@ -477,12 +506,15 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
                       alignment: message['isMe'] 
                           ? Alignment.centerRight 
                           : Alignment.centerLeft,
-                      child: ChatBotMessageLayout(
+                      child: ChatBotMessageLayout(index: index,
+                        translation: message['translation'],
                         isMeChatting: message['isMe'],
                         messageBody: message['message'],
                         timestamp: message['timestamp'],
                         isMuted: !message['isMe'] && _isAudioMuted,
-                        onMuteToggle: () => _toggleMute(message['message']),
+                        onMuteToggle: (String message){
+                          _toggleMute(message);
+                        },
                       ),
                     );
                   } else {
@@ -500,14 +532,17 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
               ),
             ),
 
-            if(_messages.length <=1)
-              ChatBotQuickReplies(
-                onSend: (message) {
-                  _messageController.text = message;
-                  selectedScenario=message;
-                  _sendMessage(scenario:selectedScenario??"" ,userLanguage: userLanguage);
-                },
-              ),
+            // if(_messages.length <=1)
+            //   Padding(
+            //     padding:  EdgeInsets.only(bottom: ((_messages.length <=1))?22.0:0),
+            //     child: ChatBotQuickReplies(
+            //       onSend: (message) {
+            //         _messageController.text = message;
+            //         selectedScenario=message;
+            //         _sendMessage(scenario:selectedScenario??"");
+            //       },
+            //     ),
+            //   ),
 
 
             Padding(
@@ -529,26 +564,26 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
                       color: Colors.transparent,
                       borderRadius: BorderRadius.circular(30),
                       child: GestureDetector(
-                        onLongPressStart: _messageController.text.isEmpty 
+                        onLongPressStart: _messageController.text.isEmpty
                             ? (_) {
-                                setState(() {
-                                  _isRecording = true;
-                                });
-                                _scaleController.forward();
-                                _colorController.forward();
-                                _startListening();
-                              }
+                          setState(() {
+                            _isRecording = true;
+                          });
+                          _scaleController.forward();
+                          _colorController.forward();
+                          _startListening();
+                        }
                             : null,
                         onLongPressEnd: _messageController.text.isEmpty
                             ? (_) {
-                                if (_messageController.text.isEmpty) {
-                                  _stopListening();
-                                }
-                              }
+                          if (_messageController.text.isEmpty) {
+                            _stopListening();
+                          }
+                        }
                             : null,
                         onTap: _messageController.text.isNotEmpty
                             ? () async{
-                          _sendMessage(scenario:selectedScenario??"" ,userLanguage: userLanguage);
+                          _sendMessage(scenario:selectedScenario??"" );
                           context.read<CoinCubit>().useCoin(1);
                           setState(() {
                           });
@@ -566,21 +601,21 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
                                   color: _messageController.text.isNotEmpty
                                       ? const Color(0xFF49329A)
                                       : _isRecording
-                                          ? _colorAnimation.value
-                                          : const Color(0xFF49329A),
+                                      ? _colorAnimation.value
+                                      : const Color(0xFF49329A),
                                   borderRadius: BorderRadius.circular(30),
                                 ),
                                 child: _messageController.text.isNotEmpty
                                     ? SvgPicture.string(
-                                        Svgfiles.sendSvg,
-                                        width: 24,
-                                        height: 24,
-                                      )
+                                  Svgfiles.sendSvg,
+                                  width: 24,
+                                  height: 24,
+                                )
                                     : Icon(
-                                        _isRecording ? Icons.mic : Icons.mic_none,
-                                        color: Colors.white,
-                                        size: 24,
-                                      ),
+                                  _isRecording ? Icons.mic : Icons.mic_none,
+                                  color: Colors.white,
+                                  size: 24,
+                                ),
                               ),
                             );
                           },
@@ -589,9 +624,9 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
                     ),
                   ),
                 ),
-                onSubmitted: (_) =>  _sendMessage(scenario:selectedScenario??"" ,userLanguage: userLanguage),
+                onSubmitted: (_) =>  _sendMessage(scenario:selectedScenario??"" ),
               ),
-            ),
+            )
           ],
         ),
       ),
@@ -605,6 +640,7 @@ class ChatBotQuickReplies extends StatelessWidget {
     "Restaurant",
     "Shop",
     "Travel",
+    "General",
   ];
 
   final void Function(String message) onSend;

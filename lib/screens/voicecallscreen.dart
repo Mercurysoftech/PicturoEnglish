@@ -36,16 +36,15 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
   @override
   void initState() {
     context.read<CallSocketHandleCubit>().resetCubit();
+    if(!context.read<CallSocketHandleCubit>().isLiveCallActive) {
+      context.read<CallTimerCubit>().resetTimer();
+    }
     context.read<CallTimerCubit>().startTimer();
     super.initState();
 
   }
 
-  @override
-  void dispose() {
-    context.read<CallTimerCubit>().stopTimer();
-    super.dispose();
-  }
+
 
   String formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
@@ -222,7 +221,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
           // End call button
           GestureDetector(
             onTap: (){
-              context.read<CallSocketHandleCubit>().endCall(targetUserId:widget.callerId);
+              context.read<CallSocketHandleCubit>().endCall();
               context.read<CallTimerCubit>().resetTimer();
             },
             child: Container(

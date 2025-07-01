@@ -13,6 +13,7 @@ import 'package:picturo_app/services/api_service.dart';
 
 import '../cubits/game_view_cubit/game_view_cubit.dart';
 import '../cubits/get_avatar_cubit/get_avatar_cubit.dart';
+import '../services/review_helper.dart';
 import '../utils/common_app_bar.dart';
 
 class GamesPage extends StatefulWidget {
@@ -30,6 +31,7 @@ class _GamesPageState extends State<GamesPage> {
   @override
   void initState() {
     super.initState();
+
     context.read<GameCubit>().fetchGamesAndUpdateGrid();
   }
 
