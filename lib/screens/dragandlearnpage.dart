@@ -258,29 +258,7 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
                 'Drag and Learn',
                 style: TextStyle(                   fontFamily: AppConstants.commonFont,color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
               ),
-            ),
-            actions: [
-              IconButton(
-                  onPressed: (){
-                    print('lkkjjjjjj');
-                  if(isVolumeMute==false){
-                    setState(() {
-                      isVolumeMute = true;
-                      print('lkkjjjjjj-----------');
-                      _stopAllSounds();
-                      _bgPlayer.resume();
-                    });
-                  }else if(isVolumeMute==true){
-                    setState(() {
-                      isVolumeMute = false;
-                      print('lkkjjjjjj============');
-                      _playBackgroundMusic();
-                    });
-
-                  }
-              }, icon: Icon(isVolumeMute?Icons.volume_up_outlined:Icons.volume_off_outlined,color: Colors.white,))
-            ],
-            // shape: RoundedRectangleBorder(
+            ), // shape: RoundedRectangleBorder(
             //
             // ),
           ),

@@ -14,7 +14,6 @@ import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import '../../responses/allusers_response.dart';
 import '../../responses/friends_response.dart';
 import '../../services/api_service.dart';
-import 'package:phone_state/phone_state.dart';
 
 part 'call_socket_handle_state.dart';
 
