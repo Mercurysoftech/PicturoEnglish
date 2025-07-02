@@ -7,6 +7,7 @@ import 'package:picturo_app/responses/topics_response.dart'; // Import your Topi
 import 'package:picturo_app/screens/homepage.dart';
 import 'package:picturo_app/services/api_service.dart'; // Import your API service
 import 'package:picturo_app/screens/subtopicpage.dart';
+import 'package:picturo_app/utils/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../../cubits/drag_and_learn_cubit/drag_and_learn_cubit.dart';
@@ -173,28 +174,24 @@ class TopicCard extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: CachedNetworkImage(
+            child: CachedNetworkImageWidget(
               imageUrl: "https://picturoenglish.com/admin/$image",
               height: 70,
               width: 70,
               fit: BoxFit.cover,
-              errorWidget: (context, url, error) => const Icon(
-                Icons.broken_image,
-                size: 40,
-                color: Colors.grey,
-              ),
-              placeholder: (context, url) => Shimmer.fromColors(
-                baseColor: Colors.grey.shade200,
-                highlightColor: Colors.grey.shade100,
-                child: Container(
-                  height: 70,
-                  width: 70,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
+
+              //     Shimmer.fromColors(
+              //   baseColor: Colors.grey.shade200,
+              //   highlightColor: Colors.grey.shade100,
+              //   child: Container(
+              //     height: 70,
+              //     width: 70,
+              //     decoration: BoxDecoration(
+              //       color: Colors.white,
+              //       borderRadius: BorderRadius.circular(12),
+              //     ),
+              //   ),
+              // ),
             ),
           ),
           const SizedBox(width: 16),

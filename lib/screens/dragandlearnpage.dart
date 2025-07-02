@@ -4,6 +4,7 @@ import 'package:picturo_app/screens/dragandlearntopics.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:picturo_app/utils/cached_network_image.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../cubits/drag_and_learn_cubit/drag_and_learn_cubit.dart';
 import '../cubits/get_coins_cubit/coins_cubit.dart';
@@ -320,8 +321,8 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
                               child: placedImages[word] != null
                                   ? ClipRRect(
                                 borderRadius: BorderRadius.circular(12),
-                                child: Image.network(
-                                  "https://picturoenglish.com/admin/${placedImages[word]!}",
+                                child: CachedNetworkImageWidget(
+                                 imageUrl:  "https://picturoenglish.com/admin/${placedImages[word]!}",
                                   fit: BoxFit.cover,
                                 ),
                               )
@@ -373,7 +374,7 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
                             child: SizedBox(
                               width: itemSize,
                               height: itemSize,
-                              child: Image.network("https://picturoenglish.com/admin/${availableImages[index] ?? ''}", fit: BoxFit.cover),
+                              child: CachedNetworkImageWidget(imageUrl: "https://picturoenglish.com/admin/${availableImages[index] ?? ''}", fit: BoxFit.cover),
                             ),
                           ),
                           childWhenDragging: SizedBox(
@@ -388,7 +389,7 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(12),
-                              child: Image.network("https://picturoenglish.com/admin/${availableImages[index] ?? ''}", fit: BoxFit.cover),
+                              child: CachedNetworkImageWidget(imageUrl: "https://picturoenglish.com/admin/${availableImages[index] ?? ''}", fit: BoxFit.cover),
                             ),
                           ),
                         );

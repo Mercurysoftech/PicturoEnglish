@@ -1,0 +1,2 @@
+/Users/ragu/StudioProjects/PicturoEnglish/android/app/.cxx/Debug/2u3y4724/x86_64/CMakeFiles/edit_cache.dir
+/Users/ragu/StudioProjects/PicturoEnglish/android/app/.cxx/Debug/2u3y4724/x86_64/CMakeFiles/rebuild_cache.dir

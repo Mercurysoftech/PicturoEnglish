@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:picturo_app/providers/profileprovider.dart';
 import 'package:picturo_app/responses/question_details_response.dart';
 import 'package:picturo_app/services/api_service.dart';
+import 'package:picturo_app/utils/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 
@@ -149,22 +150,10 @@ class _LearnWordsPageState extends State<LearnWordsPage> {
                   ),
                 ),
                 // Actual image
-                Image.network(
-                  'https://picturoenglish.com/admin/${_questionData!.qusImage}',
+                CachedNetworkImageWidget(
+                  imageUrl: 'https://picturoenglish.com/admin/${_questionData!.qusImage}',
                   fit: BoxFit.contain,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Shimmer.fromColors(
-                      baseColor: Colors.grey[300]!,
-                      highlightColor: Colors.grey[100]!,
-                      child: Container(
-                        color: Colors.white,
-                        height: double.infinity,
-                        width: double.infinity,
-                      ),
-                    );
-                  },
-                  errorBuilder: (context, error, stackTrace) {
+                  errorWidget: (context, error, stackTrace) {
                     return Image.asset('assets/run.gif');
                   },
                 ),
