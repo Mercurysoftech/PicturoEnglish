@@ -27,7 +27,7 @@ class ProfileProvider with ChangeNotifier {
   String? get location => _user?.location;
   String? get membership => _user?.membership;
   String? get referralCode => _user?.referralCode;
-  String? get speakingLanguage => _user?.speakingLanguage;
+
   String? get qualification => _user?.qualification;
   int? get avatarId => _user?.avatarId;
 
@@ -179,7 +179,6 @@ class ProfileProvider with ChangeNotifier {
     'membership': membership,
     'referral_code': referralCode,
     'reason': user!.reason,
-    'speaking_language': speakingLanguage,
     'qualification': qualification,
     'avatar_id': avatarId,
   };

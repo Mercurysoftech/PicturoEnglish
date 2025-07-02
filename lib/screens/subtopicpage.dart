@@ -140,7 +140,6 @@ class _SubtopicPageState extends State<SubtopicPage> {
             builder: (_) => LearnWordsPage(
               topicId: topicId,
               bookId: bookId.toString(),
-              optionTitle: question.question ?? '',
               questionId: question.id ?? 0,
             ),
           ),
@@ -180,7 +179,7 @@ class _SubtopicPageState extends State<SubtopicPage> {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                "${capitalizeFirstLetter(question.question ?? '')}s",
+                capitalizeFirstLetter(question.question ?? ''),
                 style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w500,

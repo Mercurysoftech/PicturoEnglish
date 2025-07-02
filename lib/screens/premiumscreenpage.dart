@@ -1,7 +1,10 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:picturo_app/classes/svgfiles.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class PremiumScreen extends StatefulWidget {
   const PremiumScreen({super.key});
@@ -81,29 +84,90 @@ class _PremiumScreenState extends State<PremiumScreen> {
       ),
     );
   }
-
+  bool paymentLoading=false;
   void openCheckout() async {
-    var options = {
-      'key': 'rzp_test_NPGwHpFZReb6dh', // Replace with your Razorpay API key
-      'amount': 20000, // 200 INR in paise (200 * 100)
-      'name': 'Picturo Premium',
-      'description': 'One-Time Premium Purchase',
-      'prefill': {
-        'contact': '9344587208', // Optional: Pre-filled contact number
-        'email': 'user@example.com', // Optional: Pre-filled email
-      },
-      'theme': {
-        'color': '#49329A', // Use your app's theme color
-      }
-    };
-
+setState(() {
+  paymentLoading=true;
+});
     try {
-      _razorpay.open(options);
+      // Call your backend to create the order
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString("auth_token");
+    final url = Uri.parse('https://picturoenglish.com/api/create_order.php');
+
+    final response = await http.post(
+      url,
+      headers: {
+        "Authorization": "Bearer $token",
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode({
+        "amount": 200
+      }),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final orderData = json.decode(response.body);
+      print("Order created successfully: ${orderData['id']}");
+    } else {
+      print("Failed to create order. Status: ${response.statusCode}");
+      print("Body: ${response.body}");
+    }
+
+      if (response.statusCode == 200) {
+        final orderData = json.decode(response.body);
+
+        if (orderData['id'] != null && orderData['amount'] != null) {
+          var options = {
+            'key': 'rzp_live_DmO2qslBG6Nr8v', // Replace with your real Razorpay Key ID
+            'amount': orderData['amount'], // Amount in paise
+            'currency': 'INR',
+            'name': 'Picturo Premium',
+            'description': 'One-Time Premium Purchase',
+            'order_id': orderData['id'], // Use Razorpay Order ID from backend
+            'prefill': {
+              'contact': '9344587208',
+              'email': 'user@example.com',
+            },
+            'theme': {
+              'color': '#49329A',
+            }
+          };
+
+          _razorpay.open(options);
+        } else {
+          _showErrorDialog("Invalid order data received.");
+        }
+      } else {
+        _showErrorDialog("Failed to create order.");
+      }
+    setState(() {
+      paymentLoading=false;
+    });
     } catch (e) {
       debugPrint('Error: $e');
+      _showErrorDialog("Something went wrong. Please try again.");
+      setState(() {
+        paymentLoading=false;
+      });
     }
   }
 
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: Text("Error"),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text("OK"),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -393,7 +457,7 @@ Container(
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
-                      onPressed:  openCheckout,
+                      onPressed:(paymentLoading)?(){}:  openCheckout,
                       child: Text(
                         'Pay now',
                         style: TextStyle(

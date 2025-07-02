@@ -32,20 +32,9 @@ class GrammarQuestCubit extends Cubit<GrammarQuestState> {
       if (response.statusCode == 200) {
 
         final List data = json.decode(response.body);
-        log("sdjclskmcsdkcms;ldc __ ${data}");
-
-
         final questions = data.map((e) => GrammarQuestion.fromJson(e)).toList();
-        SharedPreferences pref=await SharedPreferences.getInstance();
-        int? level=pref.getInt("QuestLevel");
-        if(level!=null&&levelFrom!=null){
-          level=levelFrom??0;
-          pref.setInt("QuestLevel", level);
-        }else{
-          // level=levelFrom;
-          // pref.setInt("QuestLevel", levelFrom??0);
-        }
-        emit(GrammarQuestLoaded(questions.cast<GrammarQuestion>(),level??0));
+
+        emit(GrammarQuestLoaded(questions.cast<GrammarQuestion>()));
       } else {
         emit(GrammarQuestFailed('Server error: ${response.statusCode}'));
       }

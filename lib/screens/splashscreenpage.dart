@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -6,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:picturo_app/screens/loginscreen.dart';
 import 'package:picturo_app/screens/homepage.dart';
 
+import '../cubits/call_cubit/call_socket_handle_cubit.dart';
 import 'introduction_animation/introduction_animation_screen.dart'; // Import your homepage
 
 class SplashScreen extends StatefulWidget {
@@ -27,6 +29,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   void initState() {
     super.initState();
+    context.read<CallSocketHandleCubit>().endCall();
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),

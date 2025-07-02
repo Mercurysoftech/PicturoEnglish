@@ -37,10 +37,12 @@ import 'package:picturo_app/socket/socketservice.dart';
 import 'package:picturo_app/utils/common_file.dart';
 import 'package:provider/provider.dart';
 
+import 'cubits/bottom_navigator_index_cubit.dart';
 import 'cubits/call_cubit/call_duration_handler/call_duration_handle_cubit.dart';
 import 'cubits/call_cubit/call_socket_handle_cubit.dart';
 import 'cubits/call_log_his_cubit/call_log_cubit.dart';
 import 'cubits/content_view_per_get/content_view_percentage_cubit.dart';
+import 'cubits/dal_level_update_cubit/dal_level_update_cubit.dart';
 import 'cubits/drag_and_learn_cubit/drag_and_learn_cubit.dart';
 import 'cubits/faq_details_cubit/faq_details_cubit.dart';
 import 'cubits/game_view_cubit/game_view_cubit.dart';
@@ -105,6 +107,8 @@ void main() async{
         BlocProvider(create: (context) => GrammarQuestCubit()),
         BlocProvider(create: (context) => CallTimerCubit()),
         BlocProvider(create: (context) => CoinCubit()),
+        BlocProvider(create: (context) => DalLevelUpdateCubit()),
+        BlocProvider(create: (context) => BottomNavigatorIndexCubit()),
 
       ],
       child: MyApp(),

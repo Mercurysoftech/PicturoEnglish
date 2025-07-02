@@ -9,12 +9,12 @@ class GrammarQuestLoading extends GrammarQuestState {}
 
 class GrammarQuestLoaded extends GrammarQuestState {
   final List<GrammarQuestion> questions;
-  final int level;
 
-  GrammarQuestLoaded(this.questions,this.level);
+
+  GrammarQuestLoaded(this.questions,);
 
   @override
-  List<Object?> get props => [questions,level];
+  List<Object?> get props => [questions];
 }
 
 class GrammarQuestFailed extends GrammarQuestState {
@@ -29,11 +29,15 @@ class GrammarQuestFailed extends GrammarQuestState {
 class GrammarQuestion {
   final int id;
   final String gameQus;
+  final int level;
+  final bool completed;
 
-  GrammarQuestion({required this.id, required this.gameQus});
+  GrammarQuestion({required this.id, required this.gameQus,required  this.level,required this.completed});
 
   factory GrammarQuestion.fromJson(Map<String, dynamic> json) {
     return GrammarQuestion(
+      level: json["level"]??0,
+      completed: json['completed']??false,
       id: json['id']??0,
       gameQus: json['sentence']??'',
     );

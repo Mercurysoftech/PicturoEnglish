@@ -15,11 +15,10 @@ import '../utils/common_file.dart';
 
 
 class LearnWordsPage extends StatefulWidget {
-  final String? optionTitle;
   final int? questionId;
   final String? bookId;
   final int? topicId;
-  const LearnWordsPage({super.key,this.optionTitle, this.questionId,required this.bookId,required this.topicId});
+  const LearnWordsPage({super.key, this.questionId,required this.bookId,required this.topicId});
   
 
   @override
@@ -83,10 +82,7 @@ class _LearnWordsPageState extends State<LearnWordsPage> {
 
    Future<void> initializeApiService() async {
     apiService = await ApiService.create();
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
     // userLanguage=userResponse?.speakingLanguage??'';
-
-    print('Language is heres: $userLanguage');
 
     setState(() {
       _languageLoaded = true; // Mark language as loaded

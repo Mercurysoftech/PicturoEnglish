@@ -1,31 +1,24 @@
 import 'dart:async';
-import 'dart:developer';
-
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:intl/intl.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:picturo_app/classes/svgfiles.dart';
 import 'package:picturo_app/screens/chatmessagelayout.dart';
 import 'package:picturo_app/screens/myprofilepage.dart';
-import 'package:picturo_app/screens/voicecallscreen.dart';
-import 'package:picturo_app/screens/widgets/commons.dart';
 import 'package:picturo_app/services/api_service.dart';
-import 'package:picturo_app/socket/socketservice.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
+import '../cubits/call_cubit/call_duration_handler/call_duration_handle_cubit.dart';
 import '../cubits/call_cubit/call_socket_handle_cubit.dart';
 import '../responses/friends_response.dart';
+import '../services/chat_socket_service.dart';
 import '../utils/common_file.dart';
 import 'call/calling_widget.dart';
-import 'call/widgets/call_socket_page.dart';
-import 'call/widgets/check_web_call.dart';
 
 enum ChatMenuAction { //enum class for menu option like "block user"...etc
   block,
@@ -78,61 +71,36 @@ class _ChatScreenState extends State<ChatScreen> {
   RTCPeerConnection? peerConnection;
   MediaStream? localStream;
 
-  late IO.Socket socket;
+
 
 
   void initSocket( ) async{
-
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getString('user_id');
     _userId=userId;
-    socket = IO.io('https://picturoenglish.com:2025', <String, dynamic>{
-      'transports': ['websocket'],
-      'autoConnect': false,
-    });
-    socket.connect();
-    FirebaseMessaging messaging = FirebaseMessaging.instance;
-    String? token = await messaging.getToken();
-
-
-    log("lskdcsldkcmlskdc ");
-    socket.onConnect((_) {
-      print("lsdkclskdmcsdkcmsdlkcmsdldckmsdc ${ {
-        "user_id": userId,
-        "fcm_token": "$token"
-      }}");
-      socket.emit('register', {
-        "user_id": userId,
-        "fcm_token": token
-      });
-    });
-    socket.on('newMessage', (data) {
+    ChatSocket.socket.on('newMessage', (data) {
       _handleIncomingMessage(data);
-
-    });
-    socket.on('unreadCount', (data) {
-     print("sdkcsldkmcsdcs;c __ ${data}");
     });
 
-    socket.onError((handler){
-      print('_____________ ____________ Erroer ${handler.toString()}');
+    ChatSocket.socket.onError((handler){
+
     });
-    socket.on('userOnline', (data) {
+    ChatSocket.socket.on('userOnline', (data) {
       _handleOnlineStatus({'user_id': data['user_id'], 'is_online': true});
     });
 
-    socket.on('userOffline', (data) {
+    ChatSocket.socket.on('userOffline', (data) {
       _handleOnlineStatus({'user_id': data['user_id'], 'is_online': false});
     });
 
-    socket.on('userTyping', (data) {
+    ChatSocket.socket.on('userTyping', (data) {
       _handleTypingStatus({
         'sender_id': data['sender_id'],
         'is_typing': true,
       });
     });
 
-    socket.on('stopTyping', (data) {
+    ChatSocket.socket.on('stopTyping', (data) {
       _handleTypingStatus({
         'sender_id': data['sender_id'],
         'is_typing': false,
@@ -143,9 +111,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
 
   void sendMessage(String senderId, String receiverId, String message) {
-    print("lsdkcmlskdcmsd ${socket.connected}");
     final messageId = "msg_${DateTime.now().millisecondsSinceEpoch}";
-    socket.emit('sendMessage', {
+    ChatSocket.socket.emit('sendMessage', {
       "message_id":messageId,
       'sender_id': senderId,
       'receiver_id': receiverId,
@@ -208,14 +175,14 @@ class _ChatScreenState extends State<ChatScreen> {
   void _setupTypingListener() {
     _messageController.addListener(() {
       if (_messageController.text.isNotEmpty) {
-        socket.emit('typing', {
+        ChatSocket.socket.emit('typing', {
           'sender_id': _userId,
           'receiver_id': widget.userId.toString(),
         });
 
         _typingTimer?.cancel();
         _typingTimer = Timer(const Duration(seconds: 1), () {
-          socket.emit('stopTyping', {
+          ChatSocket.socket.emit('stopTyping', {
             'sender_id': _userId,
             'receiver_id': widget.userId.toString(),
           });
@@ -365,7 +332,6 @@ void _handleOnlineStatus(dynamic data) {
 
    @override
 void dispose() {
-    socket.dispose();
   _typingTimer?.cancel();
   _messageController.dispose();
   super.dispose();
@@ -439,8 +405,46 @@ void dispose() {
                   Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap: () async{
-                              Navigator.push(context, MaterialPageRoute(builder: (context)=>CallingScreen(friendDetails: widget.friendDetails,callerName: "${widget.friendDetails.friendName}",avatarUrl: widget.friendDetails.friendProfilePic,)));
+                      onTap: ()async {
+                        if (context.read<CallSocketHandleCubit>().isLiveCallActive) {
+                          Fluttertoast.showToast(
+                            msg: "You're already in another call",
+                            backgroundColor: Colors.orange,
+                          );
+                        } else {
+                          final prefs = await SharedPreferences.getInstance();
+                          String? userId = prefs.getString("user_id");
+
+                          int? profileProvider = userId != null && userId != '' ? int.tryParse(userId) : null;
+
+                          if (profileProvider != null) {
+                            await requestPermissions();
+
+                            if (!mounted) return;
+
+                            // Navigate first
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => CallingScreen(currentUserId:profileProvider ,
+                                  friendDetails: widget.friendDetails,
+                                  callerName: "${widget.friendDetails.friendName}",
+                                  avatarUrl: widget.friendDetails.friendProfilePic,
+                                ),
+                              ),
+                            );
+
+                            // Emit socket events
+
+
+                            // Reset timer if not in active call
+                            if (!context.read<CallSocketHandleCubit>().isLiveCallActive) {
+                              context.read<CallTimerCubit>().resetTimer();
+                            }
+                          }
+                        }
+
+
                       },
 
                       borderRadius: BorderRadius.circular(70),
@@ -588,6 +592,14 @@ void dispose() {
     },
   );
 }
+
+  Future<void> requestPermissions() async {
+    final status = await Permission.microphone.request();
+
+    if (status != PermissionStatus.granted) {
+      throw Exception("Microphone permission not granted");
+    }
+  }
 
 // Add this method to handle the actual blocking
 Future<void> _blockUser() async {

@@ -59,7 +59,7 @@ class CommonAppBar extends StatelessWidget implements PreferredSize {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => VoiceCallScreen( callerId:context.watch<CallSocketHandleCubit>().targetUserId??0,callerName: "${context.watch<CallSocketHandleCubit>().callerName}", callerImage:'',isIncoming: false),
+                              builder: (context) => VoiceCallScreen( callerId:context.read<CallSocketHandleCubit>().targetUserId??0,callerName: "${context.read<CallSocketHandleCubit>().callerName}", callerImage:'',isIncoming: false),
                             ),);
                         },
                         child: Container(

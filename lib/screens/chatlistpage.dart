@@ -14,10 +14,12 @@ import 'package:picturo_app/screens/chatscreenpage.dart';
 import 'package:picturo_app/screens/myprofilepage.dart';
 import 'package:picturo_app/services/api_service.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import '../cubits/call_cubit/call_socket_handle_cubit.dart';
 import '../cubits/get_avatar_cubit/get_avatar_cubit.dart';
 import '../cubits/user_friends_cubit/user_friends_cubit.dart';
+import '../services/chat_socket_service.dart';
 import '../utils/common_app_bar.dart'; // Import your API service
 
 class ChatListPage extends StatefulWidget {
@@ -51,34 +53,25 @@ class _ChatListPageState extends State<ChatListPage>
     _fetchAllUsers();
   }
 
+  @override
+  void dispose() {
+    // TODO: implement dispose
+    ChatSocket.dispose();
+    super.dispose();
+  }
+
+  Future<void>connectSocket()async{
+    await ChatSocket.connectScoket();
+    ChatSocket.socket.on('unreadCount', (data) {
+
+    // updatedOne=false;
+    // _fetchAllUsers();
+    });
+
+  }
   
   Future<void> _fetchAllUsers() async {
-    // try {
-    //   final apiService = await ApiService.create();
-    //   final UsersResponse response = await apiService.fetchAllUsers();
-    //   final FriendsResponse friendsResponse = await apiService.fetchFriends();
-      setState(() {
-        // allUsers = response.data;
-        // friends = friendsResponse.data;
-
-         // allUsersCount = allUsers.length;
-
-         // Filter out current user from friends count
-        final currentUserId = Provider.of<UserProvider>(context, listen: false).userId;
-        context.read<UserFriendsCubit>().fetchAllUsersAndFriends(currentUserId);
-        // friendsCount = friends.where((f) => f.friendId.toString() != currentUserId.toString()).length;
-
-        // isLoading = false;
-
-
-      });
-      print('All Users: $allUsers'); // Debugging line
-    // } catch (e) {
-    //   setState(() {
-    //     errorMessage = e.toString();
-    //     isLoading = false;
-    //   });
-    // }
+        context.read<UserFriendsCubit>().fetchAllUsersAndFriends();
   }
 
   void _updateCounts() {
@@ -106,24 +99,7 @@ class _ChatListPageState extends State<ChatListPage>
   }
   bool updatedOne=false;
   late IO.Socket socket;
-  void connectSocket(){
-    socket = IO.io('https://picturoenglish.com:2025', <String, dynamic>{
-      'transports': ['websocket'],
-      'autoConnect': false,
-    });
-    socket.connect();
-    log("lskdcsldkcmlskdc ");
-    socket.onConnect((_) {
-      log("sdkcsldkmcsdcs  contxdhc");
-    });
-    socket.on('newMessage', (data) {
 
-
-    });
-    socket.on('unreadCount', (data) {
-      print("sdkcsldkmcsdcs;c ((((((((((((((__ ${data}");
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -442,7 +418,7 @@ class _ChatListPageState extends State<ChatListPage>
   }
   final currentUserId = Provider.of<UserProvider>(context).userId;
   print('Current User ID: $currentUserId');
-  print('Friends List: $friends');
+
 
   List<Friends> displayFriends = _searchController.text.isEmpty
       ? friends.where((f) => f.friendId.toString() != currentUserId).toList()

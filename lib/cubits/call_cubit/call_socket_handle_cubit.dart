@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:audio_session/audio_session.dart';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_callkit_incoming/entities/android_params.dart';
 import 'package:flutter_callkit_incoming/entities/call_kit_params.dart';
@@ -50,6 +51,9 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
     friends = friendsList;
     emit(state);
   }
+  void disposeScoket(){
+    callSocket.dispose();
+  }
 
   Future<void> initCallSocket({required int currentUserId}) async {
 
@@ -57,17 +61,25 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
       'transports': ['websocket'],
       'autoConnect': false,
     });
-
+    FirebaseMessaging messaging = FirebaseMessaging.instance;
+    String? token = await messaging.getToken();
     callSocket.connect();
     localRenderer.initialize();
     _remoteRenderer.initialize();
     callSocket.onConnect((_) {
-      callSocket.emit('register', currentUserId);
+
+      callSocket.emit('register', {
+        "userId": currentUserId,
+        "fcmToken": token
+      });
     });
+
+
 
     callSocket.on('incoming-call', (data) async {
       final from = data['from'];
       final userName = data['userName'];
+
 
       int? findedIndex = friends.indexWhere((ele) => ele.friendId.toString() == from.toString());
       if (findedIndex != -1) {
@@ -82,19 +94,23 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
           userId: '$from',
           callerName: '${friends[findedIndex].friendName}',
         );
+
         targetUserId = from;
       }
     });
 
     callSocket.on('call-accepted', (data) {
-      print("Accepted $data ");
+
       emit(CallAccepted());
       isLiveCallActive=true;
       FlutterCallkitIncoming.setCallConnected("sdkjcslkcmslkcmsdc");
     });
-
+    callSocket.on('call-ended', (data) {
+      FlutterCallkitIncoming.endCall("sdkjcslkcmslkcmsdc");
+      FlutterCallkitIncoming.endAllCalls();
+    });
     callSocket.on('call-rejected', (_) {
-      endCall(targetUserId: targetUserId??0);
+      endCall();
     });
 
     callSocket.on('signal', (data) async {
@@ -132,27 +148,42 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
       }
     });
 
-    callSocket.on('call-ended', (_)async {
+    callSocket.on('call-ended', (data)async {
       isLiveCallActive=false;
       emit(CallRejected());
+      await hangup();
+      await FlutterCallkitIncoming.endAllCalls();
     });
 
+    callSocket.on("call-hold",(_){
+      _muteLocalAudio(true);
+      emit(CallOnHold());
+    });
 
+    callSocket.on("call-resume",(_){
+      _muteLocalAudio(false);
+      emit(CallResumed());
+    });
     callSocket.onError((err) {
-      print("Socket error: $err");
     });
-
   }
   void onNativeCallStart() {
-    print("📞 Native phone call started - putting WebRTC call on hold");
-    _muteLocalAudio(true);
-    emit(CallOnHold());
+
+    if(state is! CallOnHold){
+      callSocket.emit("call-hold", {"to": targetUserId});
+      _muteLocalAudio(true);
+      emit(CallOnHold());
+    }
+
   }
 
   void onNativeCallEnd() {
-    print("📞 Native phone call ended - resuming WebRTC call");
-    _muteLocalAudio(false);
-    emit(CallResumed());
+    if(state is CallOnHold&&state is! CallResumed){
+      callSocket.emit("call-resume", {"to": targetUserId});
+      _muteLocalAudio(false);
+      emit(CallResumed());
+    }
+
   }
 
   void _muteLocalAudio(bool isMuted) {
@@ -180,11 +211,13 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
     emit(CallAccepted());
   }
 
-  Future<void> emitCallingFunction({
+  void emitCallingFunction({
     required int currentUserId,
     required int targetId,
     required String targettedUserName,
-})async{
+  }){
+    callerName=targettedUserName;
+    targetUserId=targetId;
     callSocket.emit('call-user', {'from': currentUserId, 'to': targetId});
     callSocket.emit('incoming-call', {
       'from': currentUserId,
@@ -195,11 +228,11 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
 
 
 
+
   Future<void> initiateWebRTCCall({
     required int currentUserId,
     required int targetId,
   }) async {
-
     targetUserId = targetId;
     emit(state);
     await connectNewUser(targetId, currentUserId);
@@ -236,7 +269,6 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
 
     pc.onTrack = (event) async {
       final stream = event.streams.first;
-      print("Incoming stream from user $userId");
       if (!remoteRenderers.containsKey(userId.toString())) {
         final renderer = RTCVideoRenderer();
         await renderer.initialize();
@@ -252,7 +284,6 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
     if (_localStream != null) {
       for (var track in _localStream!.getAudioTracks()) {
         track.enabled = !isMuted;
-        print("🎙️ Local audio track ${isMuted ? 'muted' : 'unmuted'}");
       }
     }
 
@@ -265,7 +296,6 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
         final track = sender.track;
         if (track != null && track.kind == 'audio') {
           track.enabled = !isMuted;
-          print("🔇 Peer audio track ${isMuted ? 'muted' : 'unmuted'} for user ${entry.key}");
         }
       }
     }
@@ -279,15 +309,15 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
   Future<void> hangup() async {
     isLiveCallActive=false;
     emit(state);
-    print('Attempting to hang up the call...');
-   await releaseAudioFocus();
+
+    await releaseAudioFocus();
     // Stop and dispose local stream
 
     if (_localStream != null) {
       for (var track in _localStream!.getTracks()) {
         track.stop(); // Stops mic & camera
       }
-      await _localStream!.dispose();
+       _localStream!.dispose();
       _localStream = null;
     }
 
@@ -313,22 +343,21 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
     // Dispose all remote video renderers
     await disposeRemoteRender();
 
-    print('Call fully disconnected and mic/camera stopped.');
+
   }
 
   // Don't forget to dispose renderers when the widget is no longer needed
   void disposeRenderers() {
     localRenderer.dispose();
     _remoteRenderer.dispose();
-    print('Renderers disposed.');
   }
-  Future<void> endCall({required int targetUserId}) async {
-    await hangup();
-    callSocket.emit('end-call', {'to': targetUserId});
-    await FlutterCallkitIncoming.endCall("sdkjcslkcmslkcmsdc");
-    await FlutterCallkitIncoming.endAllCalls();
+  Future<bool> endCall() async {
+
     emit(CallRejected());
-    print("📴 Call completely cut for both users.");
+    callSocket.emit('end-call', {'to': targetUserId});
+    await hangup();
+    await FlutterCallkitIncoming.endAllCalls();
+    return true;
   }
   Future<void> disposeLocalRender() async {
 
@@ -363,7 +392,6 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
         final audioTracks = renderer.srcObject!.getAudioTracks();
         if (audioTracks.isNotEmpty) {
           for (var track in audioTracks) {
-            print('Stopping audio track for renderer $key');
             track.stop();
           }
         }
@@ -371,7 +399,6 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
         final videoTracks = renderer.srcObject!.getVideoTracks();
         if (videoTracks.isNotEmpty) {
           for (var track in videoTracks) {
-            print('Stopping video track for renderer $key');
             track.stop();
           }
         }
@@ -383,7 +410,7 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
       }
 
       await renderer.dispose();
-      print('Renderer $key disposed');
+
     });
   }
 
@@ -439,7 +466,7 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
     await FlutterCallkitIncoming.showCallkitIncoming(params);
   }
 
-  void resetCubit() {
+  Future<void> resetCubit()async {
     emit(CallSocketHandleInitial());
   }
 }
