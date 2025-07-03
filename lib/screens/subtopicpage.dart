@@ -26,33 +26,45 @@ class SubtopicPage extends StatefulWidget {
 class _SubtopicPageState extends State<SubtopicPage> {
   @override
   void initState() {
-    // TODO: implement initState
-    context.read<SubtopicCubit>().fetchQuestions(widget.topicId!);
-    context.read<ProgressCubit>().fetchProgress(bookId: widget.bookId??0, topicId: widget.topicId??0);
     super.initState();
+    context.read<SubtopicCubit>().fetchQuestions(widget.topicId!);
+    context.read<ProgressCubit>().fetchProgress(
+      bookId: widget.bookId ?? 0,
+      topicId: widget.topicId ?? 0,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        backgroundColor: Colors.white,
-        appBar: CommonAppBar(title:widget.title??'',isBackbutton: true,),
-        body: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ProgressBarWidget(bookId: widget.bookId ?? 0, topicId: widget.topicId ?? 0),
-            const SizedBox(height: 20),
-            Expanded(child: BlocBuilder<SubtopicCubit, SubtopicState>(
+      backgroundColor: Colors.white,
+      appBar: CommonAppBar(
+        title: widget.title ?? '',
+        isBackbutton: true,
+      ),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ProgressBarWidget(
+            bookId: widget.bookId ?? 0,
+            topicId: widget.topicId ?? 0,
+          ),
+          const SizedBox(height: 20),
+          Expanded(
+            child: BlocBuilder<SubtopicCubit, SubtopicState>(
               builder: (context, state) {
                 if (state is SubtopicLoading) {
                   return const Center(child: CircularProgressIndicator());
                 } else if (state is SubtopicError) {
-                  return _buildError(state.message, context);
+                  return Center(child: Text(state.message));
                 } else if (state is SubtopicLoaded) {
                   if (state.questions.isEmpty) {
-                    return const Center(child: Text('No questions available for this topic'));
+                    return const Center(
+                      child: Text('No questions available for this topic'),
+                    );
                   }
                   return ListView.builder(
+                    key: PageStorageKey('subtopic_list_${widget.topicId}'),
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     itemCount: state.questions.length,
                     itemBuilder: (context, index) {
@@ -69,10 +81,11 @@ class _SubtopicPageState extends State<SubtopicPage> {
                   return const SizedBox();
                 }
               },
-            )),
-          ],
-        ),
-      );
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {

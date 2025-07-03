@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:picturo_app/utils/cached_network_image.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:vibration/vibration.dart';
 import '../cubits/drag_and_learn_cubit/drag_and_learn_cubit.dart';
 import '../cubits/get_coins_cubit/coins_cubit.dart';
 import '../models/dragand_learn_model.dart';
@@ -207,6 +208,8 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
   }
 
   bool isVolumeMute=true;
+  Map<String?, bool> incorrectDrop = {};
+
   @override
   Widget build(BuildContext context) {
     double itemSize = 100;
@@ -275,69 +278,138 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
 
                    Text("Level ${widget.levelIndex+1}", style: TextStyle(                   fontFamily: AppConstants.commonFont,fontSize: 24, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 20),
-                  SizedBox(
-                    height: itemSize * 2 + 50,
-                    child: GridView.builder(
-                      shrinkWrap: true,
-                      physics: NeverScrollableScrollPhysics(),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        crossAxisSpacing: 15,
-                        mainAxisSpacing: 15,
-                        childAspectRatio: 1,
-                      ),
+                  // SizedBox(
+                  //   height: itemSize * 2 + 50,
+                  //   child: GridView.builder(
+                  //     shrinkWrap: true,
+                  //     physics: NeverScrollableScrollPhysics(),
+                  //     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  //       crossAxisCount: 3,
+                  //       crossAxisSpacing: 15,
+                  //       mainAxisSpacing: 15,
+                  //       childAspectRatio: 1,
+                  //     ),
+                  //
+                  //     itemCount: words.length,
+                  //     itemBuilder: (context, index) {
+                  //       String? word = words[index];
+                  //       return DragTarget<String>(
+                  //         onWillAcceptWithDetails: (data) => true,
+                  //         onAccept: (imagePath) async{
+                  //           int wordIndex = words.indexOf(word);
+                  //           _playDropEffect('drop.mp3');
+                  //          await markQuestionAsRead(bookId: widget.bookId??0, topicId: widget.topicId??0, questionId: widget.level?.questions?[wordIndex].id??0, isRead: true);
+                  //
+                  //           int imageIndex = images.indexOf(imagePath);
+                  //           if (wordIndex == imageIndex) {
+                  //             setState(() {
+                  //               placedImages[word] = imagePath;
+                  //               availableImages.remove(imagePath);
+                  //             });
+                  //           }
+                  //           if (placedImages.values.every((value) => value != null)) {
+                  //             await markLevelAsCompleted(bookId: widget.bookId??0, topicId: widget.topicId??0, level: widget.level?.level??0);
+                  //             await Future.delayed(Duration(milliseconds: 300), _showCongratulationsPopup);
+                  //           }else {
+                  //             setState(() {
+                  //               incorrectDrop[word] = true;
+                  //             });
+                  //             _playDropEffect('wrong.mp3'); // optional wrong sound
+                  //             // Optional: Show error message
+                  //             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  //               content: Text('Oops! That’s not the correct match.'),
+                  //               backgroundColor: Colors.red,
+                  //             ));
+                  //           }
+                  //         },
+                  //         builder: (context, candidateData, rejectedData) {
+                  //           return Container(
+                  //             decoration: BoxDecoration(
+                  //               color: Colors.white,
+                  //               borderRadius: BorderRadius.circular(12),
+                  //               border: Border.all(color: Color(0xFFCBBCFF), width: 1),
+                  //             ),padding: EdgeInsets.all(5),
+                  //
+                  //             alignment: Alignment.center,
+                  //             child: placedImages[word] != null
+                  //                 ? ClipRRect(
+                  //               borderRadius: BorderRadius.circular(12),
+                  //               child: CachedNetworkImageWidget(
+                  //                imageUrl:  "https://picturoenglish.com/admin/${placedImages[word]!}",
+                  //                 fit: BoxFit.cover,
+                  //               ),
+                  //             )
+                  //                 : Text(word ?? '',
+                  //                   textAlign: TextAlign.center,
+                  //
+                  //                   style: TextStyle(
+                  //                   fontFamily: AppConstants.commonFont,fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF49329A)),
+                  //                                               ),
+                  //           );
+                  //         },
+                  //       );
+                  //     },
+                  //   ),
+                  // ),
+                  ImageWordMatchGrid(
+                    words: words,
+                    images: images,
+                    placedImages: placedImages,
+                    availableImages: availableImages,
+                    incorrectDrop: incorrectDrop,
+                    itemSize: itemSize,
+                    onAccept: (imagePath, wordIndex, word) async {
+                      _playDropEffect('drop.mp3');
 
-                      itemCount: words.length,
-                      itemBuilder: (context, index) {
-                        String? word = words[index];
-                        return DragTarget<String>(
-                          onWillAcceptWithDetails: (data) => true,
-                          onAccept: (imagePath) async{
-                            int wordIndex = words.indexOf(word);
-                            _playDropEffect('drop.mp3');
-                           await markQuestionAsRead(bookId: widget.bookId??0, topicId: widget.topicId??0, questionId: widget.level?.questions?[wordIndex].id??0, isRead: true);
+                      await markQuestionAsRead(
+                        bookId: widget.bookId ?? 0,
+                        topicId: widget.topicId ?? 0,
+                        questionId: widget.level?.questions?[wordIndex].id ?? 0,
+                        isRead: true,
+                      );
 
-                            int imageIndex = images.indexOf(imagePath);
-                            if (wordIndex == imageIndex) {
-                              setState(() {
-                                placedImages[word] = imagePath;
-                                availableImages.remove(imagePath);
-                              });
-                            }
-                            if (placedImages.values.every((value) => value != null)) {
-                              await markLevelAsCompleted(bookId: widget.bookId??0, topicId: widget.topicId??0, level: widget.level?.level??0);
-                              await Future.delayed(Duration(milliseconds: 300), _showCongratulationsPopup);
-                            }
-                          },
-                          builder: (context, candidateData, rejectedData) {
-                            return Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Color(0xFFCBBCFF), width: 1),
-                              ),padding: EdgeInsets.all(5),
-                              
-                              alignment: Alignment.center,
-                              child: placedImages[word] != null
-                                  ? ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: CachedNetworkImageWidget(
-                                 imageUrl:  "https://picturoenglish.com/admin/${placedImages[word]!}",
-                                  fit: BoxFit.cover,
-                                ),
-                              )
-                                  : Text(word ?? '',
-                                    textAlign: TextAlign.center,
+                      int imageIndex = images.indexOf(imagePath);
+                      if (wordIndex == imageIndex) {
+                        setState(() {
+                          placedImages[word] = imagePath;
+                          availableImages.remove(imagePath);
+                          incorrectDrop[word] = false;
+                        });
 
-                                    style: TextStyle(
-                                    fontFamily: AppConstants.commonFont,fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF49329A)),
-                                                                ),
-                            );
-                          },
+                        if (placedImages.values.every((value) => value != null)) {
+                          await markLevelAsCompleted(
+                            bookId: widget.bookId ?? 0,
+                            topicId: widget.topicId ?? 0,
+                            level: widget.level?.level ?? 0,
+                          );
+                          await Future.delayed(Duration(milliseconds: 300), _showCongratulationsPopup);
+                        }
+                      } else {
+                        setState(() {
+                          incorrectDrop[word] = true;
+                        });
+
+                        _playDropEffect('wrong.mp3');
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Oops! That’s not the correct match.'),
+                            backgroundColor: Colors.red,
+                          ),
                         );
-                      },
-                    ),
+
+                        if (await Vibration.hasVibrator() ?? false) {
+                          Vibration.vibrate(duration: 300);
+                        }
+
+                        Future.delayed(Duration(seconds: 1), () {
+                          setState(() {
+                            incorrectDrop[word] = false;
+                          });
+                        });
+                      }
+                    },
                   ),
+
                   const SizedBox(height: 30),
                   Container(
                     width: double.infinity,
@@ -349,7 +421,7 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
                     child: Text(
                       "Drag and place the picture into the correct container",
                       textAlign: TextAlign.center,
-                      style: TextStyle(                   fontFamily: AppConstants.commonFont,fontSize: 12, fontWeight: FontWeight.w500, color: Colors.white),
+                      style: TextStyle(fontFamily: AppConstants.commonFont,fontSize: 12, fontWeight: FontWeight.w500, color: Colors.white),
                     ),
                   ),
                   const SizedBox(height: 30),
@@ -423,3 +495,88 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
     );
   }
 }
+
+
+
+
+class ImageWordMatchGrid extends StatelessWidget {
+  final List<String?> words;
+  final List<String?> images;
+  final Map<String?, String?> placedImages;
+  final List<String?> availableImages;
+  final Map<String?, bool> incorrectDrop;
+  final double itemSize;
+  final Function(String imagePath, int wordIndex, String? word) onAccept;
+
+  const ImageWordMatchGrid({
+    super.key,
+    required this.words,
+    required this.images,
+    required this.placedImages,
+    required this.availableImages,
+    required this.incorrectDrop,
+    required this.itemSize,
+    required this.onAccept,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: itemSize * 2 + 50,
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: NeverScrollableScrollPhysics(),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          crossAxisSpacing: 15,
+          mainAxisSpacing: 15,
+          childAspectRatio: 1,
+        ),
+        itemCount: words.length,
+        itemBuilder: (context, index) {
+          String? word = words[index];
+          bool isIncorrect = incorrectDrop[word] == true;
+
+          return DragTarget<String>(
+            onWillAcceptWithDetails: (data) => true,
+            onAccept: (imagePath) => onAccept(imagePath, index, word),
+            builder: (context, candidateData, rejectedData) {
+              return Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isIncorrect ? Colors.red : Color(0xFFCBBCFF),
+                    width: 2,
+                  ),
+                ),
+                padding: EdgeInsets.all(5),
+                alignment: Alignment.center,
+                child: placedImages[word] != null
+                    ? ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: CachedNetworkImageWidget(
+                    imageUrl:
+                    "https://picturoenglish.com/admin/${placedImages[word]!}",
+                    fit: BoxFit.cover,
+                  ),
+                )
+                    : Text(
+                  word ?? '',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'YourFont',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF49329A),
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+

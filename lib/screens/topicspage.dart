@@ -176,7 +176,7 @@ class _TopicCardState extends State<TopicCard> {
       width: 150,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        border: widget.isSelected ? Border.all(color: Colors.green, width: 2) : null,
+        border: widget.isSelected ? Border.all(color: Colors.transparent, width: 2) : null,
         boxShadow: [
           BoxShadow(
             color: Colors.grey.withOpacity(0.2),
@@ -226,12 +226,12 @@ class _TopicCardState extends State<TopicCard> {
           ),
 
           // Check icon if selected
-          if (widget.isSelected)
-            Positioned(
-              top: 6,
-              right: 6,
-              child: const Icon(Icons.check_circle, color: Colors.green, size: 24),
-            ),
+          // if (widget.isSelected)
+          //   Positioned(
+          //     top: 6,
+          //     right: 6,
+          //     child: const Icon(Icons.check_circle, color: Colors.green, size: 24),
+          //   ),
         ],
       ),
     );
