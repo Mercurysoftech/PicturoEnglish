@@ -75,18 +75,20 @@ class _DragandLearnTopicScreenState extends State<DragandLearnTopicScreen> {
             ),
             ),
             Expanded(
-              child: ListView.builder(
-                itemCount: _grammarTopics.length,
-                itemBuilder: (context, index) {
-                  final topic = _grammarTopics[index];
-                  return _buildGrammarCard(index,
-                    context,
-                    topic['title'],
-                    topic['description'],
-                    topic['color'],
-                    topic['icon'],
-                  );
-                },
+              child: Scrollbar(
+                child: ListView.builder(
+                  itemCount: _grammarTopics.length,
+                  itemBuilder: (context, index) {
+                    final topic = _grammarTopics[index];
+                    return _buildGrammarCard(index,
+                      context,
+                      topic['title'],
+                      topic['description'],
+                      topic['color'],
+                      topic['icon'],
+                    );
+                  },
+                ),
               ),
             ),
           ],

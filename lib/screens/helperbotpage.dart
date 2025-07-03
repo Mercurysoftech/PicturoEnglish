@@ -73,176 +73,7 @@ class _HelperBotScreenState extends State<HelperBotScreen> {
     });
   }
 
-  // void _showQuestionsBottomSheet() {
-  //   showModalBottomSheet(
-  //     backgroundColor: Colors.white,
-  //     context: context,
-  //     isScrollControlled: true, // Allows the sheet to take more height
-  //     builder: (context) {
-  //       return Container(
-  //         padding: EdgeInsets.all(16),
-  //         height: MediaQuery.of(context).size.height * 0.85, // Increased height to 85% of screen
-  //         decoration: BoxDecoration(
-  //           color: Colors.white,
-  //           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-  //         ),
-  //         child: Column(
-  //           crossAxisAlignment: CrossAxisAlignment.start,
-  //           children: [
-  //             Center(
-  //               child: Container(
-  //                 width: 40,
-  //                 height: 4,
-  //                 margin: EdgeInsets.only(bottom: 16),
-  //                 decoration: BoxDecoration(
-  //                   color: Colors.grey[300],
-  //                   borderRadius: BorderRadius.circular(2),
-  //                 ),
-  //               ),
-  //             ),
-  //             Text(
-  //               'Frequently Asked Questions',
-  //               style: TextStyle(
-  //                 fontSize: 20,
-  //                 fontWeight: FontWeight.bold,
-  //                 color: Color(0xFF49329A),
-  //             ),
-  //             ),
-  //             SizedBox(height: 16),
-  //             Expanded(
-  //               child: ListView.builder(
-  //                 itemCount: qaPairs.length,
-  //                 itemBuilder: (context, index) {
-  //                   final question = qaPairs.keys.elementAt(index);
-  //                   return Card(
-  //                     color: Colors.white,
-  //                     elevation: 0,
-  //                     margin: EdgeInsets.symmetric(vertical: 6),
-  //                     shape: RoundedRectangleBorder(
-  //                       borderRadius: BorderRadius.circular(12)),
-  //                     child: ListTile(
-  //                       contentPadding: EdgeInsets.symmetric(
-  //                         horizontal: 16, vertical: 12),
-  //                       title: Text(
-  //                         question,
-  //                         style: TextStyle(
-  //                           fontSize: 16,
-  //                           fontWeight: FontWeight.w500,
-  //                         ),
-  //                       ),
-  //                       trailing: Icon(Icons.arrow_forward_ios, size: 16),
-  //                       onTap: () {
-  //                         Navigator.pop(context);
-  //                         _addMessage(question, true);
-  //                         // Simulate bot response after a short delay
-  //                         Future.delayed(Duration(seconds: 1), () {
-  //                           _addMessage(qaPairs[question]!, false);
-  //                         });
-  //                       },
-  //                     ),
-  //                   );
-  //                 },
-  //               ),
-  //             ),
-  //           ],
-  //         ),
-  //       );
-  //     },
-  //   );
-  // }
-  void _showQuestionsBottomSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) {
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.85,
-          padding: EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Frequently Asked Questions',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF49329A),
-                    ),
-                  ),
-                  InkWell(
-                      onTap: (){
-                        Navigator.pop(context);
-                      },
-                      child: Icon(Icons.cancel_outlined,color: Colors.red,)),
-                ],
-              ),
-              SizedBox(height: 16),
-              Expanded(
-                child: BlocBuilder<FAQCubit, FAQState>(
-                  builder: (context, state) {
-                    if (state is FAQLoading) {
-                      return Center(child: CircularProgressIndicator());
-                    } else if (state is FAQLoaded) {
-                      final faqs = state.faqs;
-                      return ListView.builder(
-                        itemCount: faqs.length,
-                        itemBuilder: (context, index) {
-                          final faq = faqs[index];
-                          return Card(
-                            margin: EdgeInsets.symmetric(vertical: 6),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                            child: ListTile(
-                              contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 12),
-                              title: Text(
-                                faq.question,
-                                style: TextStyle(
-                                    fontSize: 16, fontWeight: FontWeight.w500),
-                              ),
-                              trailing: Icon(Icons.arrow_forward_ios, size: 16),
-                              onTap: () {
-                                Navigator.pop(context);
-                                _addMessage(faq.question, true);
-                                Future.delayed(Duration(seconds: 1), () {
-                                  _addMessage(faq.answer, false);
-                                });
-                              },
-                            ),
-                          );
-                        },
-                      );
-                    } else if (state is FAQError) {
-                      return Center(child: Text(state.message));
-                    } else {
-                      return SizedBox.shrink();
-                    }
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+
 
 
   @override
@@ -260,11 +91,7 @@ class _HelperBotScreenState extends State<HelperBotScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Color(0xFFE0F7FF),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Color(0xFF49329A),
-        onPressed: _showQuestionsBottomSheet,
-        child: Icon(Icons.help_outline, color: Colors.white),
-      ),
+
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(80),
         child: AppBar(
@@ -312,117 +139,97 @@ class _HelperBotScreenState extends State<HelperBotScreen> {
           ),
         ),
       ),
-      body: BlocBuilder<UserSupportCubit, UserSupportState>(
-  builder: (context, state) {
-    if(state is UserSupportLoaded){
-      if(oldMsgUpdate==false){
-        Future.delayed(Duration.zero,(){
-          messages.addAll(state.supports);
-          setState(() {
-            oldMsgUpdate=true;
-          });
-        });
 
-      }
-      return Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFFE0F7FF),
-              Color(0xFFEAE4FF),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: EdgeInsets.all(16),
-                itemCount: messages.length,
-                itemBuilder: (context, index) {
-                  final message = messages[index];
-                  return Align(
-                    alignment: message['isMe'] == 'true'
-                        ? Alignment.centerRight
-                        : Alignment.centerLeft,
-                    child: ChatMessageLayout(
-                      isMeChatting: message['isMe'] == 'true',
-                      messageBody: message['message']!,
-                      timestamp: message['time']!,
-                      senderName: message['isMe'] == 'true' ? null : 'Helper',
-                    ),
-                  );
-                },
+    body: Container(
+      height: MediaQuery.of(context).size.height * 0.85,
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.only(top: 10,bottom: 36, left: 10,right: 90),
-              child: BlocConsumer<HelperUserMessageCubit, HelperUserMessageState>(listener: (context,state){
-                if(state is HelperUserMessageLoaded){
-                  Future.delayed(Duration.zero,(){
-                    setState(() {
-                      context.read<UserSupportCubit>().fetchUserSupport();
-                      oldMsgUpdate=false;
-                      _messageController.clear();
-                    });
-                  });
+          ),
+
+          SizedBox(height: 16),
+          Expanded(
+            child: BlocBuilder<FAQCubit, FAQState>(
+              builder: (context, state) {
+                if (state is FAQLoading) {
+                  return Center(child: CircularProgressIndicator());
+                } else if (state is FAQLoaded) {
+                  final faqs = state.faqs;
+                  return  ListView.builder(
+                    itemCount: faqs.length,
+                    itemBuilder: (context, index) {
+                      final faq = faqs[index];
+                      return Card(
+                        margin: EdgeInsets.symmetric(vertical: 6),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: ExpansionTile(
+                          tilePadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          title: Text(
+                            faq.question,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          children: [
+                            Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              child: Text(
+                                faq.answer,
+                                style: TextStyle(fontSize: 15),
+                              ),
+                            ),
+                            // Align(
+                            //   alignment: Alignment.bottomRight,
+                            //   child: Padding(
+                            //     padding: EdgeInsets.only(right: 16, bottom: 8),
+                            //     child: TextButton.icon(
+                            //       onPressed: () {
+                            //         Navigator.pop(context);
+                            //         _addMessage(faq.question, true);
+                            //         Future.delayed(Duration(milliseconds: 600), () {
+                            //           _addMessage(faq.answer, false);
+                            //         });
+                            //       },
+                            //       icon: Icon(Icons.chat_bubble_outline, size: 18),
+                            //       label: Text("Send to chat"),
+                            //     ),
+                            //   ),
+                            // )
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                } else if (state is FAQError) {
+                  return Center(child: Text(state.message));
+                } else {
+                  return SizedBox.shrink();
                 }
               },
-                builder: (context, sendMessageState) {
-                  return TextField(
-                    controller: _messageController,
-                    decoration: InputDecoration(
-                      hintText: 'Message',
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(30),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 16),
-                      suffixIcon: Padding(
-                        padding: const EdgeInsets.only(right: 5),
-                        child: Material(
-                          color: Colors.transparent,
-                          borderRadius: BorderRadius.circular(30),
-                          child:InkWell(
-                              onTap: (){
-                                if(_messageController.text.isNotEmpty){
-                                  context.read<HelperUserMessageCubit>().sendUserMessage(_messageController.text);
-                                }
-                              },
-                              child: Icon(Icons.send)),
-                        ),
-                      ),
-                    ),
-
-                  );
-                },
-              ),
             ),
-          ],
-        ),
-      );
-    }else if (state is UserSupportLoading){
-      return Center(
-        child: SizedBox(
-          height: 30,
-          width: 30,
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }else{
-      return Center(
-        child: Text("Something Went Wrong Please Try Again"),
-      );
-    }
-
-  },
-),
+          ),
+        ],
+      ),
+    ),
     );
   }
 }
