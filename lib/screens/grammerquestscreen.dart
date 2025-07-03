@@ -4,6 +4,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart' as http;
+import 'package:picturo_app/utils/cached_network_image.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../cubits/games_cubits/quest_game/quest_game_qtn_list_cubit.dart';
@@ -129,8 +130,8 @@ class _GrammarQuestScreenState extends State<GrammarQuestScreen> {
                   children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(10),
-                      child: Image.network(
-                        "https://encrypted-tbn1.gstatic.com/images?q=tbn:ANd9GcQi0s-XNjBDXwkLqd6wZJsHXQHi70I-C6swaM8Bix5Gs_ZVcEXB",
+                      child: CachedNetworkImageWidget(
+                       imageUrl:  "https://encrypted-tbn1.gstatic.com/images?q=tbn:ANd9GcQi0s-XNjBDXwkLqd6wZJsHXQHi70I-C6swaM8Bix5Gs_ZVcEXB",
                         height: MediaQuery.of(context).size.width * 0.65, // Responsive height
                         width: MediaQuery.of(context).size.width * 0.65, // Responsive width
                         fit: BoxFit.cover,

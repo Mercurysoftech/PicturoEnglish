@@ -7,6 +7,7 @@ import 'package:picturo_app/responses/topics_response.dart'; // Import your Topi
 import 'package:picturo_app/screens/homepage.dart';
 import 'package:picturo_app/services/api_service.dart'; // Import your API service
 import 'package:picturo_app/screens/subtopicpage.dart';
+import 'package:picturo_app/utils/cached_network_image.dart';
 
 import '../cubits/get_topics_list_cubit/get_topic_list_cubit.dart';
 import '../main.dart';
@@ -194,15 +195,11 @@ class _TopicCardState extends State<TopicCard> {
           // Background image
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: CachedNetworkImage(
+            child: CachedNetworkImageWidget(
               imageUrl: "https://picturoenglish.com/admin/${widget.image}",
               fit: BoxFit.cover,
               height: double.infinity,
               width: double.infinity,
-              placeholder: (context, url) => const SizedBox(),
-              errorWidget: (context, url, error) => const Center(
-                child: Icon(Icons.broken_image, size: 50, color: Colors.grey),
-              ),
             ),
           ),
 

@@ -10,11 +10,12 @@ class DragLearnLoading extends DragLearnState {}
 
 class DragLearnLoaded extends DragLearnState {
   final DragAndLearnLevelModel data;
+  final int level;
 
-  DragLearnLoaded(this.data);
+  DragLearnLoaded(this.data,this.level);
 
   @override
-  List<Object> get props => [data];
+  List<Object> get props => [data,level];
 }
 
 class DragLearnFailed extends DragLearnState {
