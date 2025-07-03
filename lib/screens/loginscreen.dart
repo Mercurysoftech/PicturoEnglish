@@ -12,6 +12,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../utils/common_file.dart';
+import 'helperbotpage.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -391,6 +392,45 @@ class _LoginScreenState extends State<LoginScreen> {
                                       },
                                   ),
                                 ],
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 20,),
+                          InkWell(
+                            onTap: (){
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => HelperBotScreen()), // Navigate to BlockedUsersPage
+                              );
+                            },
+                            child: Center(
+                              child: RichText(
+                                text: TextSpan(
+                                  text: "Do You Need Help ? ",
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontFamily: AppConstants.commonFont,
+                                    fontSize: 15,
+                                  ),
+                                  children: [
+                                    TextSpan(
+                                      text: "Click Here",
+                                      style:  TextStyle(
+                                        color: Colors.orange,
+                                        fontFamily: AppConstants.commonFont,
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      recognizer: TapGestureRecognizer()
+                                        ..onTap = () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(builder: (context) => HelperBotScreen()), // Navigate to BlockedUsersPage
+                                          );
+                                        },
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),

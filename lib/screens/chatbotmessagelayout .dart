@@ -28,6 +28,7 @@ class ChatBotMessageLayout extends StatefulWidget {
 
 class _ChatBotMessageLayoutState extends State<ChatBotMessageLayout> {
   String selectedLanguageCode = "en"; // Default to English
+  String welcomeMessage = "Welcome to Picturo! I'm your AI English learning buddy. Let's begin!";
 
   @override
   Widget build(BuildContext context) {
@@ -90,15 +91,36 @@ class _ChatBotMessageLayoutState extends State<ChatBotMessageLayout> {
                       width: 1.0,
                     ),
                   ),
-                  child: Text(
-                    displayedMessage,
-                    style: TextStyle(
-                      fontFamily: 'Poppins Regular',
-                      fontSize: 15,
-                      color: widget.isMeChatting
-                          ? Colors.white
-                          : const Color(0xFF0D082C),
-                    ),
+                  child: Column(
+                    children: [
+                      Text(
+                        widget.messageBody,
+                        style: TextStyle(
+                          fontFamily: 'Poppins Regular',
+                          fontSize: 15,
+                          color: widget.isMeChatting
+                              ? Colors.white
+                              : const Color(0xFF0D082C),
+                        ),
+                      ),
+                      (selectedLanguageCode=='en'||widget.messageBody==welcomeMessage)?SizedBox():Container(
+                        height: 1,
+                        margin: EdgeInsets.symmetric(
+                          vertical: 2
+                        ),
+                        color: Colors.grey,
+                      ),
+                      (selectedLanguageCode=='en'||widget.messageBody==welcomeMessage)?SizedBox():Text(
+                        displayedMessage,
+                        style: TextStyle(
+                          fontFamily: 'Poppins Regular',
+                          fontSize: 15,
+                          color: widget.isMeChatting
+                              ? Colors.white
+                              : const Color(0xFF0D082C),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 Padding(

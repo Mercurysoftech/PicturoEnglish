@@ -118,54 +118,57 @@ class DailyTaskTab extends StatelessWidget {
       List<NotificationModel> notifications=state.notifications;
 
       return Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: ListView.builder(
-            itemCount: notifications.length,
-            itemBuilder: (BuildContext context,index){
-          return   Card(
-            color: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            elevation: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      // SizedBox(width: 8),
-                      Text('${notifications[index].title},', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'Poppins Regular')),
-                    ],
-                  ),
-                  SizedBox(height: 8),
-                  Text(notifications[index].body,
-                      style: TextStyle(fontSize: 14, fontFamily: 'Poppins Regular')),
-                  SizedBox(height: 12),
-                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(formatDateTime(notifications[index].createdAt),
-                          style: TextStyle(fontSize: 14, fontFamily: 'Poppins Regular')),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Color(0xFF49329A),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        padding: const EdgeInsets.all(8.0),
+        child: Scrollbar(
+          child: ListView.builder(
+              padding: const EdgeInsets.all(8.0),
+              itemCount: notifications.length,
+              itemBuilder: (BuildContext context,index){
+            return   Card(
+              color: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        // SizedBox(width: 8),
+                        Text('${notifications[index].title},', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'Poppins Regular')),
+                      ],
+                    ),
+                    SizedBox(height: 8),
+                    Text(notifications[index].body,
+                        style: TextStyle(fontSize: 14, fontFamily: 'Poppins Regular')),
+                    SizedBox(height: 12),
+                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(formatDateTime(notifications[index].createdAt),
+                            style: TextStyle(fontSize: 14, fontFamily: 'Poppins Regular')),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color(0xFF49329A),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          onPressed: () {
+                            if((notifications[index].body.toString().toLowerCase().contains("game")||notifications[index].title.toLowerCase().toString().contains("game"))){
+                              context.read<BottomNavigatorIndexCubit>().onChageIndex(2);
+                            }else{
+                              context.read<BottomNavigatorIndexCubit>().onChageIndex(0);
+                            }
+                          },
+                          child: Text((notifications[index].body.toString().toLowerCase().contains("game")||notifications[index].title.toLowerCase().toString().contains("game"))?'Play now':"View", style: TextStyle(fontFamily: 'Poppins Regular', fontWeight: FontWeight.bold, color: Colors.white)),
                         ),
-                        onPressed: () {
-                          if((notifications[index].body.toString().toLowerCase().contains("game")||notifications[index].title.toLowerCase().toString().contains("game"))){
-                            context.read<BottomNavigatorIndexCubit>().onChageIndex(2);
-                          }else{
-                            context.read<BottomNavigatorIndexCubit>().onChageIndex(0);
-                          }
-                        },
-                        child: Text((notifications[index].body.toString().toLowerCase().contains("game")||notifications[index].title.toLowerCase().toString().contains("game"))?'Play now':"View", style: TextStyle(fontFamily: 'Poppins Regular', fontWeight: FontWeight.bold, color: Colors.white)),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          );
-        }),
+            );
+          }),
+        ),
       );
 
     }else{

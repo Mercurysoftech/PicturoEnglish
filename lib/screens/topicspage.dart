@@ -92,46 +92,51 @@ class _TopicsScreenState extends State<TopicsScreen> {
           ),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 14.0,vertical: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text("Categories", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold,fontFamily: 'Poppins Regular', color: Colors.black)),
               SizedBox(height: 16),
               Expanded(
-                child:  GridView.builder(
-                  shrinkWrap: true,
-                  itemCount: topics.length,
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 14,
-                    childAspectRatio: 0.85,
-                  ),
-                  itemBuilder: (context, index) {
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          selectedIndex = index;
-                        });
-                        // Navigate to a new screen when an item is clicked
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => SubtopicPage(bookId: widget.topicId,
-                                title: topics[index]['title']!,
-                                topicId: topics[index]['id']
-                            ),
+                child:  Scrollbar(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: GridView.builder(
+                      shrinkWrap: true,
+                      itemCount: topics.length,
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 14,
+                        childAspectRatio: 0.85,
+                      ),
+                      itemBuilder: (context, index) {
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              selectedIndex = index;
+                            });
+                            // Navigate to a new screen when an item is clicked
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => SubtopicPage(bookId: widget.topicId,
+                                    title: topics[index]['title']!,
+                                    topicId: topics[index]['id']
+                                ),
+                              ),
+                            );
+                          },
+                          child: TopicCard(
+                            title: topics[index]['title']!,
+                            image: topics[index]['image']!,
+                            isSelected: selectedIndex == index,
                           ),
                         );
                       },
-                      child: TopicCard(
-                        title: topics[index]['title']!,
-                        image: topics[index]['image']!,
-                        isSelected: selectedIndex == index,
-                      ),
-                    );
-                  },
+                    ),
+                  ),
                 ),
               ),
             ],

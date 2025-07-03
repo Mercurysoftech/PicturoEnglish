@@ -73,35 +73,37 @@ class _DLGameTopicsPageState extends State<DLGameTopicsPage> {
                           Text("Categories", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, fontFamily: AppConstants.commonFont, color: Colors.black)),
                           SizedBox(height: 16),
                           Expanded(
-                            child: ListView.builder(
-                              itemCount: topics.length,
-                              itemBuilder: (context, index) {
-                                return GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      selectedIndex = index;
-                                    });
+                            child: Scrollbar(
+                              child: ListView.builder(
+                                itemCount: topics.length,
+                                itemBuilder: (context, index) {
+                                  return GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        selectedIndex = index;
+                                      });
 
-                                    List<Data>? selectedFiles= data.data?.where((element)=>element.topicId.toString()==topics[index]['id'].toString()).toList();
+                                      List<Data>? selectedFiles= data.data?.where((element)=>element.topicId.toString()==topics[index]['id'].toString()).toList();
 
-                                    if(selectedFiles!=null&&selectedFiles.isNotEmpty){
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(builder: (context) => DragLearnPage(title: topics[index]['title'],bookId: widget.topicId, data: selectedFiles.first,)),
-                                      );
-                                    }
+                                      if(selectedFiles!=null&&selectedFiles.isNotEmpty){
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(builder: (context) => DragLearnPage(title: topics[index]['title'],bookId: widget.topicId, data: selectedFiles.first,)),
+                                        );
+                                      }
 
-                                  },
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(bottom: 12.0),
-                                    child: TopicCard(
-                                      title: topics[index]['title']=="Action verb"?"Action Verbs":topics[index]['title']!,
-                                      image: topics[index]['image']!,
-                                      isSelected: selectedIndex == index,
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(bottom: 12.0),
+                                      child: TopicCard(
+                                        title: topics[index]['title']=="Action verb"?"Action Verbs":topics[index]['title']!,
+                                        image: topics[index]['image']!,
+                                        isSelected: selectedIndex == index,
+                                      ),
                                     ),
-                                  ),
-                                );
-                              },
+                                  );
+                                },
+                              ),
                             ),
                           ),
                         ],

@@ -43,6 +43,7 @@ class _SubtopicPageState extends State<SubtopicPage> {
             ProgressBarWidget(bookId: widget.bookId ?? 0, topicId: widget.topicId ?? 0),
             const SizedBox(height: 20),
             Expanded(child: BlocBuilder<SubtopicCubit, SubtopicState>(
+
               builder: (context, state) {
                 if (state is SubtopicLoading) {
                   return const Center(child: CircularProgressIndicator());
@@ -52,18 +53,24 @@ class _SubtopicPageState extends State<SubtopicPage> {
                   if (state.questions.isEmpty) {
                     return const Center(child: Text('No questions available for this topic'));
                   }
-                  return ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: state.questions.length,
-                    itemBuilder: (context, index) {
-                      return optionTile(
-                        context,
-                        index + 1,
-                        state.questions[index],
-                        widget.topicId!,
-                        widget.bookId!,
-                      );
-                    },
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: Scrollbar(
+                      child: ListView.builder(
+                        scrollDirection: Axis.vertical,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        itemCount: state.questions.length,
+                        itemBuilder: (context, index) {
+                          return optionTile(
+                            context,
+                            index + 1,
+                            state.questions[index],
+                            widget.topicId!,
+                            widget.bookId!,
+                          );
+                        },
+                      ),
+                    ),
                   );
                 } else {
                   return const SizedBox();

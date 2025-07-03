@@ -161,44 +161,49 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
             ? Center(child: CircularProgressIndicator())
             : profileProvider.user == null
                 ? Center(child: Text('No profile data available'))
-                : SingleChildScrollView(
-                    child: Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: Column(
-                        children: [
-                      _buildProfileCard(context, profileProvider),
-                      SizedBox(height: 10),
-                      _buildUserDetailsCard(profileProvider.user!),
-                      SizedBox(height: 10),
-                      PremiumButton(),
-                      SizedBox(height: 10),
-                      _buildSettingsOption(Icons.language, "Language", context,profileProvider),
+                : Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0,vertical: 16),
+                  child: Scrollbar(
+                    child: SingleChildScrollView(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 8.0),
+                          child: Column(
+                            children: [
+                          _buildProfileCard(context, profileProvider),
                           SizedBox(height: 10),
-                      _buildSettingsOption(Icons.location_history, "Location", context,profileProvider),
-                          // SizedBox(height: 10),
-                      // _buildSettingsOption(Icons.location_city, "Update Location", context,profileProvider),
+                          _buildUserDetailsCard(profileProvider.user!),
                           SizedBox(height: 10),
-                      _buildSettingsOption(Icons.monetization_on_outlined, "Referral Earning", context,profileProvider),
-                      SizedBox(height: 10),
-                      _buildBankDetailsOption("Bank account details", context),
-                       SizedBox(height: 10),
-                      _buildWithdrawlOption("Withdraw", context),
-                      SizedBox(height: 10),
-                      _buildTransactionDetailsOption("Transaction History", context),
-                      SizedBox(height: 10),
-                      _buildSettingsOption(Icons.block, "Blocked users", context,profileProvider),
-                      SizedBox(height: 10),
-                       _buildSettingsOption(Icons.help_outline, "Help", context,profileProvider),
-                       SizedBox(height: 10),
-                          _buildSettingsOption(Icons.share, "Share This App", context,profileProvider),
-                       SizedBox(height: 10),
-                      _buildSettingsOption(Icons.delete_outline, "Delete Account", context,profileProvider),
-                      SizedBox(height: 10),
-                      _buildLogoutButton(),
-                    ],
+                          PremiumButton(),
+                          SizedBox(height: 10),
+                          _buildSettingsOption(Icons.language, "Language", context,profileProvider),
+                              SizedBox(height: 10),
+                          _buildSettingsOption(Icons.location_history, "Location", context,profileProvider),
+                              // SizedBox(height: 10),
+                          // _buildSettingsOption(Icons.location_city, "Update Location", context,profileProvider),
+                              SizedBox(height: 10),
+                          _buildSettingsOption(Icons.monetization_on_outlined, "Referral Earning", context,profileProvider),
+                          SizedBox(height: 10),
+                          _buildBankDetailsOption("Bank account details", context),
+                           SizedBox(height: 10),
+                          _buildWithdrawlOption("Withdraw", context),
+                          SizedBox(height: 10),
+                          _buildTransactionDetailsOption("Transaction History", context),
+                          SizedBox(height: 10),
+                          _buildSettingsOption(Icons.block, "Blocked users", context,profileProvider),
+                          SizedBox(height: 10),
+                           _buildSettingsOption(Icons.help_outline, "Help", context,profileProvider),
+                           SizedBox(height: 10),
+                              _buildSettingsOption(Icons.share, "Share This App", context,profileProvider),
+                           SizedBox(height: 10),
+                          _buildSettingsOption(Icons.delete_outline, "Delete Account", context,profileProvider),
+                          SizedBox(height: 10),
+                          _buildLogoutButton(),
+                        ],
+                      ),
+                    ),
+                                  ),
                   ),
                 ),
-              ),
       ),
       );
   }
