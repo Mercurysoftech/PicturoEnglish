@@ -264,7 +264,7 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
               padding: const EdgeInsets.only(top: 4.0),
               child: Text(
                 'Drag and Learn',
-                style: TextStyle(                   fontFamily: AppConstants.commonFont,color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(fontFamily: AppConstants.commonFont,color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ), // shape: RoundedRectangleBorder(
             //

@@ -12,6 +12,7 @@ import 'package:picturo_app/screens/editprofilepage.dart';
 import 'package:picturo_app/screens/helperbotpage.dart';
 import 'package:picturo_app/screens/homepage.dart';
 import 'package:picturo_app/screens/loginscreen.dart';
+import 'package:picturo_app/screens/premium_plans_screen.dart';
 import 'package:picturo_app/screens/premiumscreenpage.dart';
 import 'package:picturo_app/screens/transactionhistory.dart';
 import 'package:picturo_app/screens/widgets/commons.dart';
@@ -642,7 +643,7 @@ class PremiumButton extends StatelessWidget {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => PremiumScreen(userName: userName,)), // Navigate to PremiumScreen
+          MaterialPageRoute(builder: (context) => PremiumPlansScreen(userName: userName,)), // Navigate to PremiumScreen
         );
       },
       child: Container(
