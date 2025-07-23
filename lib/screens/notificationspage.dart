@@ -114,12 +114,22 @@ class DailyTaskTab extends StatelessWidget {
     }
     return BlocBuilder<NotificationCubit, NotificationState>(
   builder: (context, state) {
+
     if(state is NotificationLoaded){
       List<NotificationModel> notifications=state.notifications;
 
       return Padding(
         padding: const EdgeInsets.all(8.0),
-        child: Scrollbar(
+        child: (notifications.isEmpty)?Center(
+          child: Text(
+            'No notification found',
+            style: TextStyle(
+              fontSize: 16,
+              fontFamily: 'Poppins Regular',
+              color: Colors.grey,
+            ),
+          ),
+        ):Scrollbar(
           child: ListView.builder(
               padding: const EdgeInsets.all(8.0),
               itemCount: notifications.length,

@@ -68,7 +68,7 @@ class _LearnWordsPageState extends State<LearnWordsPage> {
       final response = await apiService.readMarkAsRead(bookId: widget.bookId.toString(), topicId: widget.topicId.toString(), questionId: widget.questionId.toString());
 
       if(response!=null&&response){
-        context.read<ProgressCubit>().fetchProgress(bookId: int.parse(widget.bookId??"0"), topicId: widget.topicId??0);
+        context.read<ProgressCubit>().fetchProgress(isFromTopic: true,bookId: int.parse(widget.bookId??"0"), topicId: widget.topicId??0);
         context.read<SubtopicCubit>().fetchQuestions(widget.topicId!);
       }
     } catch (e) {
@@ -122,152 +122,154 @@ class _LearnWordsPageState extends State<LearnWordsPage> {
         ? Center(child: CircularProgressIndicator())
         : _errorMessage.isNotEmpty
             ? Center(child: Text(_errorMessage))
-            : SingleChildScrollView(
-                child: Column(
-                  children: [
-                    SizedBox(height: 10),
-                    Center(
-  child: SizedBox(
-    height: 280,
-    width: 280,
-    child: ClipRRect(
-      borderRadius: BorderRadius.circular(15),
-      child: _questionData?.qusImage != null
-          ? Stack(
-              children: [
-                // Shimmer effect as placeholder
-                Shimmer.fromColors(
-                  baseColor: Colors.grey[300]!,
-                  highlightColor: Colors.grey[100]!,
-                  child: Container(
-                    color: Colors.white,
-                    height: double.infinity,
-                    width: double.infinity,
+            : Scrollbar(
+              child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      SizedBox(height: 10),
+                      Center(
+                child: SizedBox(
+                  height: 280,
+                  width: 280,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(15),
+                    child: _questionData?.qusImage != null
+                        ? Stack(
+                children: [
+                  // Shimmer effect as placeholder
+                  Shimmer.fromColors(
+                    baseColor: Colors.grey[300]!,
+                    highlightColor: Colors.grey[100]!,
+                    child: Container(
+                      color: Colors.white,
+                      height: double.infinity,
+                      width: double.infinity,
+                    ),
+                  ),
+                  // Actual image
+                  CachedNetworkImageWidget(
+                    imageUrl: 'https://picturoenglish.com/admin/${_questionData!.qusImage}',
+                    fit: BoxFit.contain,
+                    errorWidget: (context, error, stackTrace) {
+                      return Image.asset('assets/run.gif');
+                    },
+                  ),
+                ],
+              )
+                        : Image.asset('assets/run.gif'),
                   ),
                 ),
-                // Actual image
-                CachedNetworkImageWidget(
-                  imageUrl: 'https://picturoenglish.com/admin/${_questionData!.qusImage}',
-                  fit: BoxFit.contain,
-                  errorWidget: (context, error, stackTrace) {
-                    return Image.asset('assets/run.gif');
-                  },
-                ),
-              ],
-            )
-          : Image.asset('assets/run.gif'),
-    ),
-  ),
-),
-                    SizedBox(height: 20),
-                    Text(
-                      _questionData?.question ?? 'No question',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: AppConstants.commonFont,
+              ),
+                      SizedBox(height: 20),
+                      Text(
+                        _questionData?.question ?? 'No question',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: AppConstants.commonFont,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                    Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.all(10),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Meaning',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: AppConstants.commonFont,
-                            ),
-                          ),
-                          SizedBox(height: 10),
-                          Text(
-                            capitalizeFirstLetter(_questionData?.meaning ?? 'No meaning available'),
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Color(0xFF515151),
-                              fontFamily: AppConstants.commonFont,
-                            ),
-                          ),
-                          SizedBox(height: 20),
-                          // In your LearnWordsPage's build method, replace the Native Meaning section with this:
-
-if (userLanguage?.toLowerCase() != 'english') ...[
-  Text(
-    'Native Meaning',
-    style: TextStyle(
-      fontSize: 18,
-      fontWeight: FontWeight.bold,
-      fontFamily: AppConstants.commonFont,
-    ),
-  ),
-  SizedBox(height: 10),
-  if (_questionData?.nativeMeaning != null && 
-      _questionData!.nativeMeaning!.isNotEmpty)
-    _buildNativeMeaningBasedOnLanguage(
-      _questionData!.nativeMeaning[0], 
-      userLanguage
-    ) ??
-
-
-    Text(
-      'No Native meaning available',
-      style: TextStyle(
-        fontSize: 16,
-        color: Color(0xFF515151),
-        fontFamily: AppConstants.commonFont,
-      ),
-    ),
-  SizedBox(height: 20),
-],
-                          Text(
-                            'Examples',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: AppConstants.commonFont,
-                            ),
-                          ),
-                          SizedBox(height: 18),
-                          ...?_questionData?.examples!.asMap().entries.map((entry) {
-                            final index = entry.key + 1;
-                            final example = entry.value;
-
-                            final languageExample = _getExampleBasedOnLanguage(example, userLanguage);
-                            return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '$index. ${example.english ?? 'No English example'}',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Color(0xFF515151),
-                                  fontFamily: AppConstants.commonFont,
-                                ),
+                      Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.all(10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Meaning',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: AppConstants.commonFont,
                               ),
-                              SizedBox(height: 10),
-                              if (languageExample != null)
+                            ),
+                            SizedBox(height: 10),
+                            Text(
+                              capitalizeFirstLetter(_questionData?.meaning ?? 'No meaning available'),
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Color(0xFF515151),
+                                fontFamily: AppConstants.commonFont,
+                              ),
+                            ),
+                            SizedBox(height: 20),
+                            // In your LearnWordsPage's build method, replace the Native Meaning section with this:
+
+              if (userLanguage?.toLowerCase() != 'english') ...[
+                Text(
+                  'Native Meaning',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: AppConstants.commonFont,
+                  ),
+                ),
+                SizedBox(height: 10),
+                if (_questionData?.nativeMeaning != null &&
+                    _questionData!.nativeMeaning!.isNotEmpty)
+                  _buildNativeMeaningBasedOnLanguage(
+                    _questionData!.nativeMeaning[0],
+                    userLanguage
+                  ) ??
+
+
+                  Text(
+                    'No Native meaning available',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Color(0xFF515151),
+                      fontFamily: AppConstants.commonFont,
+                    ),
+                  ),
+                SizedBox(height: 20),
+              ],
+                            Text(
+                              'Examples',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: AppConstants.commonFont,
+                              ),
+                            ),
+                            SizedBox(height: 18),
+                            ...?_questionData?.examples!.asMap().entries.map((entry) {
+                              final index = entry.key + 1;
+                              final example = entry.value;
+
+                              final languageExample = _getExampleBasedOnLanguage(example, userLanguage);
+                              return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
                                 Text(
-                                  '$index. $languageExample',
+                                  '$index. ${example.english ?? 'No English example'}',
                                   style: TextStyle(
                                     fontSize: 16,
                                     color: Color(0xFF515151),
                                     fontFamily: AppConstants.commonFont,
                                   ),
                                 ),
-                              SizedBox(height: 18),
-                            ],
-                          );
-                        }).toList(),
-                        ],
+                                SizedBox(height: 10),
+                                if (languageExample != null)
+                                  Text(
+                                    '$index. $languageExample',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Color(0xFF515151),
+                                      fontFamily: AppConstants.commonFont,
+                                    ),
+                                  ),
+                                SizedBox(height: 18),
+                              ],
+                            );
+                          }).toList(),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+            ),
   );
 }
 Widget? _buildNativeMeaningBasedOnLanguage(NativeMeaning nativeMeaning, String? userLanguage) {

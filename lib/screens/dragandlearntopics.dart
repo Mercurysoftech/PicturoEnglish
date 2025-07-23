@@ -77,6 +77,7 @@ class _DragandLearnTopicScreenState extends State<DragandLearnTopicScreen> {
             Expanded(
               child: Scrollbar(
                 child: ListView.builder(
+                  shrinkWrap: true,
                   itemCount: _grammarTopics.length,
                   itemBuilder: (context, index) {
                     final topic = _grammarTopics[index];
@@ -106,12 +107,10 @@ class _DragandLearnTopicScreenState extends State<DragandLearnTopicScreen> {
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () {
-
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => DLGameTopicsPage(title:title ,topicId: bookId+1,)),
             );
-
         },
         child: Container(
           padding: EdgeInsets.all(16),

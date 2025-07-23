@@ -120,7 +120,7 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
 
     try {
       final response = await http.post(url, headers: headers, body: body);
-      print("ksdjcnskjdcksjncskdjc Level ${body} ${response.body}");
+
       if (response.statusCode == 200) {
         print('✅ Level marked as completed: ${response.body}');
       } else {
@@ -178,6 +178,8 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
   bool pauseMusic=false;
 
   void _showCongratulationsPopup() {
+    final hasEnoughQuestions = (widget.preLevels?[widget.levelIndex+1].questions?.length ?? 0) >= 5;
+
     showDialog(
       context: context,
       builder: (context) {
@@ -189,9 +191,11 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
               onPressed: () => Navigator.of(context).pop(),
               child: const Text("OK", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ),
-            TextButton(
+            (!hasEnoughQuestions)?SizedBox():TextButton(
               onPressed: () {
                 Navigator.pop(context);
+
+
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(

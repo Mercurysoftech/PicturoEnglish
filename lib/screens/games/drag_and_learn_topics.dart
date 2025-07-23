@@ -10,6 +10,7 @@ import 'package:picturo_app/screens/subtopicpage.dart';
 import 'package:picturo_app/utils/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 
+import '../../cubits/content_view_per_get/content_view_percentage_cubit.dart';
 import '../../cubits/drag_and_learn_cubit/drag_and_learn_cubit.dart';
 import '../../cubits/get_topics_list_cubit/get_topic_list_cubit.dart';
 import '../../models/dragand_learn_model.dart';
@@ -83,6 +84,9 @@ class _DLGameTopicsPageState extends State<DLGameTopicsPage> {
                                       setState(() {
                                         selectedIndex = index;
                                       });
+                                      //BlocBuilder<ProgressCubit, ProgressState>(
+                                      //         builder: (context, state) {
+                                      context.read<ProgressCubit>().fetchProgress(isFromTopic: false,bookId: widget.topicId, topicId: topics[index]['id']);
 
                                       List<Data>? selectedFiles= data.data?.where((element)=>element.topicId.toString()==topics[index]['id'].toString()).toList();
 

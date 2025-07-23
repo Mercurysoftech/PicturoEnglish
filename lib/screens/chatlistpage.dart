@@ -49,6 +49,7 @@ class _ChatListPageState extends State<ChatListPage>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _searchController.addListener(_onSearchChanged);
+
     connectSocket();
     _fetchAllUsers();
   }
@@ -59,10 +60,17 @@ class _ChatListPageState extends State<ChatListPage>
     ChatSocket.dispose();
     super.dispose();
   }
-
+  List<String>?  countViewList=[];
   Future<void>connectSocket()async{
+    SharedPreferences preferences=await SharedPreferences.getInstance();
+    List<String>? countViewedIndex=preferences.getStringList("Count_Viewed_Index");
+    setState(() {
+      countViewList=countViewedIndex;
+    });
     await ChatSocket.connectScoket();
+    // ChatSocket.socket.emit("userOnline",{});
     ChatSocket.socket.on('unreadCount', (data) {
+      print("sdcmskdcs;dlcksd;lc,sd;cl, __ ${data}");
 
     // updatedOne=false;
     // _fetchAllUsers();
@@ -227,10 +235,15 @@ class _ChatListPageState extends State<ChatListPage>
     final formatter = DateFormat('h:mm a'); // 12-hour format
     return formatter.format(dateTime);
   }
-  Widget _buildFriendTile(BuildContext context, Friends user) {
+  Widget _buildFriendTile(BuildContext context, Friends user,int index) {
 
     return GestureDetector(
-      onTap: () {
+      onTap: () async{
+        SharedPreferences preferences=await SharedPreferences.getInstance();
+        List<String>? countViewedIndex=preferences.getStringList("Count_Viewed_Index");
+        countViewedIndex?.add("${index}");
+       preferences.setStringList("Count_Viewed_Index",countViewedIndex??[]);
+
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -277,12 +290,26 @@ class _ChatListPageState extends State<ChatListPage>
                       ),
                     ],
                   ),
-                  (user.lastMessage==null)?SizedBox():Text(
-                    '${user.lastMessage}',
-                    style: TextStyle(
-                        color: Colors.grey,
-                        fontFamily: 'Poppins Regular',
-                        fontSize: 12),
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      (user.lastMessage==null)?SizedBox():Text(
+                        '${user.lastMessage}',
+                        style: TextStyle(
+                            color: Colors.grey,
+                            fontFamily: 'Poppins Regular',
+                            fontSize: 12),
+                      ),
+                      (user.unreadCount==0)?SizedBox():Container(
+                        padding: EdgeInsets.symmetric(horizontal: 9,vertical: 3),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(30),
+                          color: Color(0xFF49329A)
+                        ),
+                        child: Center(
+                          child: Text("${user.unreadCount}",style: TextStyle(color: Colors.white),),
+                        ),
+                      )
+                    ],
                   ),
                 ],
               ),
@@ -417,12 +444,11 @@ class _ChatListPageState extends State<ChatListPage>
     );
   }
   final currentUserId = Provider.of<UserProvider>(context).userId;
-  print('Current User ID: $currentUserId');
-
 
   List<Friends> displayFriends = _searchController.text.isEmpty
       ? friends.where((f) => f.friendId.toString() != currentUserId).toList()
       : filteredFriends.where((f) => f.friendId.toString() != currentUserId).toList();
+
 
   if (displayFriends.isEmpty) {
     return Center(
@@ -440,12 +466,15 @@ class _ChatListPageState extends State<ChatListPage>
 
   return RefreshIndicator(
     onRefresh: _fetchAllUsers, // Allow pull-to-refresh
-    child: ListView(
-      padding: EdgeInsets.fromLTRB(15, 0, 15, 15),
-      children: [
-        SizedBox(height: 20),
-        ...displayFriends.map((friend) => _buildFriendTile(context, friend)),
-      ],
+    child: Scrollbar(
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(15, 0, 15, 15),
+        children: [
+          const SizedBox(height: 20),
+          for (int i = 0; i < displayFriends.length; i++)
+            _buildFriendTile(context, displayFriends[i], i),
+        ],
+      ),
     ),
   );
 }
@@ -556,13 +585,18 @@ Future<String> _getAvatarUrl(int avatarId) async {
   } else if (errorMessage.isNotEmpty) {
     return Center(child: Text('Error: $errorMessage'));
   } else {
-    return ListView.builder(
-      padding: EdgeInsets.fromLTRB(15, 0, 15, 15),
-      itemCount: displayUsers.length,
-      itemBuilder: (context, index) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8.0),
+      child: Scrollbar(
+        child: ListView.builder(
+          padding: EdgeInsets.fromLTRB(15, 0, 8, 15),
+          itemCount: displayUsers.length,
+          itemBuilder: (context, index) {
 
-        return _buildUserRequestTile(context, displayUsers[index]);
-      },
+            return _buildUserRequestTile(context, displayUsers[index]);
+          },
+        ),
+      ),
     );
   }
 }

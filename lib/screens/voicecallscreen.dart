@@ -55,7 +55,6 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
   }
 
   void _toggleMute() {
-    print("lsdjkclskmclskmcsdccklmlckmw ");
     setState(() {
       isMuted = ! isMuted;
     });

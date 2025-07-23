@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:developer';
 import 'package:audio_session/audio_session.dart';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
@@ -9,9 +11,10 @@ import 'package:flutter_callkit_incoming/entities/call_kit_params.dart';
 import 'package:flutter_callkit_incoming/entities/ios_params.dart';
 import 'package:flutter_callkit_incoming/entities/notification_params.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
-
+import 'package:http/http.dart' as http;
 import '../../responses/allusers_response.dart';
 import '../../responses/friends_response.dart';
 import '../../services/api_service.dart';
@@ -56,18 +59,25 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
   }
 
   Future<void> initCallSocket({required int currentUserId}) async {
-
-    callSocket = IO.io('https://picturoenglish.com:2027', {
-      'transports': ['websocket'],
-      'autoConnect': false,
-    });
     FirebaseMessaging messaging = FirebaseMessaging.instance;
     String? token = await messaging.getToken();
+
+    callSocket = IO.io(
+        'https://picturoenglish.com:2027',
+        IO.OptionBuilder()
+            .setTransports(['websocket']) // for Flutter or Dart VM
+            .disableAutoConnect()
+            .setQuery({
+          'userId': currentUserId,
+          'fcmToken': token,
+        })
+            .build(),);
+
     callSocket.connect();
     localRenderer.initialize();
     _remoteRenderer.initialize();
-    callSocket.onConnect((_) {
 
+    callSocket.onConnect((_) {
       callSocket.emit('register', {
         "userId": currentUserId,
         "fcmToken": token
@@ -105,13 +115,14 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
       isLiveCallActive=true;
       FlutterCallkitIncoming.setCallConnected("sdkjcslkcmslkcmsdc");
     });
-    callSocket.on('call-ended', (data) {
-      FlutterCallkitIncoming.endCall("sdkjcslkcmslkcmsdc");
-      FlutterCallkitIncoming.endAllCalls();
-    });
+
     callSocket.on('call-rejected', (_) {
+      print("sdlkcmlskdmc Call Redd");
+
       endCall();
     });
+
+
 
     callSocket.on('signal', (data) async {
       final from = data['from'];
@@ -151,6 +162,8 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
     callSocket.on('call-ended', (data)async {
       isLiveCallActive=false;
       emit(CallRejected());
+      FlutterCallkitIncoming.endCall("sdkjcslkcmslkcmsdc");
+
       await hangup();
       await FlutterCallkitIncoming.endAllCalls();
     });
@@ -167,6 +180,51 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
     callSocket.onError((err) {
     });
   }
+
+  Future<void> postCallLog({
+    required String receiverId,
+    required String callType,
+    required String status,
+    required int duration,
+  }) async {
+    final url = Uri.parse('https://picturoenglish.com/api/call_log_add.php');
+    SharedPreferences pref =await SharedPreferences.getInstance();
+    String? token = pref.getString("auth_token");
+    final body = {
+      'receiver_id': receiverId,
+      'call_type': callType,
+      'status': "completed",
+      'duration': duration,
+    };
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Accept': 'application/json',
+          "Authorization": "Bearer $token",
+        },
+        body: jsonEncode(body),
+      );
+      print('Call log added successfully: ${response.body} __ ${body}');
+      if (response.statusCode == 200) {
+
+      } else {
+        print('Failed to add call log. Status code: ${response.statusCode}');
+        print('Response body: ${response.body}');
+      }
+    } catch (e) {
+      print('Error posting call log: $e');
+    }
+  }
+  void listenEvent(String event, Function(dynamic) callback) {
+    callSocket.on(event, callback);
+  }
+  bool isCallSocketConnected() {
+
+   return callSocket.active;
+  }
+
   void onNativeCallStart() {
 
     if(state is! CallOnHold){
@@ -218,6 +276,12 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
   }){
     callerName=targettedUserName;
     targetUserId=targetId;
+
+    print("ldkjmclksdmclkdsc _ ${ {
+      'from': currentUserId,
+      'to': targetId,
+      "userName": targettedUserName
+    }} _${{'from': currentUserId, 'to': targetId}} ${callSocket.connected}");
     callSocket.emit('call-user', {'from': currentUserId, 'to': targetId});
     callSocket.emit('incoming-call', {
       'from': currentUserId,

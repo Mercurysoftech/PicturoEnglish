@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -143,7 +144,7 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver{
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
       ),
-      'page': TopicsScreen(title: 'Idioms',topicId: 5,),
+      'page': TopicsScreen(title: 'Idiom',topicId: 5,),
     },
     {
       'image': 'assets/waiting.png',
@@ -233,8 +234,28 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver{
     currentUserId=userId;
     int? profileProvider=userId!=null&&userId!=''?int.parse(userId):null;
     if(profileProvider!=null){
-      context.read<CallSocketHandleCubit>().initCallSocket(currentUserId:profileProvider);
+      await context.read<CallSocketHandleCubit>().initCallSocket(currentUserId:profileProvider);
+     Future.delayed(Duration(seconds: 2),(){
+       context.read<CallSocketHandleCubit>().listenEvent("call-ended", (data){
+         CallTimerState state= context.read<CallTimerCubit>().state;
+         //  context.read<CallLogCubit>().postCallLog(
+         //   receiverId: widget.friendDetails.friendId.toString(),
+         //   callType: "audio",
+         //   status: "inCompleted",
+         //   duration: 0,
+         // );
+       });
+
+     });
     }
+  }
+
+  String formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final hours = twoDigits(duration.inHours);
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    return "$hours:$minutes:$seconds";
   }
 
    Future<void> initializeServices() async {
@@ -549,7 +570,7 @@ class _HomeContentState extends State<HomeContent> {
                         var gridItem = items[index];
                         return GestureDetector(
                           onTap: () {
-                            if (gridItem['text'] == 'The essential language process') {
+                            if (gridItem['text'] == 'The essential language proces') {
                               return;
                             }
                             Navigator.push(
@@ -563,10 +584,10 @@ class _HomeContentState extends State<HomeContent> {
                               Container(
                                 margin: EdgeInsets.symmetric(vertical: 10),
                                 decoration: BoxDecoration(
-                                  gradient:gridItem['gradient'],
-                                  // color: gridItem['text'] == 'The essential language process'
-                                  //     ? Colors.grey.withValues(alpha: 0.34)
-                                  //     : null,
+                                  gradient:(gridItem['text'] == 'The essential language proces')?null:gridItem['gradient'],
+                                  color: (gridItem['text'] == 'The essential language proces')
+                                      ? Colors.grey.withValues(alpha: 0.44)
+                                      : null,
                                   borderRadius: BorderRadius.circular(20),
                                   boxShadow: [
                                     BoxShadow(
@@ -586,12 +607,13 @@ class _HomeContentState extends State<HomeContent> {
                                         height: 55,
                                         width: 55,
                                         alignment: Alignment.bottomCenter,
-                                        decoration: BoxDecoration(
+                                        decoration:(gridItem['text'] == 'The essential language proces')?null: BoxDecoration(
                                           image: DecorationImage(
                                             image: AssetImage(gridItem['image']),
                                             fit: BoxFit.cover,
                                           ),
                                         ),
+                                        child: (gridItem['text'] == 'The essential language proces')?Center(child: Icon(Icons.lock,size: 30,color: Colors.white,)):null,
                                       ),
                                     ),
                                     SizedBox(width: 15),

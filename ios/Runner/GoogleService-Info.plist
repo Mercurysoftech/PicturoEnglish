@@ -3,17 +3,17 @@
 <plist version="1.0">
 <dict>
 	<key>API_KEY</key>
-	<string>AIzaSyAQj7dsggscKIDOpcJarjWPhecTv3Ol6z4</string>
+	<string>AIzaSyAZRBl8DbQHLoMzkLVJmSsrfIrO98cHu6Y</string>
 	<key>GCM_SENDER_ID</key>
-	<string>467637414689</string>
+	<string>414535387061</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
 	<string>com.example.picturoApp</string>
 	<key>PROJECT_ID</key>
-	<string>infinite-deck-429307-i6</string>
+	<string>picturoenglish-1012d</string>
 	<key>STORAGE_BUCKET</key>
-	<string>infinite-deck-429307-i6.firebasestorage.app</string>
+	<string>picturoenglish-1012d.firebasestorage.app</string>
 	<key>IS_ADS_ENABLED</key>
 	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:467637414689:ios:e791e7f48fef9140e7ec60</string>
+	<string>1:414535387061:ios:d6583d66f993bef00b3bfc</string>
 </dict>
 </plist>

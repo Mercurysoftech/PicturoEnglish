@@ -19,7 +19,7 @@ class CommonAppBar extends StatelessWidget implements PreferredSize {
   @override
   Widget build(BuildContext context) {
     return PreferredSize(
-      preferredSize: Size.fromHeight(70),
+      preferredSize: Size.fromHeight(72),
       child: AppBar(
         titleSpacing: 18,
         backgroundColor: Color(0xFF49329A),
@@ -47,7 +47,7 @@ class CommonAppBar extends StatelessWidget implements PreferredSize {
         ),
         actions: (actions!=null)?actions:(isFromHomePage!=null&&isFromHomePage==true && actions==null)? [
         Padding(
-            padding: const EdgeInsets.only(top: 7.0,left: 8, right: 28.0),
+            padding: const EdgeInsets.only(top: 2.0,left: 8, right: 28.0),
             child: Row(mainAxisAlignment: MainAxisAlignment.center,crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 BlocBuilder<CallSocketHandleCubit, CallSocketHandleState>(
@@ -105,13 +105,13 @@ class CommonAppBar extends StatelessWidget implements PreferredSize {
                                 );
                               },
                               child: CircleAvatar(
-                                radius: 15,
+                                radius: 17,
                                 backgroundColor: Color(0xFF49329A),
                                 backgroundImage: state.imageProvider,
                               ),
                             ),
                           ),
-                          const SizedBox(height: 2,),
+
                           InkWell(
                               onTap: (){
                                 Navigator.push(
@@ -119,7 +119,7 @@ class CommonAppBar extends StatelessWidget implements PreferredSize {
                                   MaterialPageRoute(builder: (context) => MyProfileScreen()),
                                 );
                               },
-                              child: Text("  Profile",style: TextStyle(color: Colors.white,fontWeight: FontWeight.w500,fontSize: 12),)),
+                              child: Text(" Profile",style: TextStyle(color: Colors.white,fontWeight: FontWeight.w500,fontSize: 13),)),
 
                         ],
                       );

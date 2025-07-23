@@ -29,15 +29,17 @@ class GrammarQuestFailed extends GrammarQuestState {
 class GrammarQuestion {
   final int id;
   final String gameQus;
+  final String image_path;
   final int level;
   final bool completed;
 
-  GrammarQuestion({required this.id, required this.gameQus,required  this.level,required this.completed});
+  GrammarQuestion({required this.id, required this.gameQus,required this.image_path,required  this.level,required this.completed});
 
   factory GrammarQuestion.fromJson(Map<String, dynamic> json) {
     return GrammarQuestion(
       level: json["level"]??0,
       completed: json['completed']??false,
+      image_path: json['image_path']??'',
       id: json['id']??0,
       gameQus: json['sentence']??'',
     );

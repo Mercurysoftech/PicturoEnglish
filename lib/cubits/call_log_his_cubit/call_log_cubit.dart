@@ -15,7 +15,7 @@ class CallLogCubit extends Cubit<CallLogState> {
 
   Future<void> fetchCallLogs({required List<User> allUsers}) async {
     emit(CallLogLoading());
-    try {
+    // try {
       SharedPreferences pref =await SharedPreferences.getInstance();
       String? token = pref.getString("auth_token");
       final response = await http.get(
@@ -37,8 +37,45 @@ class CallLogCubit extends Cubit<CallLogState> {
       } else {
         emit(CallLogError('Failed to load call logs.'));
       }
+    // } catch (e) {
+    //   emit(CallLogError('Error: $e'));
+    // }
+  }
+  Future<void> postCallLog({
+    required String receiverId,
+    required String callType,
+    required String status,
+    required int duration,
+  }) async {
+    final url = Uri.parse('https://picturoenglish.com/api/call_log_add.php');
+    SharedPreferences pref =await SharedPreferences.getInstance();
+    String? token = pref.getString("auth_token");
+    final body = {
+      'receiver_id': receiverId,
+      'call_type': callType,
+      'status': "completed",
+      'duration': duration,
+    };
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Accept': 'application/json',
+          "Authorization": "Bearer $token",
+        },
+        body: jsonEncode(body),
+      );
+      print('Call log added successfully: ${response.body} __ ${body}');
+      if (response.statusCode == 200) {
+
+      } else {
+        print('Failed to add call log. Status code: ${response.statusCode}');
+        print('Response body: ${response.body}');
+      }
     } catch (e) {
-      emit(CallLogError('Error: $e'));
+      print('Error posting call log: $e');
     }
   }
+
 }

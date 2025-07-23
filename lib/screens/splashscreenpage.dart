@@ -29,7 +29,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   void initState() {
     super.initState();
-    context.read<CallSocketHandleCubit>().endCall();
+    // if(context.read<CallSocketHandleCubit>().isCallSocketConnected()){
+    //   context.read<CallSocketHandleCubit>().endCall();
+    // }
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),

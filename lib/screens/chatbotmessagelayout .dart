@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 class ChatBotMessageLayout extends StatefulWidget {
   final bool isMeChatting;
@@ -8,7 +10,7 @@ class ChatBotMessageLayout extends StatefulWidget {
   final bool isMuted;
   final bool isError;
   final Function(String message) onMuteToggle;
-  final Map<String,dynamic>? translation;
+  final Map<dynamic,dynamic>? translation;
 
   const ChatBotMessageLayout({
     super.key,
@@ -103,22 +105,55 @@ class _ChatBotMessageLayoutState extends State<ChatBotMessageLayout> {
                               : const Color(0xFF0D082C),
                         ),
                       ),
-                      (selectedLanguageCode=='en'||widget.messageBody==welcomeMessage)?SizedBox():Container(
-                        height: 1,
-                        margin: EdgeInsets.symmetric(
-                          vertical: 2
-                        ),
-                        color: Colors.grey,
+                      (selectedLanguageCode=='en'||widget.messageBody==welcomeMessage)?SizedBox():Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              height: 1,
+                              margin: EdgeInsets.symmetric(
+                                vertical: 18
+                              ),
+                              color: Colors.grey,
+                            ),
+                          ),
+                          Text("Translation  "),
+                          Expanded(
+                            child: Container(
+                              height: 1,
+                              margin: EdgeInsets.symmetric(
+                                  vertical: 18
+                              ),
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
                       ),
-                      (selectedLanguageCode=='en'||widget.messageBody==welcomeMessage)?SizedBox():Text(
-                        displayedMessage,
-                        style: TextStyle(
-                          fontFamily: 'Poppins Regular',
-                          fontSize: 15,
-                          color: widget.isMeChatting
-                              ? Colors.white
-                              : const Color(0xFF0D082C),
-                        ),
+                      (selectedLanguageCode=='en'||widget.messageBody==welcomeMessage)?SizedBox():Stack(
+                        children: [
+                          Text(
+                            displayedMessage,
+                            style: TextStyle(
+                              fontFamily: 'Poppins Regular',
+                              fontSize: 15,
+                              color: widget.isMeChatting
+                                  ? Colors.white
+                                  : const Color(0xFF0D082C),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: GestureDetector(
+                            onTap: (){
+                              widget.onMuteToggle(displayedMessage);
+                            },
+                            child: Icon(
+                              widget.isMuted ? Icons.volume_off : Icons.volume_up,
+                              size: 18,
+                              color: Colors.grey[600],
+                            ),
+                          ),)
+                        ],
                       ),
                     ],
                   ),
@@ -146,7 +181,7 @@ class _ChatBotMessageLayoutState extends State<ChatBotMessageLayout> {
                 children: [
                   GestureDetector(
                     onTap: (){
-                      widget.onMuteToggle(displayedMessage);
+                      widget.onMuteToggle(widget.messageBody);
                     },
                     child: Icon(
                       widget.isMuted ? Icons.volume_off : Icons.volume_up,
@@ -157,10 +192,22 @@ class _ChatBotMessageLayoutState extends State<ChatBotMessageLayout> {
                   const SizedBox(width: 8),
                   InkWell(
                     onTap: () async {
+                      Clipboard.setData(ClipboardData(text: widget.messageBody));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Copied to clipboard!")),
+                      );
+                    },
+                    child: Icon(Icons.copy, size: 18, color: Colors.grey[600]),
+                  ),
+                  const SizedBox(width: 8),
+
+                  InkWell(
+                    onTap: () async {
                       showLanguageDialog(context);
                     },
                     child: Icon(Icons.language, size: 18, color: Colors.grey[600]),
                   ),
+
                 ],
               ),
             ),

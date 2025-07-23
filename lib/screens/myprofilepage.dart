@@ -173,7 +173,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                           SizedBox(height: 10),
                           _buildUserDetailsCard(profileProvider.user!),
                           SizedBox(height: 10),
-                          PremiumButton(),
+
+                          PremiumButton(userName: profileProvider.username??'',),
                           SizedBox(height: 10),
                           _buildSettingsOption(Icons.language, "Language", context,profileProvider),
                               SizedBox(height: 10),
@@ -633,15 +634,15 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
 }
 
 class PremiumButton extends StatelessWidget {
-  const PremiumButton({super.key});
-
+  const PremiumButton({super.key, required this.userName});
+  final String userName;
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => PremiumScreen()), // Navigate to PremiumScreen
+          MaterialPageRoute(builder: (context) => PremiumScreen(userName: userName,)), // Navigate to PremiumScreen
         );
       },
       child: Container(

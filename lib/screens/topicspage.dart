@@ -26,9 +26,6 @@ class TopicsScreen extends StatefulWidget {
 class _TopicsScreenState extends State<TopicsScreen> {
   int? selectedIndex; // Track the selected item
 
-  bool _isLoading = true; // Track loading state
-  String _errorMessage = ''; // Store error messages
-
   @override
   void initState() {
     super.initState();
@@ -79,7 +76,7 @@ class _TopicsScreenState extends State<TopicsScreen> {
   builder: (context, state) {
 
     if(state is TopicLoaded){
-      print(state.topics);
+
       List<Map<String,dynamic>> topics=state.topics;
       return Container(
         decoration: BoxDecoration(
@@ -181,7 +178,7 @@ class _TopicCardState extends State<TopicCard> {
       width: 150,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        border: widget.isSelected ? Border.all(color: Colors.transparent, width: 2) : null,
+        border: widget.isSelected ? Border.all(color: Colors.green, width: 2) : null,
         boxShadow: [
           BoxShadow(
             color: Colors.grey.withOpacity(0.2),

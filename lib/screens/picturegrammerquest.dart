@@ -134,7 +134,7 @@ class _PictureGrammarQuestScreenState extends State<PictureGrammarQuestScreen> {
                                                   Navigator.push(
                                                     context,
                                                     MaterialPageRoute(
-                                                      builder: (context) => GrammarQuestScreen( index: index,questions: levels,level:levels[index].level,questId: question.id,title: question.gameQus),
+                                                      builder: (context) => GrammarQuestScreen(imageUrl: levels[index].image_path, index: index,questions: levels,level:levels[index].level,questId: question.id,title: question.gameQus),
                                                     ),
                                                   );
 

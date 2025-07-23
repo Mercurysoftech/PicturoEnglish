@@ -25,7 +25,7 @@ class CallLog {
       callerId: json['caller_id'],
       receiverId: json['receiver_id'],
       callType: json['call_type'],
-      userName: json['userName'],
+      userName: json['userName']??"",
       status: json['status'],
       duration: json['duration'],
       createdAt: json['created_at'],

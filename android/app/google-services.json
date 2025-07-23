@@ -1,36 +1,26 @@
 {
   "project_info": {
-    "project_number": "467637414689",
-    "project_id": "infinite-deck-429307-i6",
-    "storage_bucket": "infinite-deck-429307-i6.firebasestorage.app"
+    "project_number": "414535387061",
+    "project_id": "picturoenglish-1012d",
+    "storage_bucket": "picturoenglish-1012d.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:467637414689:android:f973eabbb777ac45e7ec60",
+        "mobilesdk_app_id": "1:414535387061:android:af0a6e651b6a5c4b0b3bfc",
         "android_client_info": {
           "package_name": "com.picturoenglish.picturo"
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "467637414689-8dfh8deei32hg79f2gctsok4r7p5la7j.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
+      "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCQyOtNH424SlWMTgxjqrKkIbHsGKikfIc"
+          "current_key": "AIzaSyBb6LsAihWTucNM5g0KC2kdPh_ygbLL5xI"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "467637414689-8dfh8deei32hg79f2gctsok4r7p5la7j.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
+          "other_platform_oauth_client": []
         }
       }
     }

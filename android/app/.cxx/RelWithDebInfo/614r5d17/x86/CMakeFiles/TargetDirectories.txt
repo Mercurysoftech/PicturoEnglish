@@ -1,0 +1,2 @@
+D:/mercury/PicturoEnglish/android/app/.cxx/RelWithDebInfo/614r5d17/x86/CMakeFiles/edit_cache.dir
+D:/mercury/PicturoEnglish/android/app/.cxx/RelWithDebInfo/614r5d17/x86/CMakeFiles/rebuild_cache.dir

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:picturo_app/responses/language_response.dart';
 import 'package:picturo_app/screens/locationgetpage.dart';
@@ -8,6 +9,7 @@ import 'package:picturo_app/services/api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
+import '../providers/profileprovider.dart';
 import '../responses/my_profile_response.dart';
 import '../utils/common_file.dart';
 
@@ -107,6 +109,10 @@ class _ChangeLanguagePageState extends State<ChangeLanguagePage> {
                       setState(() {
                         selectedLanguage = language.language;
                       });
+                      Fluttertoast.showToast(
+                        msg: "$selectedLanguage is now your native language.",
+                      );
+                      context.read<ProfileProvider>().fetchProfile();
                       Navigator.pop(context);
 
                     },
@@ -218,12 +224,15 @@ class _ChangeLanguagePageState extends State<ChangeLanguagePage> {
             children: [
               // Positioned label similar to languageSelectionTile
               const SizedBox(height: 5),
-              GestureDetector(
+              (languages.isEmpty)?SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(strokeWidth: 0.9,),
+              ):GestureDetector(
                 onTap:_showLanguageBottomSheet,
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    // Border Box for TextField
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 15),

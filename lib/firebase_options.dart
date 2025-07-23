@@ -17,7 +17,10 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      return web;
+      throw UnsupportedError(
+        'DefaultFirebaseOptions have not been configured for web - '
+        'you can reconfigure this by running the FlutterFire CLI again.',
+      );
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -46,29 +49,20 @@ class DefaultFirebaseOptions {
     }
   }
 
-  static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyA1Ewda11CEBitrrdvSsCQAivJNKCpsxC4',
-    appId: '1:467637414689:web:53d40e1d274d65d8e7ec60',
-    messagingSenderId: '467637414689',
-    projectId: 'infinite-deck-429307-i6',
-    authDomain: 'infinite-deck-429307-i6.firebaseapp.com',
-    storageBucket: 'infinite-deck-429307-i6.firebasestorage.app',
-  );
-
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyCQyOtNH424SlWMTgxjqrKkIbHsGKikfIc',
-    appId: '1:467637414689:android:f973eabbb777ac45e7ec60',
-    messagingSenderId: '467637414689',
-    projectId: 'infinite-deck-429307-i6',
-    storageBucket: 'infinite-deck-429307-i6.firebasestorage.app',
+    apiKey: 'AIzaSyBb6LsAihWTucNM5g0KC2kdPh_ygbLL5xI',
+    appId: '1:414535387061:android:af0a6e651b6a5c4b0b3bfc',
+    messagingSenderId: '414535387061',
+    projectId: 'picturoenglish-1012d',
+    storageBucket: 'picturoenglish-1012d.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyAQj7dsggscKIDOpcJarjWPhecTv3Ol6z4',
-    appId: '1:467637414689:ios:e791e7f48fef9140e7ec60',
-    messagingSenderId: '467637414689',
-    projectId: 'infinite-deck-429307-i6',
-    storageBucket: 'infinite-deck-429307-i6.firebasestorage.app',
+    apiKey: 'AIzaSyAZRBl8DbQHLoMzkLVJmSsrfIrO98cHu6Y',
+    appId: '1:414535387061:ios:d6583d66f993bef00b3bfc',
+    messagingSenderId: '414535387061',
+    projectId: 'picturoenglish-1012d',
+    storageBucket: 'picturoenglish-1012d.firebasestorage.app',
     iosBundleId: 'com.example.picturoApp',
   );
 }

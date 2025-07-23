@@ -7,8 +7,8 @@ import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PremiumScreen extends StatefulWidget {
-  const PremiumScreen({super.key});
-
+  const PremiumScreen({super.key, required this.userName});
+  final String userName;
   @override
   State<PremiumScreen> createState() => _PremiumScreenState();
 }
@@ -126,6 +126,7 @@ setState(() {
             'description': 'One-Time Premium Purchase',
             'order_id': orderData['id'], // Use Razorpay Order ID from backend
             'prefill': {
+              'name': widget.userName,
               'contact': '9344587208',
               'email': 'user@example.com',
             },

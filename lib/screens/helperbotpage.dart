@@ -131,6 +131,7 @@ class _HelperBotScreenState extends State<HelperBotScreen> {
               ],
             ),
           ),
+          
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.only(
               bottomLeft: Radius.circular(20),
@@ -174,7 +175,64 @@ class _HelperBotScreenState extends State<HelperBotScreen> {
                     itemCount: faqs.length,
                     itemBuilder: (context, index) {
                       final faq = faqs[index];
-                      return Card(
+                      return (faqs.length-1==index)?Row(mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Expanded(
+                            child: Container(
+                              margin: EdgeInsets.symmetric(horizontal: 0,vertical: 22),
+                              child: TextField(
+                                decoration: InputDecoration(
+                                  hintText: "Ask Something You Want",
+                                  contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(30),
+                                    borderSide: BorderSide(color: Colors.grey.shade300),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(30),
+                                    borderSide: BorderSide(color: Colors.grey.shade300),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(30),
+                                    borderSide: BorderSide(color: Colors.blue),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 24,),
+                          GestureDetector(
+                            onTap: () {
+                              // Your submit logic here
+                              print("Submit tapped");
+                            },
+                            child: Container(
+                              padding: EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+                              decoration: BoxDecoration(
+                                color: Colors.blue, // Button background color
+                                borderRadius: BorderRadius.circular(30), // Rounded corners
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black26,
+                                    blurRadius: 4,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                "Submit",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ):Card(
                         margin: EdgeInsets.symmetric(vertical: 6),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),

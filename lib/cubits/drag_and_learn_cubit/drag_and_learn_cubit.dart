@@ -28,7 +28,7 @@ class DragLearnCubit extends Cubit<DragLearnState> {
       },
         body: jsonEncode({"book_id": bookId}),
       );
-      print("sdlkmclskdcm,sl;dcsdl;c,s;dlc, ${response.body}");
+
     final data = json.decode(response.body);
     if (data['status'] == 'success') {
       SharedPreferences pref = await SharedPreferences.getInstance();

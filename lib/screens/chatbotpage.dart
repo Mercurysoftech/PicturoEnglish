@@ -30,6 +30,7 @@ class ChatBotScreen extends StatefulWidget {
 class _ChatBotScreenState extends State<ChatBotScreen> with TickerProviderStateMixin {
   final TextEditingController _messageController = TextEditingController();
   final List<Map<String, dynamic>> _messages = [];
+  final ScrollController _scrollController = ScrollController();
   Set<String> _mutedMessages = {};
   late ChatBotApiService _apiService;
   bool _isLoading = false;
@@ -91,6 +92,7 @@ class _ChatBotScreenState extends State<ChatBotScreen> with TickerProviderStateM
         'timestamp': _getCurrentTime(),
       });
     });
+    _scrollToBottom();
   }
 
   String _getCurrentTime() {
@@ -219,63 +221,70 @@ class _ChatBotScreenState extends State<ChatBotScreen> with TickerProviderStateM
 
     _isLoading = true;
   });
-  
+  _scrollToBottom();
   _messageController.clear();
   _scaleController.reverse();
   _colorController.reverse();
 
   // try {
+  try {
     final response = await _apiService.getChatbotResponse(
       message: message,
       language: userLanguage,
-      scenario: scenario
+      scenario: scenario,
     ).timeout(const Duration(seconds: 30));
-    print("sldkcmslkdcmlskdc __ ${response}");
 
-    // if (response.containsKey('reply')) {
-      context.read<CoinCubit>().useCoin(1);
+    context.read<CoinCubit>().useCoin(1);
 
-      String botMessage = response.response ?? "I didn't get that. Could you try again?";
-      String? audioBase64 = '';
+    String botMessage = response.response.isNotEmpty
+        ? response.response
+        : "I didn't get that. Could you try again?";
+    String? audioBase64 = '';
+    botMessage = botMessage
+        .replaceAll(RegExp(r'-{2,}'), '')
+        .replaceAll(RegExp(
+        r'[\u{1F600}-\u{1F64F}'
+        r'\u{1F300}-\u{1F5FF}'
+        r'\u{1F680}-\u{1F6FF}'
+        r'\u{1F1E0}-\u{1F1FF}'
+        r'\u{2600}-\u{26FF}'
+        r'\u{2700}-\u{27BF}'
+        r'\u{1F900}-\u{1F9FF}'
+        r'\u{1FA70}-\u{1FAFF}'
+        r'\u{200D}'
+        r'\u{FE0F}'
+        r'\u{1F018}-\u{1F270}'
+        r'\u{238C}-\u{2454}'
+        r']+',
+        unicode: true), '')
+        .trim();
 
-      // Clean up the display message
-      botMessage = botMessage
-          .replaceAll(RegExp(r'-{2,}'), '')
-          .replaceAll(RegExp(
-              r'[\u{1F600}-\u{1F64F}'
-              r'\u{1F300}-\u{1F5FF}'
-              r'\u{1F680}-\u{1F6FF}'
-              r'\u{1F1E0}-\u{1F1FF}'
-              r'\u{2600}-\u{26FF}'
-              r'\u{2700}-\u{27BF}'
-              r'\u{1F900}-\u{1F9FF}'
-              r'\u{1FA70}-\u{1FAFF}'
-              r'\u{200D}'
-              r'\u{FE0F}'
-              r'\u{1F018}-\u{1F270}'
-              r'\u{238C}-\u{2454}'
-              r']+',
-              unicode: true), '')
-          .trim();
-
-      setState(() {
-        _messages.add({
-          'message': botMessage,
-          'isMe': false,
-          'timestamp': _getCurrentTime(),
-          'audioBase64': audioBase64,
-          'translation': response.translations,
-        });
-        _isLoading = false;
+    setState(() {
+      _messages.add({
+        'message': botMessage,
+        'isMe': false,
+        'timestamp': _getCurrentTime(),
+        'audioBase64': '',
+        'translation': response.translations,
       });
-
+      _isLoading = false;
+    });
+  } catch (e) {
+    // Show the error from `error` key
+    setState(() {
+      _messages.add({
+        'message': e.toString().replaceFirst("Exception: ", ""),
+        'isMe': false,
+        'timestamp': _getCurrentTime(),
+        'audioBase64': '',
+        'translation': {},
+      });
+      _isLoading = false;
+    });
+  }
+  _scrollToBottom();
       // Automatically play audio if not muted
-      if (audioBase64 != null && !_isAudioMuted) {
-        await Future.delayed(const Duration(milliseconds: 300)); // Short delay for UI
-        if (mounted) {
-          await _playAudioWithRetry(audioBase64);
-        }
-      }
+
     // }else {
     //   String errorMessage = response['error']?.toString() ?? 'Failed to get response';
     //   setState(() {
@@ -426,12 +435,21 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
     }
   }
 
-
-
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
   @override
   Widget build(BuildContext context) {
     final profileProvider = Provider.of<ProfileProvider>(context);
-
+    // _scrollToBottom();
 
     return Scaffold(
       backgroundColor: Color(0xFFE0F7FF),
@@ -497,6 +515,7 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
           children: [
             Expanded(
               child: ListView.builder(
+                controller: _scrollController,
                 padding: const EdgeInsets.all(16),
                 itemCount: _messages.length + (_isLoading ? 1 : 0),
                 itemBuilder: (context, index) {
@@ -507,7 +526,7 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
                           ? Alignment.centerRight 
                           : Alignment.centerLeft,
                       child: ChatBotMessageLayout(index: index,
-                        translation: message['translation'],
+                        translation: message['translation']??{},
                         isMeChatting: message['isMe'],
                         messageBody: message['message'],
                         timestamp: message['timestamp'],

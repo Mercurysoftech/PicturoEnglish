@@ -1,7 +1,11 @@
+import 'dart:developer';
+
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
@@ -13,7 +17,9 @@ class ProgressCubit extends Cubit<ProgressState> {
   Future<void> fetchProgress({
     required int bookId,
     required int topicId,
+    required bool isFromTopic,
   }) async {
+
     emit(ProgressLoading());
 
     final url = Uri.parse("https://picturoenglish.com/api/getprogress_percentage.php");
@@ -41,6 +47,10 @@ class ProgressCubit extends Cubit<ProgressState> {
           final int totalQuestions = data['total_questions'];
           final int readQuestions = data['read_questions'];
           double progress = totalQuestions > 0 ? readQuestions / totalQuestions : 0.0;
+
+           if(progress==1&&isFromTopic){
+             Fluttertoast.showToast(msg: "Content was Completed Successfully",backgroundColor: Colors.green);
+           }
           emit(ProgressLoaded(progress));
         } else {
           emit(ProgressFailed("Failed to fetch progress"));

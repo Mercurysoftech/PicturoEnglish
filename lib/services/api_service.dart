@@ -619,7 +619,6 @@ Future<FriendsResponse> fetchFriends() async {
     );
 
     // Debugging: Print the raw API response
-    // print("Raw API Response---------%%%%%: ${json.encode(response.data)} ))PPPP");
 
     // Check if the response status code is 200 (OK)
     if (response.statusCode == 200) {
@@ -773,7 +772,6 @@ Future<QuestionsResponse> fetchQuestions(int topicId) async {
       }),
     );
 
-      print("sdljcslkdcsdkl __ ${response.data}");
     if (response.statusCode == 200) {
 
 
@@ -831,7 +829,7 @@ Future<QuestionDetailsResponse> fetchDetailedQuestion(int questionId) async {
     );
 
     // Debugging: Print the raw API response
-  dev.log("Raw API Response Eacch Questionssssssss: ${response.data}");
+  // dev.log("Raw API Response Eacch Questionssssssss: ${response.data}");
 
     // Check if the response status code is 200 (OK)
     if (response.statusCode == 200) {

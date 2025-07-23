@@ -18,7 +18,7 @@ class NotificationCubit extends Cubit<NotificationState> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     final token = prefs.getString("auth_token");
 
-    try {
+    // try {
       final response = await http.get(
         Uri.parse('https://picturoenglish.com/api/get_notifications.php'),
         headers: {
@@ -26,6 +26,7 @@ class NotificationCubit extends Cubit<NotificationState> {
           "Content-Type": "application/json"
         },
       );
+
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -39,6 +40,7 @@ class NotificationCubit extends Cubit<NotificationState> {
           final today = DateTime(now.year, now.month, now.day);
 
           final todayNotifications = allNotifications.where((notification) {
+
             final createdAt = DateTime.tryParse(notification.createdAt ?? '');
             if (createdAt == null) return false;
             final createdDate = DateTime(createdAt.year, createdAt.month, createdAt.day);
@@ -48,17 +50,20 @@ class NotificationCubit extends Cubit<NotificationState> {
           if (todayNotifications.isNotEmpty) {
             emit(NotificationLoaded(todayNotifications));
           } else {
-            emit(const NotificationError("No notifications for today."));
+
+            emit(NotificationLoaded([]));
           }
         } else {
+
           emit(const NotificationError("No notifications found."));
         }
       } else {
+
         emit(NotificationError("Failed with status: ${response.statusCode}"));
       }
-    } catch (e) {
-      emit(NotificationError("Error: $e"));
-    }
+    // } catch (e) {
+    //   emit(NotificationError("Error: $e"));
+    // }
   }
 
 }

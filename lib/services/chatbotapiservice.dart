@@ -49,9 +49,7 @@ class ChatBotApiService {
     required String scenario,
   }) async {
     // try {
-      print("lsdclskcmlskcmslkcsckl ${{
-        "message": "$message",
-      }}");
+
       final response = await _dio.post(
         'chat',
         data: jsonEncode({
@@ -61,16 +59,23 @@ class ChatBotApiService {
         }),
       ).timeout(const Duration(seconds: _timeoutSeconds));
 
-       print("sjkdcskjdckjsdc ${response.data}");
+      print("Response: ${response.data}");
+
       if (response.statusCode != 200) {
         throw DioException(
           requestOptions: response.requestOptions,
           response: response,
           error: 'Invalid status code: ${response.statusCode}',
         );
-      }else{
-        AiMultiLanguageResponseModel data=AiMultiLanguageResponseModel.fromJson(response.data);
-        return data;
+      } else {
+        final dataMap = response.data;
+
+        // Handle error inside 200 response
+        if (dataMap['error'] != null && dataMap['error'].toString().isNotEmpty) {
+          throw Exception(dataMap['error']);
+        }
+
+        return AiMultiLanguageResponseModel.fromJson(dataMap);
       }
 
 

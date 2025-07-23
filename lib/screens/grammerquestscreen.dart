@@ -13,11 +13,12 @@ import '../utils/common_app_bar.dart';
 import '../utils/common_file.dart';
 class GrammarQuestScreen extends StatefulWidget {
   final String? title;
+  final String? imageUrl;
   final int questId;
   final int level;
   final int index;
   final List<GrammarQuestion> questions;
-  const GrammarQuestScreen({super.key, this.title,required this.questId,required  this.level,required this.index,required this.questions});
+  const GrammarQuestScreen({super.key, this.title,required this.questId,required  this.level,required this.index,required this.questions,required this.imageUrl});
 
   @override
   _GrammarQuestScreenState createState() => _GrammarQuestScreenState();
@@ -131,7 +132,7 @@ class _GrammarQuestScreenState extends State<GrammarQuestScreen> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(10),
                       child: CachedNetworkImageWidget(
-                       imageUrl:  "https://encrypted-tbn1.gstatic.com/images?q=tbn:ANd9GcQi0s-XNjBDXwkLqd6wZJsHXQHi70I-C6swaM8Bix5Gs_ZVcEXB",
+                       imageUrl:  "https://picturoenglish.com/admin/uploads/${widget.imageUrl?.split("/").last}",
                         height: MediaQuery.of(context).size.width * 0.65, // Responsive height
                         width: MediaQuery.of(context).size.width * 0.65, // Responsive width
                         fit: BoxFit.cover,
@@ -303,7 +304,7 @@ class _GrammarQuestScreenState extends State<GrammarQuestScreen> {
                   Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => GrammarQuestScreen(questions: widget.questions,index: widget.index+1,level:widget.level+1,questId: widget.questId+1,title: widget.questions[widget.index+1].gameQus),
+                      builder: (context) => GrammarQuestScreen(imageUrl: widget.questions[widget.index+1].image_path,questions: widget.questions,index: widget.index+1,level:widget.level+1,questId: widget.questId+1,title: widget.questions[widget.index+1].gameQus),
                     ),
                   );
                 }

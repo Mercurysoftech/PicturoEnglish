@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:picturo_app/screens/homepage.dart';
 import 'package:picturo_app/services/api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../providers/profileprovider.dart';
 import '../responses/my_profile_response.dart';
 import '../utils/common_app_bar.dart';
 import '../utils/common_file.dart';
@@ -141,6 +143,7 @@ class _LocationGetPageState extends State<LocationGetPage> {
 
   if (result["success"] == true) {
     print('Raw Response: $result');
+    context.read<ProfileProvider>().fetchProfile();
     if(widget.isFromProfile){
      Navigator.pop(context);
     Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>MyProfileScreen()));
@@ -260,7 +263,7 @@ class _LocationGetPageState extends State<LocationGetPage> {
         locationMessage=widget.user?.location??'';
       }
     }
-    _handleLocationPermission();
+    // _handleLocationPermission();
     _loadSavedData();
   }
 

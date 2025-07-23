@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
@@ -15,6 +16,7 @@ import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 import '../cubits/call_cubit/call_duration_handler/call_duration_handle_cubit.dart';
 import '../cubits/call_cubit/call_socket_handle_cubit.dart';
+import '../cubits/user_friends_cubit/user_friends_cubit.dart';
 import '../responses/friends_response.dart';
 import '../services/chat_socket_service.dart';
 import '../utils/common_file.dart';
@@ -62,7 +64,6 @@ class _ChatScreenState extends State<ChatScreen> {
     _initializeApiService();
     initSocket();
     _setupTypingListener();
-
   }
 
 
@@ -81,6 +82,7 @@ class _ChatScreenState extends State<ChatScreen> {
     ChatSocket.socket.on('newMessage', (data) {
       _handleIncomingMessage(data);
     });
+
 
     ChatSocket.socket.onError((handler){
 
@@ -607,7 +609,7 @@ Future<void> _blockUser() async {
     // Implement your block user API call here
     // Example:
     await _apiService.blockUser(widget.userId);
-    
+    context.read<UserFriendsCubit>().fetchAllUsersAndFriends();
     // Show a success message
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('User blocked successfully')),
