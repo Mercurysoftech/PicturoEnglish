@@ -190,7 +190,53 @@ class _TopicCardState extends State<TopicCard> {
         ],
       ),
       child: Stack(
-        children:   ,
+        children:  [
+          // Background image
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: CachedNetworkImageWidget(
+              imageUrl: "https://picturoenglish.com/admin/${widget.image}",
+              fit: BoxFit.cover,
+              height: double.infinity,
+              width: double.infinity,
+            ),
+          ),
+
+          // Semi-transparent overlay for text readability
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              color: Colors.black.withOpacity(0.4),
+            ),
+          ),
+
+          // Title text
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text(
+                capitalizeFirstLetter(widget.title=="Action verb"?"Action Verbs":widget.title),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: AppConstants.commonFont,
+                  color: Colors.white,
+                ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+
+          // Check icon if selected
+          // if (widget.isSelected)
+          //   Positioned(
+          //     top: 6,
+          //     right: 6,
+          //     child: const Icon(Icons.check_circle, color: Colors.green, size: 24),
+          //   ),
+        ] ,
       ),
     );
   }
