@@ -16,6 +16,7 @@ import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 import '../cubits/call_cubit/call_duration_handler/call_duration_handle_cubit.dart';
 import '../cubits/call_cubit/call_socket_handle_cubit.dart';
+import '../cubits/call_cubit/get_friends_list_cubit/get_friends_list_cubit.dart';
 import '../cubits/user_friends_cubit/user_friends_cubit.dart';
 import '../responses/friends_response.dart';
 import '../services/chat_socket_service.dart';
@@ -282,28 +283,6 @@ void _handleOnlineStatus(dynamic data) {
           "isOptimistic": true,
         });
       });
-
-
-
-
-      //
-      // final messageData = {
-      //   "sender_id":_userId,
-      //   "receiver_id": "$receiverId",
-      //   "message": _messageController.text
-      // };
-      //
-      // bool? response = await _apiService.sendMessagesToAPI(messageMap: messageData);
-      // if(response!=null&&response){
-      //   setState(() {
-      //     _messages.insert(0, {
-      //       "senderId": _userId.toString(),
-      //       "message": _messageController.text.trim(),
-      //       "timestamp": now,
-      //       "isOptimistic": true,
-      //     });
-      //   });
-      // }
       _messageController.clear();
     }
 }
@@ -341,230 +320,237 @@ void dispose() {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Color(0xFFE0F7FF),
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(80),
-        child: AppBar(
-          backgroundColor: Color(0xFF49329A),
-          leading: Padding(
-            padding: const EdgeInsets.only(top: 10.0),
-            child: IconButton(
-              icon: Icon(Icons.arrow_back_ios, color: Colors.white),
-              onPressed: (){
-               Navigator.pop(context);
-              },
+    return WillPopScope(
+      onWillPop: () async{
+        context.read<GetFriendsListCubit>().fetchAllFriends();
+        return true;
+      },
+      child: Scaffold(
+        backgroundColor: Color(0xFFE0F7FF),
+        appBar: PreferredSize(
+          preferredSize: Size.fromHeight(80),
+          child: AppBar(
+            backgroundColor: Color(0xFF49329A),
+            leading: Padding(
+              padding: const EdgeInsets.only(top: 10.0),
+              child: IconButton(
+                icon: Icon(Icons.arrow_back_ios, color: Colors.white),
+                onPressed: (){
+                  context.read<GetFriendsListCubit>().fetchAllFriends();
+                 Navigator.pop(context);
+                },
+              ),
             ),
-          ),
-          title: Padding(
-            padding: const EdgeInsets.only(top: 10.0),
-            child: Row(
-              children: [
-                widget.avatarWidget,
-                SizedBox(width: 10),
-
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      widget.userName,
-                      style: TextStyle(
-                        color: Colors.white, 
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Poppins Regular',
-                        fontSize: 16
-                      ),
-                    ),
-                    Text(
-                      _isUserTyping
-                          ? 'Typing...'
-                          : _isOnline
-                          ? 'Online'
-                          : 'Offline',
-  style: TextStyle(
-    color: _isUserTyping 
-        ? Colors.green 
-        : _isOnline 
-            ? Colors.white 
-            : Colors.white,
-    fontSize: 12,
-    fontFamily: 'Poppins Regular'
-  ),
-)
-                  ],
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            Padding(
+            title: Padding(
               padding: const EdgeInsets.only(top: 10.0),
               child: Row(
                 children: [
-                  CoinBadge(),
-                  SizedBox(width: 5,),
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: ()async {
-                        if (context.read<CallSocketHandleCubit>().isLiveCallActive) {
-                          Fluttertoast.showToast(
-                            msg: "You're already in another call",
-                            backgroundColor: Colors.orange,
-                          );
-                        } else {
-                          final prefs = await SharedPreferences.getInstance();
-                          String? userId = prefs.getString("user_id");
+                  widget.avatarWidget,
+                  SizedBox(width: 10),
 
-                          int? profileProvider = userId != null && userId != '' ? int.tryParse(userId) : null;
-
-                          if (profileProvider != null) {
-                            await requestPermissions();
-
-                            if (!mounted) return;
-
-                            // Navigate first
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => CallingScreen(currentUserId:profileProvider ,
-                                  friendDetails: widget.friendDetails,
-                                  callerName: "${widget.friendDetails.friendName}",
-                                  avatarUrl: widget.friendDetails.friendProfilePic,
-                                ),
-                              ),
-                            );
-
-                            // Emit socket events
-
-
-                            // Reset timer if not in active call
-                            if (!context.read<CallSocketHandleCubit>().isLiveCallActive) {
-                              context.read<CallTimerCubit>().resetTimer();
-                            }
-                          }
-                        }
-
-
-                      },
-
-                      borderRadius: BorderRadius.circular(70),
-                      child: Container(
-                        padding: EdgeInsets.all(5),
-                        child: SvgPicture.string(
-                          Svgfiles.svgString,
-                          width: 28,
-                          height: 28,
-                          fit: BoxFit.fitHeight,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        widget.userName,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Poppins Regular',
+                          fontSize: 16
                         ),
                       ),
-                    ),
+                      Text(
+                        _isUserTyping
+                            ? 'Typing...'
+                            : _isOnline
+                            ? 'Online'
+                            : 'Offline',
+        style: TextStyle(
+      color: _isUserTyping
+          ? Colors.green
+          : _isOnline
+              ? Colors.white
+              : Colors.white,
+      fontSize: 12,
+      fontFamily: 'Poppins Regular'
+        ),
+      )
+                    ],
                   ),
-                 PopupMenuButton<ChatMenuAction>(
-  icon: Icon(Icons.more_vert, color: Colors.white, size: 28),
-  onSelected: (ChatMenuAction result) {
-    if (result == ChatMenuAction.block) {
-      _showBlockConfirmationDialog();
-    }
-  },
-  itemBuilder: (BuildContext context) => <PopupMenuEntry<ChatMenuAction>>[
-    const PopupMenuItem<ChatMenuAction>(
-      value: ChatMenuAction.block,
-      child: Text('Block User',style: TextStyle(fontFamily: AppConstants.commonFont),),
-    ),
-  ],
-),
                 ],
               ),
             ),
-          ],
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
+            actions: [
+              Padding(
+                padding: const EdgeInsets.only(top: 10.0),
+                child: Row(
+                  children: [
+                    CoinBadge(),
+                    SizedBox(width: 5,),
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: ()async {
+                          if (context.read<CallSocketHandleCubit>().isLiveCallActive) {
+                            Fluttertoast.showToast(
+                              msg: "You're already in another call",
+                              backgroundColor: Colors.orange,
+                            );
+                          } else {
+                            final prefs = await SharedPreferences.getInstance();
+                            String? userId = prefs.getString("user_id");
+
+                            int? profileProvider = userId != null && userId != '' ? int.tryParse(userId) : null;
+
+                            if (profileProvider != null) {
+                              await requestPermissions();
+
+                              if (!mounted) return;
+
+                              // Navigate first
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => CallingScreen(currentUserId:profileProvider ,
+                                    friendDetails: widget.friendDetails,
+                                    callerName: "${widget.friendDetails.friendName}",
+                                    avatarUrl: widget.friendDetails.friendProfilePic,
+                                  ),
+                                ),
+                              );
+
+                              // Emit socket events
+
+
+                              // Reset timer if not in active call
+                              if (!context.read<CallSocketHandleCubit>().isLiveCallActive) {
+                                context.read<CallTimerCubit>().resetTimer();
+                              }
+                            }
+                          }
+
+
+                        },
+
+                        borderRadius: BorderRadius.circular(70),
+                        child: Container(
+                          padding: EdgeInsets.all(5),
+                          child: SvgPicture.string(
+                            Svgfiles.svgString,
+                            width: 28,
+                            height: 28,
+                            fit: BoxFit.fitHeight,
+                          ),
+                        ),
+                      ),
+                    ),
+                   PopupMenuButton<ChatMenuAction>(
+        icon: Icon(Icons.more_vert, color: Colors.white, size: 28),
+        onSelected: (ChatMenuAction result) {
+      if (result == ChatMenuAction.block) {
+        _showBlockConfirmationDialog();
+      }
+        },
+        itemBuilder: (BuildContext context) => <PopupMenuEntry<ChatMenuAction>>[
+      const PopupMenuItem<ChatMenuAction>(
+        value: ChatMenuAction.block,
+        child: Text('Block User',style: TextStyle(fontFamily: AppConstants.commonFont),),
+      ),
+        ],
+      ),
+                  ],
+                ),
+              ),
+            ],
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(20),
+                bottomRight: Radius.circular(20),
+              ),
             ),
           ),
         ),
-      ),
-      body: _isLoading 
-          ? Center(child: CircularProgressIndicator())
-          : Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Color(0xFFE0F7FF),
-                    Color(0xFFEAE4FF),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              child: Column(
-                children: [
-                  Expanded(
-                    child: ListView.builder(
-                      reverse: true,
-                      padding: EdgeInsets.all(8),
-                      itemCount: _messages.length,
-                      itemBuilder: (context, index) {
-                        final message = _messages[index];
-                        final isMe = message["senderId"] == _userId;
-
-                        return Align(
-                          alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                          child: ChatMessageLayout(
-                            isMeChatting: isMe,
-                            messageBody: message["message"] ?? "",
-                            timestamp:message["timestamp"] ?? "null",
-                          ),
-                        );
-                      },
-                    ),
+        body: _isLoading
+            ? Center(child: CircularProgressIndicator())
+            : Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Color(0xFFE0F7FF),
+                      Color(0xFFEAE4FF),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                    child: TextField(
-                      controller: _messageController,
-                      decoration: InputDecoration(
-                        hintText: 'Message',
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(30),
-                          borderSide: BorderSide.none,
-                        ),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 15),
-                        suffixIcon: Padding(
-                          padding: EdgeInsets.only(right: 5),
-                          child: Material(
-                            color: Colors.transparent,
+                ),
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: ListView.builder(
+                        reverse: true,
+                        padding: EdgeInsets.all(8),
+                        itemCount: _messages.length,
+                        itemBuilder: (context, index) {
+                          final message = _messages[index];
+                          final isMe = message["senderId"] == _userId;
+
+                          return Align(
+                            alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                            child: ChatMessageLayout(
+                              isMeChatting: isMe,
+                              messageBody: message["message"] ?? "",
+                              timestamp:message["timestamp"] ?? "null",
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                      child: TextField(
+                        controller: _messageController,
+                        decoration: InputDecoration(
+                          hintText: 'Message',
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(30),
-                            child: InkWell(
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+                          suffixIcon: Padding(
+                            padding: EdgeInsets.only(right: 5),
+                            child: Material(
+                              color: Colors.transparent,
                               borderRadius: BorderRadius.circular(30),
-                              onTap: _sendMessage,
-                              child: Container(
-                                padding: EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Color(0xFF49329A),
-                                  borderRadius: BorderRadius.circular(30),
-                                ),
-                                child: SvgPicture.string(
-                                  Svgfiles.sendSvg,
-                                  width: 24,
-                                  height: 24,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(30),
+                                onTap: _sendMessage,
+                                child: Container(
+                                  padding: EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Color(0xFF49329A),
+                                    borderRadius: BorderRadius.circular(30),
+                                  ),
+                                  child: SvgPicture.string(
+                                    Svgfiles.sendSvg,
+                                    width: 24,
+                                    height: 24,
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                         ),
+                        // onSubmitted: (_) => _sendMessage(),
                       ),
-                      // onSubmitted: (_) => _sendMessage(),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
+      ),
     );
   }
   void _showBlockConfirmationDialog() {

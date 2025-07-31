@@ -525,8 +525,9 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
                       alignment: message['isMe'] 
                           ? Alignment.centerRight 
                           : Alignment.centerLeft,
-                      child: ChatBotMessageLayout(index: index,
-                        translation: message['translation']??{},
+                      child: ChatBotMessageLayout(
+                        index: index,
+                        // translation: message['translation']??{},
                         isMeChatting: message['isMe'],
                         messageBody: message['message'],
                         timestamp: message['timestamp'],

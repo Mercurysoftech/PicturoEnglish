@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_tts/flutter_tts.dart';
+import 'package:translator/translator.dart';
 
 class ChatBotMessageLayout extends StatefulWidget {
   final bool isMeChatting;
@@ -10,18 +10,16 @@ class ChatBotMessageLayout extends StatefulWidget {
   final bool isMuted;
   final bool isError;
   final Function(String message) onMuteToggle;
-  final Map<dynamic,dynamic>? translation;
 
   const ChatBotMessageLayout({
     super.key,
     required this.isMeChatting,
     required this.messageBody,
     required this.timestamp,
-    required this.translation,
     required this.index,
     required this.isMuted,
-    this.isError = false, required this.onMuteToggle,
-
+    this.isError = false,
+    required this.onMuteToggle,
   });
 
   @override
@@ -29,27 +27,79 @@ class ChatBotMessageLayout extends StatefulWidget {
 }
 
 class _ChatBotMessageLayoutState extends State<ChatBotMessageLayout> {
-  String selectedLanguageCode = "en"; // Default to English
-  String welcomeMessage = "Welcome to Picturo! I'm your AI English learning buddy. Let's begin!";
+  String selectedLanguageCode = "en"; // default to English
+  String translatedMessage = "";
+  bool isTranslating = false;
+  final String welcomeMessage = "Welcome to Picturo! I'm your AI English learning buddy. Let's begin!";
+
+  final translator = GoogleTranslator();
+
+  Map<String, String> languageMap = {
+    "en": "English",
+    "ta": "Tamil",
+    "ml": "Malayalam",
+    "te": "Telugu",
+    "hi": "Hindi",
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    // Translate if not English
+    if (selectedLanguageCode != "en") {
+      _translateMessage();
+    }
+  }
+
+  Future<void> _translateMessage() async {
+    setState(() {
+      isTranslating = true;
+    });
+
+    try {
+      var translation = await translator.translate(
+        widget.messageBody,
+        to: selectedLanguageCode,
+      );
+      setState(() {
+        translatedMessage = translation.text;
+        isTranslating = false;
+      });
+    } catch (e) {
+      setState(() {
+        translatedMessage = "Translation failed";
+        isTranslating = false;
+      });
+    }
+  }
+
+  void _onLanguageSelected(String code) {
+    setState(() {
+      selectedLanguageCode = code;
+      translatedMessage = "";
+    });
+
+    if (code != "en") {
+      _translateMessage();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    String displayedMessage = selectedLanguageCode == "en"
-        ? widget.messageBody
-        : widget.translation?[languageMap[selectedLanguageCode] ?? ""] ?? widget.messageBody;
-
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
-        mainAxisAlignment:
-        widget.isMeChatting ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: widget.isMeChatting
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Message content
           Flexible(
             child: Column(
-              crossAxisAlignment:
-              widget.isMeChatting ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+              crossAxisAlignment: widget.isMeChatting
+                  ? CrossAxisAlignment.end
+                  : CrossAxisAlignment.start,
               children: [
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -94,6 +144,7 @@ class _ChatBotMessageLayoutState extends State<ChatBotMessageLayout> {
                     ),
                   ),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         widget.messageBody,
@@ -105,56 +156,57 @@ class _ChatBotMessageLayoutState extends State<ChatBotMessageLayout> {
                               : const Color(0xFF0D082C),
                         ),
                       ),
-                      (selectedLanguageCode=='en'||widget.messageBody==welcomeMessage)?SizedBox():Row(
-                        children: [
-                          Expanded(
-                            child: Container(
-                              height: 1,
-                              margin: EdgeInsets.symmetric(
-                                vertical: 18
+                      const SizedBox(height: 10),
+                      if (selectedLanguageCode != "en" &&
+                          widget.messageBody != welcomeMessage)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Divider(color: Colors.grey),
+                            Text(
+                              "Translation",
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey[700]),
+                            ),
+                            const SizedBox(height: 6),
+                            if (isTranslating)
+                              const Text("Translating...",
+                                  style: TextStyle(fontSize: 14))
+                            else
+                              Stack(
+                                children: [
+                                  Text(
+                                    translatedMessage,
+                                    style: TextStyle(
+                                      fontFamily: 'Poppins Regular',
+                                      fontSize: 15,
+                                      color: widget.isMeChatting
+                                          ? Colors.white
+                                          : const Color(0xFF0D082C),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    bottom: 0,
+                                    right: 0,
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        widget.onMuteToggle(translatedMessage);
+                                      },
+                                      child: Icon(
+                                        widget.isMuted
+                                            ? Icons.volume_off
+                                            : Icons.volume_up,
+                                        size: 18,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                              color: Colors.grey,
-                            ),
-                          ),
-                          Text("Translation  "),
-                          Expanded(
-                            child: Container(
-                              height: 1,
-                              margin: EdgeInsets.symmetric(
-                                  vertical: 18
-                              ),
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
-                      (selectedLanguageCode=='en'||widget.messageBody==welcomeMessage)?SizedBox():Stack(
-                        children: [
-                          Text(
-                            displayedMessage,
-                            style: TextStyle(
-                              fontFamily: 'Poppins Regular',
-                              fontSize: 15,
-                              color: widget.isMeChatting
-                                  ? Colors.white
-                                  : const Color(0xFF0D082C),
-                            ),
-                          ),
-                          Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: GestureDetector(
-                            onTap: (){
-                              widget.onMuteToggle(displayedMessage);
-                            },
-                            child: Icon(
-                              widget.isMuted ? Icons.volume_off : Icons.volume_up,
-                              size: 18,
-                              color: Colors.grey[600],
-                            ),
-                          ),)
-                        ],
-                      ),
+                          ],
+                        ),
                     ],
                   ),
                 ),
@@ -173,14 +225,14 @@ class _ChatBotMessageLayoutState extends State<ChatBotMessageLayout> {
             ),
           ),
 
-          // Mute + Language
-          if (!widget.isMeChatting && widget.onMuteToggle != null)
+          // Controls
+          if (!widget.isMeChatting)
             Padding(
               padding: const EdgeInsets.only(left: 8, top: 8),
               child: Row(
                 children: [
                   GestureDetector(
-                    onTap: (){
+                    onTap: () {
                       widget.onMuteToggle(widget.messageBody);
                     },
                     child: Icon(
@@ -192,7 +244,8 @@ class _ChatBotMessageLayoutState extends State<ChatBotMessageLayout> {
                   const SizedBox(width: 8),
                   InkWell(
                     onTap: () async {
-                      Clipboard.setData(ClipboardData(text: widget.messageBody));
+                      Clipboard.setData(
+                          ClipboardData(text: widget.messageBody));
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text("Copied to clipboard!")),
                       );
@@ -200,14 +253,13 @@ class _ChatBotMessageLayoutState extends State<ChatBotMessageLayout> {
                     child: Icon(Icons.copy, size: 18, color: Colors.grey[600]),
                   ),
                   const SizedBox(width: 8),
-
                   InkWell(
                     onTap: () async {
-                      showLanguageDialog(context);
+                      _showLanguageDialog(context);
                     },
-                    child: Icon(Icons.language, size: 18, color: Colors.grey[600]),
+                    child:
+                    Icon(Icons.language, size: 18, color: Colors.grey[600]),
                   ),
-
                 ],
               ),
             ),
@@ -216,21 +268,13 @@ class _ChatBotMessageLayoutState extends State<ChatBotMessageLayout> {
     );
   }
 
-  /// Used to map language code to label in `widget.translation`
-  Map<String, String> languageMap = {
-    "en": "English",
-    "ta": "Tamil",
-    "ml": "Malayalam",
-    "te": "Telugu",
-    "hi": "Hindi",
-  };
-
-  void showLanguageDialog(BuildContext context) async {
-    final selectedLanguage = await showDialog<String>(
+  void _showLanguageDialog(BuildContext context) async {
+    final selected = await showDialog<String>(
       context: context,
       builder: (context) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           backgroundColor: Colors.white,
           child: Padding(
             padding: const EdgeInsets.all(20),
@@ -245,13 +289,9 @@ class _ChatBotMessageLayoutState extends State<ChatBotMessageLayout> {
                 Wrap(
                   spacing: 12,
                   runSpacing: 12,
-                  children: [
-                    _languageOption("English", "en"),
-                    _languageOption("Tamil", "ta"),
-                    _languageOption("Malayalam", "ml"),
-                    _languageOption("Telugu", "te"),
-                    _languageOption("Hindi", "hi"),
-                  ],
+                  children: languageMap.entries
+                      .map((entry) => _languageOption(entry.value, entry.key))
+                      .toList(),
                 ),
               ],
             ),
@@ -260,10 +300,8 @@ class _ChatBotMessageLayoutState extends State<ChatBotMessageLayout> {
       },
     );
 
-    if (selectedLanguage != null) {
-      setState(() {
-        selectedLanguageCode = selectedLanguage;
-      });
+    if (selected != null) {
+      _onLanguageSelected(selected);
     }
   }
 

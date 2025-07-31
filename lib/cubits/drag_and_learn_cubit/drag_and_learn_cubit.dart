@@ -30,6 +30,8 @@ class DragLearnCubit extends Cubit<DragLearnState> {
       );
 
     final data = json.decode(response.body);
+    log("sdcsklclskc ${{"book_id": bookId}} ${data}");
+
     if (data['status'] == 'success') {
       SharedPreferences pref = await SharedPreferences.getInstance();
       int savedLevel = pref.getInt("DragAndLearnQuestLevel") ?? 0;

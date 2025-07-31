@@ -2,11 +2,13 @@ class Topics {
   final int id;
   final String topicsName;
   final String topicsImage;
+  final bool isCompleted;
 
   Topics({
     required this.id,
     required this.topicsName,
     required this.topicsImage,
+    required this.isCompleted,
   });
 
   // Factory method to create a Book object from a JSON map
@@ -15,6 +17,7 @@ class Topics {
       id: json['id'],
       topicsName: json['topics_name'],
       topicsImage: json['topics_image'],
+      isCompleted:json['all_read'] ,
     );
   }
 }

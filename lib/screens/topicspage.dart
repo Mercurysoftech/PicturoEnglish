@@ -126,7 +126,7 @@ class _TopicsScreenState extends State<TopicsScreen> {
                               ),
                             );
                           },
-                          child: TopicCard(
+                          child: TopicCard(isCompleted: topics[index]['isCompleted'],
                             title: topics[index]['title']!,
                             image: topics[index]['image']!,
                             isSelected: selectedIndex == index,
@@ -158,11 +158,13 @@ class TopicCard extends StatefulWidget {
   final String title;
   final String image;
   final bool isSelected;
+  final bool isCompleted;
 
   const TopicCard({
     super.key,
     required this.title,
     required this.image,
+    required this.isCompleted,
     this.isSelected = false,
   });
 
@@ -178,7 +180,7 @@ class _TopicCardState extends State<TopicCard> {
       width: 150,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        border: widget.isSelected ? Border.all(color: Colors.green, width: 2) : null,
+        border: widget.isCompleted ? Border.all(color: Colors.green, width: 2) : null,
         boxShadow: [
           BoxShadow(
             color: Colors.grey.withOpacity(0.2),
@@ -188,53 +190,7 @@ class _TopicCardState extends State<TopicCard> {
         ],
       ),
       child: Stack(
-        children: [
-          // Background image
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: CachedNetworkImageWidget(
-              imageUrl: "https://picturoenglish.com/admin/${widget.image}",
-              fit: BoxFit.cover,
-              height: double.infinity,
-              width: double.infinity,
-            ),
-          ),
-
-          // Semi-transparent overlay for text readability
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              color: Colors.black.withOpacity(0.4),
-            ),
-          ),
-
-          // Title text
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Text(
-                capitalizeFirstLetter(widget.title=="Action verb"?"Action Verbs":widget.title),
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: AppConstants.commonFont,
-                  color: Colors.white,
-                ),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ),
-
-          // Check icon if selected
-          // if (widget.isSelected)
-          //   Positioned(
-          //     top: 6,
-          //     right: 6,
-          //     child: const Icon(Icons.check_circle, color: Colors.green, size: 24),
-          //   ),
-        ],
+        children:   ,
       ),
     );
   }

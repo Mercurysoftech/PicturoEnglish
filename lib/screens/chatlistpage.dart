@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:intl/intl.dart';
 import 'package:picturo_app/classes/svgfiles.dart';
 import 'package:picturo_app/providers/userprovider.dart';
@@ -12,15 +13,69 @@ import 'package:picturo_app/screens/alluserspage.dart';
 import 'package:picturo_app/screens/calllogspage.dart';
 import 'package:picturo_app/screens/chatscreenpage.dart';
 import 'package:picturo_app/screens/myprofilepage.dart';
+import 'package:picturo_app/screens/widgets/chat_friends_tab.dart';
 import 'package:picturo_app/services/api_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import '../cubits/call_cubit/call_socket_handle_cubit.dart';
+import '../cubits/call_cubit/get_friends_list_cubit/get_friends_list_cubit.dart';
 import '../cubits/get_avatar_cubit/get_avatar_cubit.dart';
 import '../cubits/user_friends_cubit/user_friends_cubit.dart';
 import '../services/chat_socket_service.dart';
 import '../utils/common_app_bar.dart'; // Import your API service
+
+import 'package:socket_io_client/socket_io_client.dart' as IO;
+
+class SocketMessageService {
+  static final SocketMessageService _instance = SocketMessageService._internal();
+  factory SocketMessageService() => _instance;
+  SocketMessageService._internal();
+
+  late IO.Socket _socket;
+
+  IO.Socket get socket => _socket;
+
+  bool _isInitialized = false;
+
+  void init(String userId, void Function(dynamic data) onNotifyMessage) {
+    if (_isInitialized) return;
+
+    _socket = IO.io("https://picturoenglish.com:2026", <String, dynamic>{
+      "transports": ["websocket"],
+      "autoConnect": true,
+      "query": {"userId": userId.toString()},
+    });
+
+    _socket.connect();
+
+    _socket.onConnect((_) {
+      print("✅ Socket connected +++++++++++++++++");
+    });
+
+    _socket.on("notify_message", (data) {
+      print("📥 Received notify_message: $data");
+
+      onNotifyMessage(data); // Call the callback
+    });
+    _socket.on("chat_list_update", (data) {
+      print("📥 Received ChatList: $data");
+
+      onNotifyMessage(data); // Call the callback
+    });
+
+    _socket.onDisconnect((_) {
+      print("❌ Socket disconnected");
+    });
+
+    _isInitialized = true;
+  }
+
+  void disconnect() {
+    _socket.disconnect();
+    _isInitialized = false;
+  }
+}
 
 class ChatListPage extends StatefulWidget {
   const ChatListPage({super.key});
@@ -52,11 +107,21 @@ class _ChatListPageState extends State<ChatListPage>
 
     connectSocket();
     _fetchAllUsers();
+    context.read<GetFriendsListCubit>().fetchAllFriends();
+    connectSS();
+  }
+  void connectSS()async{
+    final currentUserId = Provider.of<UserProvider>(context, listen: false).userId;
+
+    SocketMessageService().init(currentUserId, (data){
+      log("skdjcnksjdcn ${data}");
+    });
   }
 
   @override
   void dispose() {
     // TODO: implement dispose
+    SocketMessageService().disconnect();
     ChatSocket.dispose();
     super.dispose();
   }
@@ -71,6 +136,7 @@ class _ChatListPageState extends State<ChatListPage>
     // ChatSocket.socket.emit("userOnline",{});
     ChatSocket.socket.on('unreadCount', (data) {
       print("sdcmskdcs;dlcksd;lc,sd;cl, __ ${data}");
+      context.read<GetFriendsListCubit>().fetchAllFriends();
 
     // updatedOne=false;
     // _fetchAllUsers();
@@ -168,7 +234,14 @@ class _ChatListPageState extends State<ChatListPage>
             ),
             TabBar(
               tabAlignment: TabAlignment.center,
-              onTap: (_) => _searchController.clear(),
+              onTap: (index) {
+                setState(() {
+                  _searchController.clear();
+                  if(index==0){
+                    context.read<GetFriendsListCubit>().fetchAllFriends();
+                  }
+                });
+              },
               controller: _tabController,
               isScrollable: true,
               indicatorColor: Color(0xFF49329A),
@@ -207,7 +280,7 @@ class _ChatListPageState extends State<ChatListPage>
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  _buildChatlist(),
+                  ChatFriendsTab(),
                   _buildAllUsersTab(),
                   CallLogPage(allUsers: allUsers,),
                 ],
@@ -235,90 +308,7 @@ class _ChatListPageState extends State<ChatListPage>
     final formatter = DateFormat('h:mm a'); // 12-hour format
     return formatter.format(dateTime);
   }
-  Widget _buildFriendTile(BuildContext context, Friends user,int index) {
 
-    return GestureDetector(
-      onTap: () async{
-        SharedPreferences preferences=await SharedPreferences.getInstance();
-        List<String>? countViewedIndex=preferences.getStringList("Count_Viewed_Index");
-        countViewedIndex?.add("${index}");
-       preferences.setStringList("Count_Viewed_Index",countViewedIndex??[]);
-
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ChatScreen(
-              friendDetails: user,
-              avatarWidget: _buildUserAvatar(user.friendProfilePic??0),
-            userName: user.friendName??'',
-            userId: user.friendId??0,
-          ),
-          ),
-        );
-      },
-      child: 
-      Container(
-        margin: EdgeInsets.symmetric(vertical: 8),
-        padding: EdgeInsets.all(15),
-        decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(15),
-            border: Border.all(width: 1, color: Color(0xFFDDDDDD))),
-        child: Row(
-          children: [
-             _buildUserAvatar(user.friendProfilePic??0),
-            SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        user.friendName??'',
-                        style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'Poppins Regular'),
-                      ),
-                      Text(
-                          (user.lastMessageTime==null)?"":formatTo12Hour(user.lastMessageTime??''),
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w400,
-                            fontFamily: 'Poppins Regular'),
-                      ),
-                    ],
-                  ),
-                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      (user.lastMessage==null)?SizedBox():Text(
-                        '${user.lastMessage}',
-                        style: TextStyle(
-                            color: Colors.grey,
-                            fontFamily: 'Poppins Regular',
-                            fontSize: 12),
-                      ),
-                      (user.unreadCount==0)?SizedBox():Container(
-                        padding: EdgeInsets.symmetric(horizontal: 9,vertical: 3),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(30),
-                          color: Color(0xFF49329A)
-                        ),
-                        child: Center(
-                          child: Text("${user.unreadCount}",style: TextStyle(color: Colors.white),),
-                        ),
-                      )
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
  Widget _buildUserRequestTile(BuildContext context, User user) {
   // Determine if request is already sent based on user's status
   bool requestSent = user.chat_request_status == 0 && user.chat_status == "pending";
@@ -427,57 +417,7 @@ class _ChatListPageState extends State<ChatListPage>
   );
 }
 
- Widget _buildChatlist() {
-  if (isLoading) {
-    return Center(child: CircularProgressIndicator());
-  } else if (errorMessage.isNotEmpty) {
-    return Center(child: Text('Error: $errorMessage'));
-  } else if (friends.isEmpty) {
-    return Center(
-      child: Text(
-        'No friends yet',
-        style: TextStyle(
-          fontFamily: 'Poppins Regular',
-          color: Colors.grey,
-        ),
-      ),
-    );
-  }
-  final currentUserId = Provider.of<UserProvider>(context).userId;
 
-  List<Friends> displayFriends = _searchController.text.isEmpty
-      ? friends.where((f) => f.friendId.toString() != currentUserId).toList()
-      : filteredFriends.where((f) => f.friendId.toString() != currentUserId).toList();
-
-
-  if (displayFriends.isEmpty) {
-    return Center(
-      child: Text(
-        _searchController.text.isEmpty
-            ? 'No friends yet'
-            : 'No matching friends found',
-        style: TextStyle(
-          fontFamily: 'Poppins Regular',
-          color: Colors.grey,
-        ),
-      ),
-    );
-  }
-
-  return RefreshIndicator(
-    onRefresh: _fetchAllUsers, // Allow pull-to-refresh
-    child: Scrollbar(
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(15, 0, 15, 15),
-        children: [
-          const SizedBox(height: 20),
-          for (int i = 0; i < displayFriends.length; i++)
-            _buildFriendTile(context, displayFriends[i], i),
-        ],
-      ),
-    ),
-  );
-}
 
   Future<String> _getCurrentUserAvatar() async {
   try {

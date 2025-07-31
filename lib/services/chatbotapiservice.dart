@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -49,12 +50,17 @@ class ChatBotApiService {
     required String scenario,
   }) async {
     // try {
-
+   final prefs = await SharedPreferences.getInstance();
+   final currentUserId = prefs.getString('user_id');
+   log(";sdklclk;sdmclskcmsdc ${{
+     "message": "$message",
+     "user_id":currentUserId
+   }}");
       final response = await _dio.post(
         'chat',
         data: jsonEncode({
           "message": "$message",
-          "lang": "ta,hi,ml,te",
+          "user_id":currentUserId
           // "scenario": "$scenario"
         }),
       ).timeout(const Duration(seconds: _timeoutSeconds));

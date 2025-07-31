@@ -21,6 +21,7 @@ class TopicCubit extends Cubit<TopicState> {
             'title': topic.topicsName,
             'id': topic.id,
             'image': topic.topicsImage,
+            'isCompleted': topic.isCompleted,
           };
         }).toList();
 

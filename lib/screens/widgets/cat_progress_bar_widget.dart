@@ -83,7 +83,7 @@ class _ProgressBarWidgetState extends State<ProgressBarWidget> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: Text(
-                    "$percentage%",
+                    "${percentage>100?"100":percentage}%",
                     style: const TextStyle(
                       color: Color(0xFF49329A),
                       fontWeight: FontWeight.bold,

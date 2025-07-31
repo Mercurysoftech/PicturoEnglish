@@ -40,6 +40,7 @@ import 'package:provider/provider.dart';
 import 'cubits/bottom_navigator_index_cubit.dart';
 import 'cubits/call_cubit/call_duration_handler/call_duration_handle_cubit.dart';
 import 'cubits/call_cubit/call_socket_handle_cubit.dart';
+import 'cubits/call_cubit/get_friends_list_cubit/get_friends_list_cubit.dart';
 import 'cubits/call_log_his_cubit/call_log_cubit.dart';
 import 'cubits/content_view_per_get/content_view_percentage_cubit.dart';
 import 'cubits/dal_level_update_cubit/dal_level_update_cubit.dart';
@@ -109,6 +110,7 @@ void main() async{
         BlocProvider(create: (context) => CoinCubit()),
         BlocProvider(create: (context) => DalLevelUpdateCubit()),
         BlocProvider(create: (context) => BottomNavigatorIndexCubit()),
+        BlocProvider(create: (context) => GetFriendsListCubit()),
 
       ],
       child: MyApp(),
