@@ -8,6 +8,8 @@ import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:picturo_app/classes/services/notification_service.dart';
+import 'package:picturo_app/cubits/premium_cubit/premium_plans_cubit.dart';
+import 'package:picturo_app/cubits/referal_cubit/referal_cubit.dart';
 import 'package:picturo_app/providers/bankaccountprovider.dart';
 import 'package:picturo_app/providers/profileprovider.dart';
 import 'package:picturo_app/providers/userprovider.dart';
@@ -111,6 +113,8 @@ void main() async{
         BlocProvider(create: (context) => DalLevelUpdateCubit()),
         BlocProvider(create: (context) => BottomNavigatorIndexCubit()),
         BlocProvider(create: (context) => GetFriendsListCubit()),
+        BlocProvider(create: (context) => PlanCubit()),
+        BlocProvider(create: (context) => ReferralCubit()),
 
       ],
       child: MyApp(),

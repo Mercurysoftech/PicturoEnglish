@@ -3,6 +3,8 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:picturo_app/classes/svgfiles.dart';
+import 'package:picturo_app/cubits/premium_cubit/premium_plans_cubit.dart';
+import 'package:picturo_app/models/premium_plan_model.dart';
 import 'package:picturo_app/screens/premium_plans_screen.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -11,7 +13,7 @@ class PremiumScreen extends StatefulWidget {
   const PremiumScreen({super.key, required this.userName,required this.selectedPlan});
 
   final String userName;
-  final Plan selectedPlan;
+  final PlanModel selectedPlan;
 
   @override
   State<PremiumScreen> createState() => _PremiumScreenState();
@@ -343,7 +345,7 @@ class _PremiumScreenState extends State<PremiumScreen> {
                                 ),
                               ),
                               Text(
-                                widget.selectedPlan.per,
+                                widget.selectedPlan.validatePlan,
                                 style: TextStyle(
                                   color: Color(0xFF464646),
                                   fontFamily: 'Poppins Regular',
