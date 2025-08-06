@@ -78,7 +78,7 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
 
     final body = jsonEncode({
       'book_id': bookId,
-      'topic_id': 1,
+      'topic_id': topicId,
       'question_id': questionId,
       'is_read': isRead,
     });
@@ -86,7 +86,6 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
     try {
 
       final response = await http.post(url, headers: headers, body: body);
-      print("ksdjcnskjdcksjncskdjc ${body} ${response.body}");
 
       if (response.statusCode == 200) {
         print('✅ Question marked as read: ${response.body}');
@@ -118,11 +117,12 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
       'level': level,
     });
 
+
     try {
       final response = await http.post(url, headers: headers, body: body);
 
       if (response.statusCode == 200) {
-        print('✅ Level marked as completed: ${response.body}');
+        print('✅ Level marked as completed __ : ${body} && ${response.body}');
       } else {
         print('❌ Failed with status: ${response.statusCode}');
         print('Response: ${response.body}');

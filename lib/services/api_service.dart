@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:developer';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'dart:developer' as dev;
 import 'dart:math';
 import 'package:http/http.dart' as http;
@@ -48,24 +48,30 @@ class ApiService {
     _instance._prefs = await SharedPreferences.getInstance();
     return _instance;
   }
-
+  Future<String> getDeviceId() async {
+    final deviceInfo = DeviceInfoPlugin();
+    final androidInfo = await deviceInfo.androidInfo;
+    return androidInfo.id; // or androidId or model based on need
+  }
   Future<Map<String, dynamic>> login(
   String email, String password, BuildContext context) async {
   final String endpoint = "login.php"; // API endpoint
 
   // try {
+
+  String? deviceId= await getDeviceId();
     Response response = await _dio.post(
       endpoint,
-      data: jsonEncode({"email": email, "password": password}),
+      data: jsonEncode({"email": email, "password": password,"device_id":deviceId}),
     );
 // Debugging
-  print("sldnclsdkc $response        ${{"email": email, "password": password}}");
+
     if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
       final Map<String, dynamic> data = response.data;
 
       // Check if the response contains both token and user_id
       if (!data.containsKey("token") || !data.containsKey("user_id")) {
-        return {"error": "User not Found!"};
+        return {"error": "$data"};
       }
 
       // Save the token and user_id to SharedPreferences

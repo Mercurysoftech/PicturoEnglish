@@ -149,7 +149,9 @@ class _LearnWordsPageState extends State<LearnWordsPage> {
                   // Actual image
                   CachedNetworkImageWidget(
                     imageUrl: 'https://picturoenglish.com/admin/${_questionData!.qusImage}',
-                    fit: BoxFit.contain,
+                    fit: BoxFit.cover,
+                    width: 300,
+                    height: 300,
                     errorWidget: (context, error, stackTrace) {
                       return Image.asset('assets/run.gif');
                     },

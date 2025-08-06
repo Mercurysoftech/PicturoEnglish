@@ -1,13 +1,18 @@
 import 'dart:convert';
+import 'dart:developer';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:intl/intl.dart';
 import 'package:picturo_app/classes/svgfiles.dart';
 import 'package:picturo_app/cubits/premium_cubit/premium_plans_cubit.dart';
 import 'package:picturo_app/models/premium_plan_model.dart';
 import 'package:picturo_app/screens/premium_plans_screen.dart';
+import 'package:provider/provider.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../providers/profileprovider.dart';
 
 class PremiumScreen extends StatefulWidget {
   const PremiumScreen({super.key, required this.userName,required this.selectedPlan});
@@ -39,22 +44,100 @@ class _PremiumScreenState extends State<PremiumScreen> {
 
   void _handlePaymentSuccess(PaymentSuccessResponse response) {
     // Handle payment success
-    showDialog(
-      context: context,
-      builder: (BuildContext context) => AlertDialog(
-        backgroundColor: Colors.white,
-        title: const Text("Payment Successful"),
-        content: Text("Payment ID: ${response.paymentId}"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("OK"),
-          ),
-        ],
-      ),
-    );
+    updateUserPricePlan();
   }
 
+  String calculateEndDate(String startDateStr, String validatePlan) {
+    // Parse the start date string
+    DateTime startDate = DateFormat("yyyy-MM-dd HH:mm:ss").parse(startDateStr);
+
+    // Clean and process validatePlan
+    validatePlan = validatePlan.toLowerCase().trim();
+
+    DateTime endDate = startDate;
+
+    if (validatePlan.contains("day")) {
+      int days = int.tryParse(validatePlan.split(" ")[0]) ?? 0;
+      endDate = startDate.add(Duration(days: days));
+    } else if (validatePlan.contains("month")) {
+      int months = int.tryParse(validatePlan.split(" ")[0]) ?? 0;
+      endDate = DateTime(startDate.year, startDate.month + months, startDate.day,
+          startDate.hour, startDate.minute, startDate.second);
+    } else if (validatePlan.contains("year")) {
+      int years = int.tryParse(validatePlan.split(" ")[0]) ?? 0;
+      endDate = DateTime(startDate.year + years, startDate.month, startDate.day,
+          startDate.hour, startDate.minute, startDate.second);
+    }
+
+    return DateFormat("yyyy-MM-dd HH:mm:ss").format(endDate);
+  }
+
+  int convertVoiceCallToSeconds(String voiceCall) {
+    voiceCall = voiceCall.toLowerCase().trim(); // Normalize input
+
+    if (voiceCall.contains("unlimited")) {
+      return -1; // Use -1 or any special value for "unlimited"
+    }
+
+    final parts = voiceCall.split("/").first.trim(); // e.g. "10min" or "1 hour"
+
+    if (parts.contains("min")) {
+      final minutes = int.tryParse(parts.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+      return minutes * 60;
+    } else if (parts.contains("hour")) {
+      final hours = int.tryParse(parts.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+      return hours * 3600;
+    } else if (parts.contains("sec")) {
+      final seconds = int.tryParse(parts.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+      return seconds;
+    }
+
+    return 0; // fallback for "0" or unknown format
+  }
+
+  Future<void> updateUserPricePlan() async {
+    const String url = 'https://picturoenglish.com/api/priceplan-updateuser.php';
+
+    final Map<String, dynamic> body = {
+      // "membership": "${widget.selectedPlan.name}",
+      // "plan_voicecall": "${convertVoiceCallToSeconds(widget.selectedPlan.voiceCall)<0?0:convertVoiceCallToSeconds(widget.selectedPlan.voiceCall)}",
+      // "plan_message": "${widget.selectedPlan.message}",
+      // "plan_games": "${widget.selectedPlan.games}",
+      // "plan_chatbot": "${widget.selectedPlan.chatBot}",
+      // "plan_start_time": "${widget.selectedPlan.createdAt}",
+      // "plan_end_time": "${calculateEndDate(widget.selectedPlan.createdAt, widget.selectedPlan.validatePlan)}"
+      "planid": widget.selectedPlan.id
+    };
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString("auth_token");
+    try {
+
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          "Authorization": "Bearer $token"
+        },
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        Navigator.pop(context);
+        Navigator.pop(context);
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => PremiumPlansScreen(userName: widget.userName,)), // Navigate to PremiumScreen
+        );
+
+      } else {
+        print("Failed with status: ${response.statusCode}");
+        print("Response body: ${response.body}");
+      }
+    } catch (e) {
+      print("Error occurred: $e");
+    }
+  }
   void _handlePaymentError(PaymentFailureResponse response) {
     // Handle payment failure
     showDialog(
@@ -97,7 +180,9 @@ class _PremiumScreenState extends State<PremiumScreen> {
     setState(() {
       paymentLoading = true;
     });
-    try {
+    // try {
+    final mobile = context.read<ProfileProvider>().mobile;
+
       // Call your backend to create the order
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString("auth_token");
@@ -109,12 +194,12 @@ class _PremiumScreenState extends State<PremiumScreen> {
           "Authorization": "Bearer $token",
           "Content-Type": "application/json",
         },
-        body: jsonEncode({"amount": 200}),
+        body: jsonEncode({"amount": widget.selectedPlan.price}),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final orderData = json.decode(response.body);
-        print("Order created successfully: ${orderData['id']}");
+        print("Order created successfully: ${orderData['razorpay_order_id']}");
       } else {
         print("Failed to create order. Status: ${response.statusCode}");
         print("Body: ${response.body}");
@@ -123,44 +208,46 @@ class _PremiumScreenState extends State<PremiumScreen> {
       if (response.statusCode == 200) {
         final orderData = json.decode(response.body);
 
-        if (orderData['id'] != null && orderData['amount'] != null) {
+        if (orderData['razorpay_order_id'] != null && orderData['amount'] != null) {
           var options = {
-            'key': 'rzp_live_DmO2qslBG6Nr8v',
+
+            'key': 'rzp_test_NPGwHpFZReb6dh',
             // Replace with your real Razorpay Key ID
             'amount': orderData['amount'],
             // Amount in paise
             'currency': 'INR',
-            'name': 'Picturo Premium',
+            'name': '${widget.selectedPlan.name}',
             'description': 'One-Time Premium Purchase',
-            'order_id': orderData['id'],
+            'order_id': orderData['razorpay_order_id'],
             // Use Razorpay Order ID from backend
             'prefill': {
               'name': widget.userName,
-              'contact': '9344587208',
-              'email': 'user@example.com',
+              'contact': '${mobile}',
+              // 'email': 'user@example.com',
             },
             'theme': {
               'color': '#49329A',
             }
           };
-
           _razorpay.open(options);
         } else {
           _showErrorDialog("Invalid order data received.");
         }
       } else {
+
         _showErrorDialog("Failed to create order.");
       }
+
       setState(() {
         paymentLoading = false;
       });
-    } catch (e) {
-      debugPrint('Error: $e');
-      _showErrorDialog("Something went wrong. Please try again.");
-      setState(() {
-        paymentLoading = false;
-      });
-    }
+    // } catch (e) {
+    //   debugPrint('Error: $e');
+    //   _showErrorDialog("Something went wrong. Please try again.");
+    //   setState(() {
+    //     paymentLoading = false;
+    //   });
+    // }
   }
 
   void _showErrorDialog(String message) {
@@ -313,9 +400,9 @@ class _PremiumScreenState extends State<PremiumScreen> {
                         SizedBox(width: 30),
                         // Reduce spacing between 'Picturo' and 'Premium'
                         Text(
-                          'Premium',
+                          '${widget.selectedPlan.name}',
                           style: TextStyle(
-                              fontSize: 22,
+                              fontSize: 14,
                               fontWeight: FontWeight.bold,
                               fontFamily: 'Poppins',
                               color: Color(0XFF49329A)),
@@ -345,7 +432,7 @@ class _PremiumScreenState extends State<PremiumScreen> {
                                 ),
                               ),
                               Text(
-                                widget.selectedPlan.validatePlan,
+                                widget.selectedPlan.validityDays??'',
                                 style: TextStyle(
                                   color: Color(0xFF464646),
                                   fontFamily: 'Poppins Regular',
@@ -354,7 +441,7 @@ class _PremiumScreenState extends State<PremiumScreen> {
                             ],
                           ),
                           Text(
-                            widget.selectedPlan.price,
+                            widget.selectedPlan.price??'',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -398,56 +485,58 @@ class _PremiumScreenState extends State<PremiumScreen> {
                       ),
                     ),
                     SizedBox(height: 15),
-                    Row(
-                      children: [
-                        SvgPicture.string(
-                          Svgfiles.starSvg,
-                          width: 18,
-                          height: 18,
-                        ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          // Use Expanded to allow the text to wrap
-                          child: Text(
-                            'Exclusive Content – Access special features, more games & more quotations.',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontFamily: 'Poppins Regular',
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                            // Add ellipsis if text overflows
-                            maxLines: 2, // Limit to 2 lines (adjust as needed)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child:       Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(child: Text("Call limit per day")),
+                              Expanded(child: Text("${widget.selectedPlan.callLimitPerDay ?? 'N/A'}")),
+                            ],
                           ),
-                        ),
-                      ],
+                          Row(
+                            children: [
+                              Expanded(child: Text("Chatbot prompt limit")),
+                              Expanded(child: Text("${widget.selectedPlan.chatbotPromptLimit ?? 'N/A'}")),
+                            ],
+                          ),
+                          Row(
+                            children: [
+                              Expanded(child: Text("Is unlimited call")),
+                              Expanded(child: Text(widget.selectedPlan.isUnlimitedCall == 1 ? "Yes" : "No")),
+                            ],
+                          ),
+                          Row(
+                            children: [
+                              Expanded(child: Text("Is unlimited chat")),
+                              Expanded(child: Text(widget.selectedPlan.isUnlimitedChat == 1 ? "Yes" : "No")),
+                            ],
+                          ),
+                          Row(
+                            children: [
+                              Expanded(child: Text("Price")),
+                              Expanded(child: Text("₹ ${widget.selectedPlan.price}")),
+                            ],
+                          ),
+                          Row(
+                            children: [
+                              Expanded(child: Text("Created at")),
+                              Expanded(child: Text(widget.selectedPlan.createdAt.toString())),
+                            ],
+                          ),
+                          Row(
+                            children: [
+                              Expanded(child: Text("Updated at")),
+                              Expanded(child: Text(widget.selectedPlan.updatedAt.toString())),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                     SizedBox(height: 15),
-                    Row(
-                      children: [
-                        SvgPicture.string(
-                          Svgfiles.starSvg,
-                          width: 18,
-                          height: 18,
-                        ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          // Use Expanded to allow the text to wrap
-                          child: Text(
-                            'One-Time Payment – Pay once, enjoy forever.',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontFamily: 'Poppins Regular',
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                            // Add ellipsis if text overflows
-                            maxLines: 2, // Limit to 2 lines (adjust as needed)
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(
-                      height: 15,
-                    ),
+
                     Container(
                       padding: EdgeInsets.fromLTRB(15, 5, 10, 5),
                       decoration: BoxDecoration(

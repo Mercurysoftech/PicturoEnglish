@@ -124,7 +124,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
      // Initialize the provider when the screen loads
     Future.delayed(Duration.zero,(){
       final profileProvider = context.read<ProfileProvider>();
-      print("sldclskdcmsdc ${!profileProvider.onceLoaded}");
+
       if(!profileProvider.onceLoaded){
         context.read<ProfileProvider>().initialize();
       }
@@ -142,7 +142,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     final profileProvider = Provider.of<ProfileProvider>(context);
     return Scaffold(
       backgroundColor: Color(0xFFE0F7FF),
-      appBar: CommonAppBar(title:"My Profile" ,isBackbutton: true,
+      appBar: CommonAppBar(
+        title:"My Profile" ,isBackbutton: true,
         actions: [
           CoinBadge(),
           SizedBox(width: 20,)

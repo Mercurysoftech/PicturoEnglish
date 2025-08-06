@@ -84,7 +84,6 @@ class _ChatScreenState extends State<ChatScreen> {
       _handleIncomingMessage(data);
     });
 
-
     ChatSocket.socket.onError((handler){
 
     });
@@ -332,7 +331,7 @@ void dispose() {
           child: AppBar(
             backgroundColor: Color(0xFF49329A),
             leading: Padding(
-              padding: const EdgeInsets.only(top: 10.0),
+              padding: const EdgeInsets.only(top: 10.0,left: 8),
               child: IconButton(
                 icon: Icon(Icons.arrow_back_ios, color: Colors.white),
                 onPressed: (){
@@ -341,6 +340,7 @@ void dispose() {
                 },
               ),
             ),
+            leadingWidth: 22,
             title: Padding(
               padding: const EdgeInsets.only(top: 10.0),
               child: Row(
@@ -352,13 +352,16 @@ void dispose() {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
-                        widget.userName,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Poppins Regular',
-                          fontSize: 16
+                      SizedBox(
+                        width: 140,
+                        child: Text(
+                          widget.userName,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Poppins Regular',
+                            fontSize: 16
+                          ),
                         ),
                       ),
                       Text(

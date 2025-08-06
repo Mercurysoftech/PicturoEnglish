@@ -45,45 +45,85 @@
 //     );
 //   }
 // }
-
-
 class PremiumResponse {
-  final List<CurrentPlan> membership;
+  bool? status;
+  String? message;
+  List<Data>? data;
 
-  PremiumResponse({required this.membership});
+  PremiumResponse({this.status, this.message, this.data});
 
-  factory PremiumResponse.fromJson(Map<String, dynamic> json) {
-    return PremiumResponse(
-      membership: (json["membership"] as List<dynamic>? ?? [])
-          .map((e) => CurrentPlan.fromJson(Map<String, dynamic>.from(e)))
-          .toList(),
-    );
+  PremiumResponse.fromJson(Map<String, dynamic> json) {
+    status = json['status'];
+    message = json['message'];
+    if (json['data'] != null) {
+      data = <Data>[];
+      json['data'].forEach((v) {
+        data!.add(new Data.fromJson(v));
+      });
+    }
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = new Map<String, dynamic>();
+    data['status'] = this.status;
+    data['message'] = this.message;
+    if (this.data != null) {
+      data['data'] = this.data!.map((v) => v.toJson()).toList();
+    }
+    return data;
   }
 }
 
-class CurrentPlan {
-  final int id;
-  final String planName;
-  final String price;
-  final String startDate;
-  final String endDate;
+class Data {
+  int? id;
+  int? userId;
+  int? planId;
+  String? startDate;
+  String? endDate;
+  String? status;
+  int? remainingCallMinutes;
+  int? remainingChatbotPrompts;
+  String? createdAt;
+  String? updatedAt;
 
-  CurrentPlan({
-    required this.id,
-    required this.planName,
-    required this.price,
-    required this.startDate,
-    required this.endDate,
-  });
+  Data(
+      {this.id,
+        this.userId,
+        this.planId,
+        this.startDate,
+        this.endDate,
+        this.status,
+        this.remainingCallMinutes,
+        this.remainingChatbotPrompts,
+        this.createdAt,
+        this.updatedAt});
 
-  factory CurrentPlan.fromJson(Map<String, dynamic> json) {
-    return CurrentPlan(
-      id: json["id"] ?? 0,
-      planName: json["plan_name"] ?? "",
-      price: json["price"] ?? "0",
-      startDate: json["start_date"] ?? "",
-      endDate: json["end_date"] ?? "",
-    );
+  Data.fromJson(Map<String, dynamic> json) {
+    id = json['id'] ?? 0;
+    userId = json['user_id'] ?? 0;
+    planId = json['plan_id'] ?? 0;
+    startDate = json['start_date']?.toString() ?? '';
+    endDate = json['end_date']?.toString() ?? '';
+    status = json['status']?.toString() ?? '';
+    remainingCallMinutes = json['remaining_call_minutes'] ?? 0;
+    remainingChatbotPrompts = json['remaining_chatbot_prompts'] ?? 0;
+    createdAt = json['created_at']?.toString() ?? '';
+    updatedAt = json['updated_at']?.toString() ?? '';
+  }
+
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = new Map<String, dynamic>();
+    data['id'] = this.id;
+    data['user_id'] = this.userId;
+    data['plan_id'] = this.planId;
+    data['start_date'] = this.startDate;
+    data['end_date'] = this.endDate;
+    data['status'] = this.status;
+    data['remaining_call_minutes'] = this.remainingCallMinutes;
+    data['remaining_chatbot_prompts'] = this.remainingChatbotPrompts;
+    data['created_at'] = this.createdAt;
+    data['updated_at'] = this.updatedAt;
+    return data;
   }
 }
-

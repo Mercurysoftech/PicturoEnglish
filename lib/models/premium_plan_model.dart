@@ -1,82 +1,59 @@
 class PlanModel {
-  final String id;
-  final String name;
-  final String voiceCall;
-  final String message;
-  final String chatBot;
-  final String games;
-  final String validatePlan;
-  final String price;
+  int? id;
+  String? name;
+  String? description;
+  String? type;
+  String? validityDays;
+  int? callLimitPerDay;
+  String? chatbotPromptLimit;
+  int? isUnlimitedCall;
+  int? isUnlimitedChat;
+  String? price;
+  String? createdAt;
+  String? updatedAt;
 
-  PlanModel({
-    required this.id,
-    required this.name,
-    required this.voiceCall,
-    required this.message,
-    required this.chatBot,
-    required this.games,
-    required this.validatePlan,
-    required this.price,
-  });
-
-  factory PlanModel.fromJson(Map<String, dynamic> json) {
-    return PlanModel(
-      id: json["id"]?.toString() ?? "",
-      name: json["plan_name"] ?? "",
-      voiceCall: json["voice_call"] ?? "",
-      message: json["message"] ?? "",
-      chatBot: json["chat_bot"] ?? "",
-      games: json["games"] ?? "",
-      validatePlan: json["validate_plan"] ?? "",
-      price: json["price"] ?? "",
-    );
+  PlanModel(
+      {this.id,
+        this.name,
+        this.description,
+        this.type,
+        this.validityDays,
+        this.callLimitPerDay,
+        this.chatbotPromptLimit,
+        this.isUnlimitedCall,
+        this.isUnlimitedChat,
+        this.price,
+        this.createdAt,
+        this.updatedAt});
+  PlanModel.fromJson(Map<String, dynamic> json) {
+    id = json['id'] ?? 0;
+    name = json['name']?.toString() ?? '';
+    description = json['description']?.toString() ?? '';
+    type = json['type']?.toString() ?? '';
+    validityDays = json['validity_days']?.toString() ?? '';
+    callLimitPerDay = json['call_limit_per_day'] ?? 0;
+    chatbotPromptLimit = json['chatbot_prompt_limit']?.toString() ?? '';
+    isUnlimitedCall = json['is_unlimited_call'] ?? 0;
+    isUnlimitedChat = json['is_unlimited_chat'] ?? 0;
+    price = json['price']?.toString() ?? '';
+    createdAt = json['created_at']?.toString() ?? '';
+    updatedAt = json['updated_at']?.toString() ?? '';
   }
 
-  /// Combine feature strings into a list for UI
-  List<String> get features {
-    final list = <String>[];
-    if (voiceCall != "0" && voiceCall.isNotEmpty) list.add("Voice Call: $voiceCall");
-    if (message != "0" && message.isNotEmpty) list.add("Messaging: $message");
-    if (chatBot != "0" && chatBot.isNotEmpty) list.add("Chatbot: $chatBot");
-    if (games != "0" && games.isNotEmpty) list.add("Games: $games");
-    return list;
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = new Map<String, dynamic>();
+    data['id'] = this.id;
+    data['name'] = this.name;
+    data['description'] = this.description;
+    data['type'] = this.type;
+    data['validity_days'] = this.validityDays;
+    data['call_limit_per_day'] = this.callLimitPerDay;
+    data['chatbot_prompt_limit'] = this.chatbotPromptLimit;
+    data['is_unlimited_call'] = this.isUnlimitedCall;
+    data['is_unlimited_chat'] = this.isUnlimitedChat;
+    data['price'] = this.price;
+    data['created_at'] = this.createdAt;
+    data['updated_at'] = this.updatedAt;
+    return data;
   }
 }
-
-
-// class PremiumResponse {
-//   final List<Membership> membership;
-//
-//   PremiumResponse({required this.membership});
-//
-//   factory PremiumResponse.fromJson(Map<String, dynamic> json) {
-//     return PremiumResponse(
-//       membership: (json["membership"] as List)
-//           .map((data) => Membership.fromJson(data))
-//           .toList(),
-//     );
-//   }
-// }
-//
-// class Membership {
-//   final String membership;
-//   final String planVoiceCall;
-//   final String planStartTime;
-//   final String planEndTime;
-//
-//   Membership({
-//     required this.membership,
-//     required this.planVoiceCall,
-//     required this.planStartTime,
-//     required this.planEndTime,
-//   });
-//
-//   factory Membership.fromJson(Map<String, dynamic> json) {
-//     return Membership(
-//       membership: json["membership"] ?? "",
-//       planVoiceCall: json["plan_voice_call"] ?? "",
-//       planStartTime: json["plan_start_time"] ?? "",
-//       planEndTime: json["plan_end_time"] ?? "",
-//     );
-//   }
-// }

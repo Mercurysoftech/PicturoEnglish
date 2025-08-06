@@ -48,7 +48,7 @@ class _DragLearnPageState extends State<DragLearnPage> {
         builder: (context, state) {
           if (state is DragLearnLoaded) {
             Data? data = widget.data;
-            print("asdlcsdlkc ${data?.levels}");
+
             return BlocBuilder<DalLevelUpdateCubit, DalLevelUpdateState>(
               builder: (context, levelState) {
                 if(levelState is DalLevelUpdateLoaded){
@@ -66,7 +66,7 @@ class _DragLearnPageState extends State<DragLearnPage> {
                         itemBuilder: (context, index) {
                           final level = data?.levels?[index];
                           final isCompleted = level?.completed??false;
-                          print("dskcmlskdc ${level?.level} ${level?.questions?.length ?? 0}");
+
 
                           final hasEnoughQuestions = (level?.questions?.length ?? 0) >= 5;
 

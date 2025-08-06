@@ -139,12 +139,31 @@ class _LoginScreenState extends State<LoginScreen> {
             );
           }
         } else {
+          setState(() {
+            _isLoading = false;
+          });
           _showMessage("Invalid response from server. Please try again.");
+
         }
       } else {
-        _showMessage(response["error"] ?? "Login failed. Please try again.");
+        setState(() {
+          _isLoading = false;
+        });
+
+        if(response['error'].toString().contains("User already logged in on another device.")){
+          _showMessage("User already logged in on another device.");
+        }else{
+          _showMessage(response["error"] ?? "Login failed. Please try again.");
+        }
+
+
       }
+
+
     } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
       _showMessage("An error occurred. Please try again.");
     } finally {
       setState(() {

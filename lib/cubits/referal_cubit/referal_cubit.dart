@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -29,8 +31,32 @@ class ReferralCubit extends Cubit<ReferralState> {
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
 
+
         final earnings = ReferralEarnings.fromJson(Map<String, dynamic>.from(jsonData));
         emit(ReferralLoaded(earnings));
+      } else {
+        emit(ReferralError("Failed to fetch data"));
+      }
+    } catch (e) {
+      emit(ReferralError(e.toString()));
+    }
+  }
+  Future<void> fetchHistory() async {
+    emit(ReferralLoading());
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("auth_token");
+      final response = await http.get(
+        Uri.parse("https://picturoenglish.com/api/wallet-transaction.php"),
+        headers: {
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json"
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        log("sjkdckjscsdc ${jsonData}");
       } else {
         emit(ReferralError("Failed to fetch data"));
       }
