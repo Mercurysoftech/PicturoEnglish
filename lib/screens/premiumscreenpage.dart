@@ -16,7 +16,6 @@ import '../providers/profileprovider.dart';
 
 class PremiumScreen extends StatefulWidget {
   const PremiumScreen({super.key, required this.userName,required this.selectedPlan});
-
   final String userName;
   final PlanModel selectedPlan;
 
@@ -26,6 +25,8 @@ class PremiumScreen extends StatefulWidget {
 
 class _PremiumScreenState extends State<PremiumScreen> {
   late Razorpay _razorpay;
+  final TextEditingController refferalController=TextEditingController();
+  String razorPayId='';
 
   @override
   void initState() {
@@ -108,7 +109,104 @@ class _PremiumScreenState extends State<PremiumScreen> {
       // "plan_end_time": "${calculateEndDate(widget.selectedPlan.createdAt, widget.selectedPlan.validatePlan)}"
       "planid": widget.selectedPlan.id
     };
+
     SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString("auth_token");
+    try {
+
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          "Authorization": "Bearer $token"
+        },
+        body: jsonEncode(body),
+      );
+      log(";kadcmlskdc Plan Update  ${response.body}");
+      if (response.statusCode == 200) {
+        if(refferalController.text.isNotEmpty){
+          updateRefferels();
+        }
+        if(widget.selectedPlan.name?.toLowerCase().contains("bot")??false){
+          buyChatBotApi();
+        }else{
+          Navigator.pop(context);
+          Navigator.pop(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => PremiumPlansScreen(userName: widget.userName,)), // Navigate to PremiumScreen
+          );
+
+        }
+
+
+      } else {
+        print("Failed with status: ${response.statusCode}");
+        print("Response body: ${response.body}");
+      }
+    } catch (e) {
+      print("Error occurred: $e");
+    }
+  }
+  Future<void> updateRefferels() async {
+    const String url = 'https://picturoenglish.com/api/referral_and_wallet.php';
+    final prefs = await SharedPreferences.getInstance();
+    final currentUserId = prefs.getString('user_id');
+    final Map<String, dynamic> body = {
+      "user_id": currentUserId,
+      "referral_code": "${refferalController.text}",
+      "amount": widget.selectedPlan.price,
+      "razorpay_order_id": "${razorPayId}"
+    };
+    log("refferal Id Body : ${body}");
+
+    String? token = prefs.getString("auth_token");
+    try {
+
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          "Authorization": "Bearer $token"
+        },
+        body: jsonEncode(body),
+      );
+      log(";kadcmlskdc refferal Id Response :  ${response.body}");
+      if (response.statusCode == 200) {
+        if(refferalController.text.isNotEmpty){
+
+        }
+        if(widget.selectedPlan.name?.toLowerCase().contains("bot")??false){
+          buyChatBotApi();
+        }else{
+          Navigator.pop(context);
+          Navigator.pop(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => PremiumPlansScreen(userName: widget.userName,)), // Navigate to PremiumScreen
+          );
+
+        }
+
+
+      } else {
+        print("Failed with status: ${response.statusCode}");
+        print("Response body: ${response.body}");
+      }
+    } catch (e) {
+      print("Error occurred: $e");
+    }
+  }
+  void buyChatBotApi()async{
+    const String url = 'http://37.27.187.66:2030/buy-plan';
+    final prefs = await SharedPreferences.getInstance();
+    final currentUserId = prefs.getString('user_id');
+    final Map<String, dynamic> body = {
+      "user_id":"${currentUserId}",
+      "plan_type": "${widget.selectedPlan.name}"
+    };
+    print("sdjcksjcsdc ${body}");
+
     String? token = prefs.getString("auth_token");
     try {
 
@@ -122,7 +220,8 @@ class _PremiumScreenState extends State<PremiumScreen> {
       );
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+
+        buyChatBotApi();
         Navigator.pop(context);
         Navigator.pop(context);
         Navigator.push(
@@ -194,21 +293,26 @@ class _PremiumScreenState extends State<PremiumScreen> {
           "Authorization": "Bearer $token",
           "Content-Type": "application/json",
         },
-        body: jsonEncode({"amount": widget.selectedPlan.price}),
+        body: jsonEncode({
+          "amount": widget.selectedPlan.price,
+
+        }),
       );
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final orderData = json.decode(response.body);
-        print("Order created successfully: ${orderData['razorpay_order_id']}");
-      } else {
-        print("Failed to create order. Status: ${response.statusCode}");
-        print("Body: ${response.body}");
-      }
 
+      log(";kadcmlskdc ${{
+        "amount": widget.selectedPlan.price,
+        if(refferalController.text.isNotEmpty)
+          "refferal_code":"${refferalController.text}"
+      }}  ++ ${response.body}__ ${response.statusCode == 200}");
       if (response.statusCode == 200) {
         final orderData = json.decode(response.body);
 
         if (orderData['razorpay_order_id'] != null && orderData['amount'] != null) {
+          setState(() {
+            razorPayId=orderData['razorpay_order_id'].toString();
+          });
+
           var options = {
 
             'key': 'rzp_test_NPGwHpFZReb6dh',
@@ -544,7 +648,7 @@ class _PremiumScreenState extends State<PremiumScreen> {
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: Color(0xFFDDDDDD)),
                       ),
-                      child: TextField(
+                      child: TextField(controller: refferalController,
                         decoration: InputDecoration(
                           hintText: 'Referral Code (i.e SD2334F) Optional',
                           hintStyle: TextStyle(

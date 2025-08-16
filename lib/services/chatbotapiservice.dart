@@ -67,6 +67,7 @@ class ChatBotApiService {
 
       print("Response: ${response.data}");
 
+
       if (response.statusCode != 200) {
         throw DioException(
           requestOptions: response.requestOptions,
@@ -78,7 +79,7 @@ class ChatBotApiService {
 
         // Handle error inside 200 response
         if (dataMap['error'] != null && dataMap['error'].toString().isNotEmpty) {
-          throw Exception(dataMap['error']);
+          return AiMultiLanguageResponseModel.fromJson(dataMap);
         }
 
         return AiMultiLanguageResponseModel.fromJson(dataMap);
@@ -169,9 +170,9 @@ class AiMultiLanguageResponseModel {
 
   factory AiMultiLanguageResponseModel.fromJson(Map<String, dynamic> json) {
     return AiMultiLanguageResponseModel(
-      input: json['input'],
-      response: json['response'],
-      translations: Map<String, String>.from(json['translations']),
+      input: json['input']??"",
+      response: json['response']??"Sorry I can't Understand Enter Valid Message Please",
+      translations: Map<String, String>.from(json['translations']??{}),
     );
   }
 

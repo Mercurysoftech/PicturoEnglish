@@ -31,15 +31,15 @@ class ChatScreen extends StatefulWidget {
 
   final String userName;
   final Widget avatarWidget;
-  final Friends friendDetails;
   final int userId;
-  
+  final int profilePicId;
+
   const ChatScreen({
     super.key,
     required this.userName,
     required this.avatarWidget,
-    required this.friendDetails,
     required this.userId,
+    required this.profilePicId,
   });
 
   @override
@@ -80,29 +80,30 @@ class _ChatScreenState extends State<ChatScreen> {
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getString('user_id');
     _userId=userId;
-    ChatSocket.socket.on('newMessage', (data) {
+    await ChatSocket.connectScoket();
+    ChatSocket.socket?.on('newMessage', (data) {
       _handleIncomingMessage(data);
     });
 
-    ChatSocket.socket.onError((handler){
+    ChatSocket.socket?.onError((handler){
 
     });
-    ChatSocket.socket.on('userOnline', (data) {
+    ChatSocket.socket?.on('userOnline', (data) {
       _handleOnlineStatus({'user_id': data['user_id'], 'is_online': true});
     });
 
-    ChatSocket.socket.on('userOffline', (data) {
+    ChatSocket.socket?.on('userOffline', (data) {
       _handleOnlineStatus({'user_id': data['user_id'], 'is_online': false});
     });
 
-    ChatSocket.socket.on('userTyping', (data) {
+    ChatSocket.socket?.on('userTyping', (data) {
       _handleTypingStatus({
         'sender_id': data['sender_id'],
         'is_typing': true,
       });
     });
 
-    ChatSocket.socket.on('stopTyping', (data) {
+    ChatSocket.socket?.on('stopTyping', (data) {
       _handleTypingStatus({
         'sender_id': data['sender_id'],
         'is_typing': false,
@@ -111,24 +112,42 @@ class _ChatScreenState extends State<ChatScreen> {
 
   }
 
-
   void sendMessage(String senderId, String receiverId, String message) {
     final messageId = "msg_${DateTime.now().millisecondsSinceEpoch}";
-    ChatSocket.socket.emit('sendMessage', {
+    String now = DateTime.now().toUtc().toIso8601String();
+
+    ChatSocket.socket?.emit('sendMessage', {
       "message_id":messageId,
       'sender_id': senderId,
       'receiver_id': receiverId,
       'message': message,
+      "notify_message":{
+        "from": senderId,
+        "message": message,
+        "message_id": messageId,
+        "timestamp": now
+      },
     });
+    print("lsdjkvlskdcmlskd ${{
+      "message_id":messageId,
+      'sender_id': senderId,
+      'receiver_id': receiverId,
+      'message': message,
+      "notify_message":{
+        "from": senderId,
+        "message": message,
+        "message_id": messageId,
+        "timestamp": now
+      },
+    }}");
   }
+
 
   @override
   void didUpdateWidget(ChatScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.userId != widget.userId) {
-      // User changed, reset messages and reconnect socket
       _messages.clear();
-       // _initSocket();
     }
   }
 
@@ -177,14 +196,14 @@ class _ChatScreenState extends State<ChatScreen> {
   void _setupTypingListener() {
     _messageController.addListener(() {
       if (_messageController.text.isNotEmpty) {
-        ChatSocket.socket.emit('typing', {
+        ChatSocket.socket?.emit('typing', {
           'sender_id': _userId,
           'receiver_id': widget.userId.toString(),
         });
 
         _typingTimer?.cancel();
         _typingTimer = Timer(const Duration(seconds: 1), () {
-          ChatSocket.socket.emit('stopTyping', {
+          ChatSocket.socket?.emit('stopTyping', {
             'sender_id': _userId,
             'receiver_id': widget.userId.toString(),
           });
@@ -270,8 +289,8 @@ void _handleOnlineStatus(dynamic data) {
       final prefs = await SharedPreferences.getInstance();
 
       _userId= prefs.getString('user_id');
+      print("My UserId : ${_userId}");
       final receiverId = widget.userId.toString();
-
       final now = _formatTimeTo12Hour(DateTime.now().toIso8601String()); // Get current time in ISO format
       sendMessage(_userId.toString(),receiverId, _messageController.text.trim());
       setState(() {
@@ -319,6 +338,7 @@ void dispose() {
 
   @override
   Widget build(BuildContext context) {
+
     return WillPopScope(
       onWillPop: () async{
         context.read<GetFriendsListCubit>().fetchAllFriends();
@@ -330,22 +350,40 @@ void dispose() {
           preferredSize: Size.fromHeight(80),
           child: AppBar(
             backgroundColor: Color(0xFF49329A),
-            leading: Padding(
-              padding: const EdgeInsets.only(top: 10.0,left: 8),
-              child: IconButton(
-                icon: Icon(Icons.arrow_back_ios, color: Colors.white),
-                onPressed: (){
-                  context.read<GetFriendsListCubit>().fetchAllFriends();
-                 Navigator.pop(context);
-                },
+            leading: InkWell(
+              onTap: (){
+                Navigator.pop(context);
+              },
+              child: Padding(
+                padding: const EdgeInsets.only(top: 10.0,left: 18),
+                child: IconButton(
+                  icon: Icon(Icons.arrow_back_ios, color: Colors.white),
+                  onPressed: (){
+                    Navigator.pop(context);
+                    context.read<GetFriendsListCubit>().fetchAllFriends();
+
+                  },
+                ),
               ),
             ),
             leadingWidth: 22,
             title: Padding(
-              padding: const EdgeInsets.only(top: 10.0),
+              padding: const EdgeInsets.only(top: 10.0,),
               child: Row(
                 children: [
-                  widget.avatarWidget,
+                  InkWell(
+                      onTap: (){
+                        Navigator.pop(context);
+                      },
+                      child: SizedBox(width: 14,
+                      height: 32,
+                      )),
+                  InkWell(
+                      onTap: (){
+                        context.read<GetFriendsListCubit>().fetchAllFriends();
+                        Navigator.pop(context);
+                      },
+                      child: widget.avatarWidget),
                   SizedBox(width: 10),
 
                   Column(
@@ -410,16 +448,21 @@ void dispose() {
                             if (profileProvider != null) {
                               await requestPermissions();
 
-                              if (!mounted) return;
+                              context.read<CallSocketHandleCubit>().resetCubit();
 
+                              context.read<CallSocketHandleCubit>().emitCallingFunction(
+                                targetId: widget.userId ?? 0,
+                                currentUserId: profileProvider,
+                                targettedUserName: "${widget.userName}",
+                              );
                               // Navigate first
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => CallingScreen(currentUserId:profileProvider ,
-                                    friendDetails: widget.friendDetails,
-                                    callerName: "${widget.friendDetails.friendName}",
-                                    avatarUrl: widget.friendDetails.friendProfilePic,
+                                  builder: (context) => CallingScreen(
+                                    currentUserId:profileProvider ,
+                                    callerName: widget.userName,
+                                    avatarUrl: widget.profilePicId, friendId: widget.userId,
                                   ),
                                 ),
                               );

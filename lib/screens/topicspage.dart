@@ -119,14 +119,17 @@ class _TopicsScreenState extends State<TopicsScreen> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => SubtopicPage(bookId: widget.topicId,
+                                builder: (context) => SubtopicPage(
+                                    paramsTopicId: widget.topicId,
+                                    bookId: widget.topicId,
                                     title: topics[index]['title']!,
                                     topicId: topics[index]['id']
                                 ),
                               ),
                             );
                           },
-                          child: TopicCard(isCompleted: topics[index]['isCompleted'],
+                          child: TopicCard(
+                            isCompleted: topics[index]['isCompleted'],
                             title: topics[index]['title']!,
                             image: topics[index]['image']!,
                             isSelected: selectedIndex == index,
@@ -179,8 +182,9 @@ class _TopicCardState extends State<TopicCard> {
       height: 150, // fixed height for consistency
       width: 150,
       decoration: BoxDecoration(
+
         borderRadius: BorderRadius.circular(12),
-        border: widget.isCompleted ? Border.all(color: Colors.green, width: 2) : null,
+        border:( widget.isCompleted ||widget.isSelected)? Border.all(color: Colors.green, width: 2) : null,
         boxShadow: [
           BoxShadow(
             color: Colors.grey.withOpacity(0.2),
@@ -230,12 +234,12 @@ class _TopicCardState extends State<TopicCard> {
           ),
 
           // Check icon if selected
-          // if (widget.isSelected)
-          //   Positioned(
-          //     top: 6,
-          //     right: 6,
-          //     child: const Icon(Icons.check_circle, color: Colors.green, size: 24),
-          //   ),
+          if (widget.isCompleted)
+            Positioned(
+              top: 6,
+              right: 6,
+              child: const Icon(Icons.check_circle, color: Colors.green, size: 24),
+            ),
         ] ,
       ),
     );

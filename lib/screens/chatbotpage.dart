@@ -227,7 +227,7 @@ class _ChatBotScreenState extends State<ChatBotScreen> with TickerProviderStateM
   _colorController.reverse();
 
   // try {
-  try {
+
     final response = await _apiService.getChatbotResponse(
       message: message,
       language: userLanguage,
@@ -269,43 +269,22 @@ class _ChatBotScreenState extends State<ChatBotScreen> with TickerProviderStateM
       });
       _isLoading = false;
     });
-  } catch (e) {
-    // Show the error from `error` key
-    setState(() {
-      _messages.add({
-        'message': e.toString().replaceFirst("Exception: ", ""),
-        'isMe': false,
-        'timestamp': _getCurrentTime(),
-        'audioBase64': '',
-        'translation': {},
-      });
-      _isLoading = false;
-    });
-  }
-  _scrollToBottom();
-      // Automatically play audio if not muted
-
-    // }else {
-    //   String errorMessage = response['error']?.toString() ?? 'Failed to get response';
-    //   setState(() {
-    //     _messages.add({
-    //       'message': errorMessage,
-    //       'isMe': false,
-    //       'timestamp': _getCurrentTime(),
-    //     });
-    //     _isLoading = false;
-    //   });
-    // }
   // } catch (e) {
+  //   // Show the error from `error` key
   //   setState(() {
   //     _messages.add({
-  //       'message': 'Error: ${e.toString()}',
+  //       'message': e.toString().replaceFirst("Exception: ", ""),
   //       'isMe': false,
   //       'timestamp': _getCurrentTime(),
+  //       'audioBase64': '',
+  //       'translation': {},
   //     });
   //     _isLoading = false;
   //   });
   // }
+  _scrollToBottom();
+
+
 }
 
 
@@ -564,7 +543,6 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
             //     ),
             //   ),
 
-
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
               child: TextField(
@@ -603,10 +581,13 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
                             : null,
                         onTap: _messageController.text.isNotEmpty
                             ? () async{
-                          _sendMessage(scenario:selectedScenario??"" );
-                          context.read<CoinCubit>().useCoin(1);
-                          setState(() {
-                          });
+                          if(_messageController.text.isNotEmpty){
+                            _sendMessage(scenario:selectedScenario??"" );
+                            context.read<CoinCubit>().useCoin(1);
+                            setState(() {
+                            });
+                          }
+
                         }
                             : null,
                         child: AnimatedBuilder(
@@ -644,7 +625,7 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
                     ),
                   ),
                 ),
-                onSubmitted: (_) =>  _sendMessage(scenario:selectedScenario??"" ),
+                // onSubmitted: (_) =>  _sendMessage(scenario:selectedScenario??"" ),
               ),
             )
           ],

@@ -83,8 +83,19 @@ class Data {
   String? status;
   int? remainingCallMinutes;
   int? remainingChatbotPrompts;
-  String? createdAt;
-  String? updatedAt;
+  String? subscriptionCreatedAt;
+  String? subscriptionUpdatedAt;
+  String? planName;
+  String? description;
+  String? type;
+  int? validityDays;
+  int? callLimitPerDay;
+  String? chatbotPromptLimit;
+  int? isUnlimitedCall;
+  int? isUnlimitedChat;
+  String? price;
+  String? planCreatedAt;
+  String? planUpdatedAt;
 
   Data(
       {this.id,
@@ -95,22 +106,43 @@ class Data {
         this.status,
         this.remainingCallMinutes,
         this.remainingChatbotPrompts,
-        this.createdAt,
-        this.updatedAt});
+        this.subscriptionCreatedAt,
+        this.subscriptionUpdatedAt,
+        this.planName,
+        this.description,
+        this.type,
+        this.validityDays,
+        this.callLimitPerDay,
+        this.chatbotPromptLimit,
+        this.isUnlimitedCall,
+        this.isUnlimitedChat,
+        this.price,
+        this.planCreatedAt,
+        this.planUpdatedAt});
 
   Data.fromJson(Map<String, dynamic> json) {
-    id = json['id'] ?? 0;
-    userId = json['user_id'] ?? 0;
-    planId = json['plan_id'] ?? 0;
-    startDate = json['start_date']?.toString() ?? '';
-    endDate = json['end_date']?.toString() ?? '';
-    status = json['status']?.toString() ?? '';
-    remainingCallMinutes = json['remaining_call_minutes'] ?? 0;
-    remainingChatbotPrompts = json['remaining_chatbot_prompts'] ?? 0;
-    createdAt = json['created_at']?.toString() ?? '';
-    updatedAt = json['updated_at']?.toString() ?? '';
+    id = json['id'];
+    userId = json['user_id'];
+    planId = json['plan_id'];
+    startDate = json['start_date'];
+    endDate = json['end_date'];
+    status = json['status'];
+    remainingCallMinutes = json['remaining_call_minutes'];
+    remainingChatbotPrompts = json['remaining_chatbot_prompts'];
+    subscriptionCreatedAt = json['subscription_created_at'];
+    subscriptionUpdatedAt = json['subscription_updated_at'];
+    planName = json['plan_name'];
+    description = json['description'].toString();
+    type = json['type'];
+    validityDays = json['validity_days'];
+    callLimitPerDay = json['call_limit_per_day'];
+    chatbotPromptLimit = json['chatbot_prompt_limit'].toString();
+    isUnlimitedCall = json['is_unlimited_call'];
+    isUnlimitedChat = json['is_unlimited_chat'];
+    price = json['price'];
+    planCreatedAt = json['plan_created_at'];
+    planUpdatedAt = json['plan_updated_at'];
   }
-
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = new Map<String, dynamic>();
@@ -122,8 +154,20 @@ class Data {
     data['status'] = this.status;
     data['remaining_call_minutes'] = this.remainingCallMinutes;
     data['remaining_chatbot_prompts'] = this.remainingChatbotPrompts;
-    data['created_at'] = this.createdAt;
-    data['updated_at'] = this.updatedAt;
+    data['subscription_created_at'] = this.subscriptionCreatedAt;
+    data['subscription_updated_at'] = this.subscriptionUpdatedAt;
+    data['plan_name'] = this.planName;
+    data['description'] = this.description;
+    data['type'] = this.type;
+    data['validity_days'] = this.validityDays;
+    data['call_limit_per_day'] = this.callLimitPerDay;
+    data['chatbot_prompt_limit'] = this.chatbotPromptLimit;
+    data['is_unlimited_call'] = this.isUnlimitedCall;
+    data['is_unlimited_chat'] = this.isUnlimitedChat;
+    data['price'] = this.price;
+    data['plan_created_at'] = this.planCreatedAt;
+    data['plan_updated_at'] = this.planUpdatedAt;
     return data;
   }
 }
+

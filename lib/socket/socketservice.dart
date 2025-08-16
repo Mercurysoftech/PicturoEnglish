@@ -134,11 +134,11 @@ class SocketService with ChangeNotifier {
     _socket?.on("chatRequestNotification", (data) => print("Chat request notification: $data"));
   }
 
-  bool isUserOnline(String userId) {
-    print('isUser $userId isOnline: ${onlineUsers[userId]?? false}');
-    print('onlineUsers: ${onlineUsers[userId]}');
-    return onlineUsers[userId] ?? false;
-  }
+  // bool isUserline(String userId) {
+  //   print('isUser $userId isOnline: ${onlineUsers[userId]?? false}');
+  //   print('onlineUsers: ${onlineUsers[userId]}');
+  //   return onlineUsers[userId] ?? false;
+  // }
 
   void listenForMessages(Function(dynamic) messageHandler) {
     _socket?.off('newMessage');
@@ -174,20 +174,21 @@ class SocketService with ChangeNotifier {
     });
   }
 
-  void listenForOnlineStatus(Function(dynamic) onlineHandler) {
-    _socket?.off('userOnline');
-    _socket?.off('userOffline');
-    
-    _socket?.on('userOnline', (data) {
-      print('User online: $data');
-      onlineHandler({'is_online': true, ...data});
-    });
-    
-    _socket?.on('userOffline', (data) {
-      print('User offline: $data');
-      onlineHandler({'is_online': false, ...data});
-    });
-  }
+
+  // void listenForOnlineStatus(Function(dynamic) onlineHandler) {
+  //   _socket?.off('userOnline');
+  //   _socket?.off('userOffline');
+  //
+  //   _socket?.on('userOnline', (data) {
+  //     print('User online: $data');
+  //     onlineHandler({'is_online': true, ...data});
+  //   });
+  //
+  //   _socket?.on('userOffline', (data) {
+  //     print('User offline: $data');
+  //     onlineHandler({'is_online': false, ...data});
+  //   });
+  // }
 
   void sendMessage(dynamic messageData) {
     if (_socket?.connected != true) {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:picturo_app/classes/svgfiles.dart';
@@ -290,7 +291,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildDetailRow("User name", user.username),
-            _buildDetailRow("User code", user.referralCode), // Replace with actual user code if available
+            _buildDetailRow("Referral code", user.referralCode), // Replace with actual user code if available
             _buildDetailRow("Numbers of referral", "0"), // Replace with actual referral count if available
             _buildDetailRow("Total earning", "₹ 0"), // Replace with actual earning if available
             _buildDetailRow("Location", user.location),
@@ -338,16 +339,29 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
             ),
           ):Expanded(
             flex:4, // Equal space
-            child: Text(
-              value,
-              maxLines: 1,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF49329A), fontFamily: 'Poppins Regular',
-              ),
-              textAlign: TextAlign.start, // Align text to the end
-              overflow: TextOverflow.ellipsis, // Handle overflow with ellipsis
+            child: Row(
+              children: [
+                Text(
+                  value,
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF49329A), fontFamily: 'Poppins Regular',
+                  ),
+                  textAlign: TextAlign.start, // Align text to the end
+                  overflow: TextOverflow.ellipsis, // Handle overflow with ellipsis
+                ),
+                (label=="Referral code")?const SizedBox(width: 6,):SizedBox(),
+                (label=="Referral code")?InkWell(
+                    onTap: (){
+                      Clipboard.setData(ClipboardData(text: value));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Copied to clipboard!')),
+                      );
+                    },
+                    child: Icon(Icons.copy,size: 18,)):SizedBox(),
+              ],
             ),
           ),
         ],

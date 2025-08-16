@@ -1,12 +1,18 @@
+import 'dart:convert';
+import 'dart:developer';
 import 'dart:io';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_callkit_incoming/entities/call_event.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
+import 'package:get/get_navigation/src/root/get_material_app.dart';
 import 'package:picturo_app/classes/services/notification_service.dart';
 import 'package:picturo_app/cubits/premium_cubit/premium_plans_cubit.dart';
 import 'package:picturo_app/cubits/referal_cubit/referal_cubit.dart';
@@ -34,6 +40,7 @@ import 'package:picturo_app/screens/premiumscreenpage.dart';
 import 'package:picturo_app/screens/signupscreen.dart';
 import 'package:picturo_app/screens/splashscreenpage.dart';
 import 'package:picturo_app/screens/voicecallscreen.dart';
+import 'package:picturo_app/services/api_service.dart';
 import 'package:picturo_app/services/push_notification_service.dart';
 import 'package:picturo_app/socket/socketservice.dart';
 import 'package:picturo_app/utils/common_file.dart';
@@ -62,7 +69,36 @@ import 'firebase_options.dart';
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  print("📩 Handling background message: ${message.messageId}");
+
+  RemoteNotification? notification = message.notification;
+  AndroidNotification? android = message.notification?.android;
+  if(notification?.title=="Incoming Call"|| (notification?.body.toString().contains('calling')??false)){
+    showFlutterCallNotification(
+      callSessionId: 'sdkjcslkcmslkcmsdc',
+      userId: '${message.data['caller_id']}',
+      callerName: '${message.data['caller_username']}',
+    );
+  }else if (notification != null && android != null) {
+
+    flutterLocalNotificationsPlugin.show(
+      notification.hashCode,
+      notification.title,
+      notification.body?.split("-")[0],
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'channel_id',
+          'channel_name',
+          importance: Importance.max,
+          priority: Priority.high,
+        ),
+      ),
+      payload:jsonEncode({
+        "sender_Id":message.data['sender_id'],
+        "sender_Name": notification.body?.split("-")[1],
+        "sender_profile": notification.body?.split("-")[2],
+      }), // use message.data if you want to navigate
+    );
+  }
 }
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -74,18 +110,55 @@ class MyHttpOverrides extends HttpOverrides {
       ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
   }
 }
+String? initialNotificationPayload;
 void main() async{
   WidgetsFlutterBinding.ensureInitialized();
 
   await NotificationService().init();
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-  // Request notification permissions
+  // Register plugins in background isolate
+  FlutterCallkitIncoming.onEvent.listen((event) {
+
+    if(event?.event==Event.actionCallAccept){
+
+      Map<String,dynamic> data=event?.body??{};
+
+        int target=int.parse(data["extra"]['userId']??"0");
+      navigatorKey.currentContext?.read<CallSocketHandleCubit>().acceptCall(target);
+        Navigator.push(
+          navigatorKey.currentContext!,
+          MaterialPageRoute(
+            builder: (context) => VoiceCallScreen(callerId:target,callerName: "${data['nameCaller']}", callerImage:'',isIncoming: false),
+          ),);
+
+    }else if(event?.event==Event.actionCallDecline){
+
+      Map<String,dynamic> data=event?.body??{};
+      navigatorKey.currentContext!.read<CallSocketHandleCubit>().endCall();
+
+    }else if(event?.event==Event.actionCallEnded){
+
+    }
+
+  });
+
   await NotificationService().requestPermissions();
-  
+  PushNotificationService.initialize();
+
+  // Get the launch details (if app opened from terminated state)
+  final NotificationAppLaunchDetails? launchDetails =
+  await flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
+
+  if (launchDetails?.didNotificationLaunchApp ?? false) {
+    initialNotificationPayload = launchDetails!.notificationResponse?.payload;
+  }
+
   // Initialize notifications
 
   HttpOverrides.global = MyHttpOverrides();
@@ -206,12 +279,74 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     // TODO: implement initState
+    if (initialNotificationPayload != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _handleNotificationNavigation(initialNotificationPayload!);
+        initialNotificationPayload = null; // clear so it doesn't run again
+      });
+    }
     checkAndNavigationCallingPage();
     super.initState();
   }
 
+  void _handleNotificationNavigation(String payload) {
+    // Map<String, dynamic> data = jsonDecode(payload);
 
+    Get.to(() => UserPage());
+  }
 
+  Widget buildUserAvatar(int avatarId) {
+    if (avatarId == 0) {
+      return const CircleAvatar(
+        radius: 25,
+        backgroundColor: Color(0xFF49329A),
+        backgroundImage: AssetImage('assets/avatar2.png'),
+      );
+    }
+
+    return FutureBuilder<String>(
+      future: _getAvatarUrl(avatarId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const CircleAvatar(
+            radius: 25,
+            backgroundColor: Color(0xFF49329A),
+            child: CircularProgressIndicator(
+              color: Colors.white,
+              strokeWidth: 2,
+            ),
+          );
+        } else if (snapshot.hasError || !snapshot.hasData) {
+          return const CircleAvatar(
+            radius: 25,
+            backgroundColor: Color(0xFF49329A),
+            backgroundImage: AssetImage('assets/avatar2.png'),
+          );
+        } else {
+          return CircleAvatar(
+            radius: 25,
+            backgroundImage: NetworkImage(snapshot.data!),
+          );
+        }
+      },
+    );
+  }
+  Future<String> _getAvatarUrl(int avatarId) async {
+    try {
+      final apiService = await ApiService.create();
+      final avatarResponse = await apiService.fetchAvatars();
+
+      final avatar = avatarResponse.data.firstWhere(
+            (a) => a.id == avatarId,
+        orElse: () => throw Exception('Avatar not found'),
+      );
+
+      return 'http://picturoenglish.com/admin/${avatar.avatarUrl}';
+    } catch (e) {
+      print('Error fetching avatar URL: $e');
+      throw e;
+    }
+  }
   Future<dynamic> getCurrentCall() async {
 
     var calls = await FlutterCallkitIncoming.activeCalls();
@@ -244,7 +379,7 @@ class _MyAppState extends State<MyApp> {
       if(currentCall!=null){
         int userCurrentId=int.parse(_currentUuid??"0");
         int target=int.parse(currentCall["extra"]['userId']??"0");
-        context.read<CallSocketHandleCubit>().acceptCall(target, userCurrentId);
+        context.read<CallSocketHandleCubit>().acceptCall(target);
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -258,9 +393,9 @@ class _MyAppState extends State<MyApp> {
         bool accepted=currentCall['accepted'];
 
         if(accepted){
-          int userCurrentId=int.parse(_currentUuid??"0");
+
           int target=int.parse(currentCall["extra"]['userId']??"0");
-          context.read<CallSocketHandleCubit>().acceptCall(target, userCurrentId);
+          context.read<CallSocketHandleCubit>().acceptCall(target);
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -277,29 +412,13 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    PushNotificationService.initialize(context); // Important!
+ // Important!
 
     return BlocProvider(
   create: (context) => TopicCubit(),
-  child: MaterialApp(
+  child: GetMaterialApp(
       navigatorKey: navigatorKey,
-      // builder: (context, child) {
-      //   return Stack(
-      //     children: [
-      //       child!,
-      //       DraggableFloatingButton(
-      //         onTap: () {
-      //           final currentContext = navigatorKey.currentContext;
-      //           if (currentContext != null) {
-      //             ScaffoldMessenger.of(currentContext).showSnackBar(
-      //               const SnackBar(content: Text('Floating button tapped!')),
-      //             );
-      //           }
-      //         },
-      //       ),
-      //     ],
-      //   );
-      // },
+
       debugShowCheckedModeBanner: false,
       initialRoute: '/',
       routes: {
@@ -320,4 +439,27 @@ class _MyAppState extends State<MyApp> {
 String capitalizeFirstLetter(String input) {
   if (input.isEmpty) return input;
   return input[0].toUpperCase() + input.substring(1);
+}
+class UserPage extends StatefulWidget {
+  const UserPage({super.key});
+
+  @override
+  State<UserPage> createState() => _UserPageState();
+}
+
+class _UserPageState extends State<UserPage> {
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+
+
+
+  @override
+  Widget build(BuildContext context) {
+
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Hive Local User')),
+      body: Text("sdcsdc"),
+    );
+  }
 }

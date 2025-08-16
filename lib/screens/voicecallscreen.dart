@@ -75,7 +75,11 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
         builder: (context, state) {
 
           if(state is CallRejected){
-            context.read<CallTimerCubit>().stopTimer();
+            context.read<CallTimerCubit>().stopTimer(
+              receiverId: widget.callerId.toString(),
+              callType: "audio",
+              status: "completed",
+            );
             Future.delayed(Duration.zero,(){
                 Navigator.pop(context);
               context.read<CallSocketHandleCubit>().resetCubit();

@@ -623,6 +623,7 @@ Future<FriendsResponse> fetchFriends() async {
         "Content-Type": "application/json",
       }),
     );
+    dev.log("kjnksdjcns ${token}");
 
     // Debugging: Print the raw API response
 
@@ -961,13 +962,12 @@ Future<UserResponse> fetchProfileDetails() async {
     );
 
     // Debugging: Print the raw API response
-
-
     // Check if the response status code is 200 (OK)
     if (response.statusCode == 200) {
       if (response.data is Map<String, dynamic>) {
         Map<String, dynamic> responseData = response.data;
 
+        dev.log("lskdmclksdmcsdlc ${responseData}");
         // Ensure the response has required user details
         if (responseData.containsKey("id") &&
             responseData.containsKey("username") &&
@@ -1369,7 +1369,6 @@ Future<Map<String, dynamic>> acceptChatRequest({
       "request_id": requestId,
     };
 
-    // Make the POST request
     Response response = await _dio.post(
       "accept_chat_request.php",  // Replace with your actual API endpoint
       data: jsonEncode(params),

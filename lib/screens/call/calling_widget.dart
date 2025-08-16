@@ -16,14 +16,14 @@ class CallingScreen extends StatefulWidget {
   final String callerName;
   final int currentUserId;
   final int? avatarUrl;
-  final Friends friendDetails;
+  final int? friendId;
 
   const CallingScreen({
     super.key,
     required this.callerName,
     required this.currentUserId,
     required this.avatarUrl,
-    required this.friendDetails,
+    required this.friendId,
   });
 
   @override
@@ -35,18 +35,6 @@ class _CallingScreenState extends State<CallingScreen> {
   void initState() {
     super.initState();
 
-    // Use post-frame callback to safely access context
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-
-      context.read<CallSocketHandleCubit>().resetCubit();
-
-      context.read<CallSocketHandleCubit>().emitCallingFunction(
-        targetId: widget.friendDetails.friendId ?? 0,
-        currentUserId: widget.currentUserId,
-        targettedUserName: "${widget.friendDetails.friendName}",
-      );
-    });
   }
 
   Future<String> _getAvatarUrl(int avatarId) async {
@@ -110,12 +98,15 @@ class _CallingScreenState extends State<CallingScreen> {
     return Scaffold(
       body: BlocBuilder<CallSocketHandleCubit, CallSocketHandleState>(
         builder: (context, state) {
+          print("skdcmklsdcmlskdc ${state.runtimeType}");
           if (state is CallRejected) {
             Future.delayed(Duration.zero, () {
-              if (context.mounted && Navigator.canPop(context)) {
-                Navigator.pop(context);
-                context.read<CallSocketHandleCubit>().resetCubit();
-              }
+              // if (context.mounted && Navigator.canPop(context)) {
+              //
+              //
+              // }
+              Navigator.pop(context);
+              context.read<CallSocketHandleCubit>().resetCubit();
             });
           } else if (state is CallAccepted) {
             Future.delayed(Duration.zero, () {
@@ -123,7 +114,7 @@ class _CallingScreenState extends State<CallingScreen> {
                 context,
                 MaterialPageRoute(
                   builder: (context) => VoiceCallScreen(
-                    callerId: widget.friendDetails.friendId ?? 0,
+                    callerId: widget.friendId??0,
                     callerName: widget.callerName,
                     callerImage: '',
                     isIncoming: false,
@@ -217,10 +208,10 @@ class _CallingScreenState extends State<CallingScreen> {
                         context.read<CallSocketHandleCubit>().endCall();
 
                         await context.read<CallLogCubit>().postCallLog(
-                          receiverId: widget.friendDetails.friendId.toString(),
+                          receiverId: widget.friendId.toString(),
                           callType: "audio",
                           status: "inCompleted",
-                          duration: 0,
+                          duration: 1,
                         );
 
                         if (context.mounted && Navigator.canPop(context)) {

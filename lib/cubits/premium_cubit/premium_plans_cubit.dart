@@ -52,6 +52,8 @@ class PlanCubit extends Cubit<PlanState> {
           "Content-Type": "application/json"
         },
       );
+
+      log("ldkscmlksdcsd ${response.body}");
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
 

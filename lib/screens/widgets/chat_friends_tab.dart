@@ -41,7 +41,11 @@ class _ChatFriendsTabState extends State<ChatFriendsTab> {
       return SizedBox(
         height: 20,
         width: 20,
-        child: CircularProgressIndicator(),
+        child: SizedBox(
+          height: 20,
+          width: 20,
+          child: CircularProgressIndicator(),
+        ),
       );
     }
 
@@ -62,10 +66,10 @@ class _ChatFriendsTabState extends State<ChatFriendsTab> {
           context,
           MaterialPageRoute(
             builder: (context) => ChatScreen(
-              friendDetails: user,
               avatarWidget: _buildUserAvatar(user.friendProfilePic??0),
               userName: user.friendName??'',
               userId: user.friendId??0,
+              profilePicId: user.friendProfilePic??0,
             ),
           ),
         );

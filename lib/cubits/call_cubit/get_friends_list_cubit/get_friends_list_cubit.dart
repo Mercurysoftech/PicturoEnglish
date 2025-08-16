@@ -17,18 +17,15 @@ class GetFriendsListCubit extends Cubit<GetFriendsListState> {
       final apiService = await ApiService.create();
       final friendsResponse = await apiService.fetchFriends();
 
-
       final List<Friends> friends = friendsResponse.data;
 
       final prefs = await SharedPreferences.getInstance();
       final currentUserId = prefs.getString('user_id');
+
       // final int friendsCount = friends
       //     .where((f) => f.friendId.toString() != currentUserId.toString())
       //     .length;
-      log("sdjcksdjcnksjcnskdcj ${friends}");
-
-      emit(GetFriendsListLoaded(friends: friends
-      ));
+      emit(GetFriendsListLoaded(friends: friends));
     } catch (e) {
       emit(GetFriendsListFailed());
     }

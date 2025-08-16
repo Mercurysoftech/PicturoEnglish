@@ -7,6 +7,7 @@ import 'package:picturo_app/screens/learnwordspage.dart';
 import 'package:picturo_app/utils/common_file.dart';
 import '../cubits/content_view_per_get/content_view_percentage_cubit.dart';
 import '../cubits/get_sub_topics_list/get_sub_topics_list_cubit.dart';
+import '../cubits/get_topics_list_cubit/get_topic_list_cubit.dart';
 import '../main.dart';
 import '../responses/questions_response.dart';
 import '../utils/common_app_bar.dart';
@@ -16,8 +17,9 @@ class SubtopicPage extends StatefulWidget {
   final String? title;
   final int? topicId;
   final int? bookId;
+  final int? paramsTopicId;
 
-  const SubtopicPage({super.key, this.title, this.topicId, this.bookId});
+  const SubtopicPage({super.key, this.paramsTopicId,this.title, this.topicId, this.bookId});
 
   @override
   State<SubtopicPage> createState() => _SubtopicPageState();
@@ -34,62 +36,71 @@ class _SubtopicPageState extends State<SubtopicPage> {
       topicId: widget.topicId ?? 0,
     );
   }
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: CommonAppBar(
-        title: widget.title ?? '',
-        isBackbutton: true,
-      ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ProgressBarWidget(
-            bookId: widget.bookId ?? 0,
-            topicId: widget.topicId ?? 0,
-          ),
-          const SizedBox(height: 20),
-          Expanded(
-            child: BlocBuilder<SubtopicCubit, SubtopicState>(
-              builder: (context, state) {
-                if (state is SubtopicLoading) {
-                  return const Center(child: CircularProgressIndicator());
-                } else if (state is SubtopicError) {
-                  return Center(child: Text(state.message));
-                } else if (state is SubtopicLoaded) {
-                  if (state.questions.isEmpty) {
-                    return const Center(
-                      child: Text('No questions available for this topic'),
-                    );
-                  }
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                    child: Scrollbar(
-                      child: ListView.builder(
-                        key: PageStorageKey('subtopic_list_${widget.topicId}'),
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        itemCount: state.questions.length,
-                        itemBuilder: (context, index) {
-                          return optionTile(
-                            context,
-                            index + 1,
-                            state.questions[index],
-                            widget.topicId!,
-                            widget.bookId!,
-                          );
-                        },
-                      ),
-                    ),
-                  );
-                } else {
-                  return const SizedBox();
-                }
-              },
+    return WillPopScope(
+
+      onWillPop: () async{
+        context.read<TopicCubit>().fetchTopics(widget.bookId??0);
+        return true;
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        appBar: CommonAppBar(onBackButtonTap: (){
+          Navigator.pop(context);
+          context.read<TopicCubit>().fetchTopics(widget.bookId??0);
+        },
+          title: widget.title ?? '',
+          isBackbutton: true,
+        ),
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ProgressBarWidget(
+              bookId: widget.bookId ?? 0,
+              topicId: widget.topicId ?? 0,
             ),
-          ),
-        ],
+            const SizedBox(height: 20),
+            Expanded(
+              child: BlocBuilder<SubtopicCubit, SubtopicState>(
+                builder: (context, state) {
+                  if (state is SubtopicLoading) {
+                    return const Center(child: CircularProgressIndicator());
+                  } else if (state is SubtopicError) {
+                    return Center(child: Text(state.message));
+                  } else if (state is SubtopicLoaded) {
+                    if (state.questions.isEmpty) {
+                      return const Center(
+                        child: Text('No questions available for this topic'),
+                      );
+                    }
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: Scrollbar(
+                        child: ListView.builder(
+                          key: PageStorageKey('subtopic_list_${widget.topicId}'),
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          itemCount: state.questions.length,
+                          itemBuilder: (context, index) {
+                            return optionTile(
+                              context,
+                              index + 1,
+                              state.questions[index],
+                              widget.topicId!,
+                              widget.bookId!,
+                            );
+                          },
+                        ),
+                      ),
+                    );
+                  } else {
+                    return const SizedBox();
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

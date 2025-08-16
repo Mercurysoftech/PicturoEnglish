@@ -46,21 +46,17 @@ class SocketMessageService {
       "autoConnect": true,
       "query": {"userId": userId.toString()},
     });
-
     _socket.connect();
-
     _socket.onConnect((_) {
       print("✅ Socket connected +++++++++++++++++");
     });
 
     _socket.on("notify_message", (data) {
       print("📥 Received notify_message: $data");
-
-      onNotifyMessage(data); // Call the callback
+      onNotifyMessage(data);
     });
     _socket.on("chat_list_update", (data) {
       print("📥 Received ChatList: $data");
-
       onNotifyMessage(data); // Call the callback
     });
 
@@ -108,23 +104,11 @@ class _ChatListPageState extends State<ChatListPage>
     connectSocket();
     _fetchAllUsers();
     context.read<GetFriendsListCubit>().fetchAllFriends();
-    connectSS();
-  }
-  void connectSS()async{
-    final currentUserId = Provider.of<UserProvider>(context, listen: false).userId;
 
-    SocketMessageService().init(currentUserId, (data){
-      log("skdjcnksjdcn ${data}");
-    });
   }
 
-  @override
-  void dispose() {
-    // TODO: implement dispose
-    SocketMessageService().disconnect();
-    ChatSocket.dispose();
-    super.dispose();
-  }
+
+
   List<String>?  countViewList=[];
   Future<void>connectSocket()async{
     SharedPreferences preferences=await SharedPreferences.getInstance();
@@ -132,12 +116,12 @@ class _ChatListPageState extends State<ChatListPage>
     setState(() {
       countViewList=countViewedIndex;
     });
-    await ChatSocket.connectScoket();
-    // ChatSocket.socket.emit("userOnline",{});
-    ChatSocket.socket.on('unreadCount', (data) {
-      print("sdcmskdcs;dlcksd;lc,sd;cl, __ ${data}");
-      context.read<GetFriendsListCubit>().fetchAllFriends();
+    // await ChatSocket.connectScoket();
 
+    ChatSocket.socket?.on('unreadCount', (data) {
+      // print("sdcmskdcs;dlcksd;lc,sd;cl, __ ${data}");
+      if (!mounted) return; // ✅ Check here
+      context.read<GetFriendsListCubit>().fetchAllFriends();
     // updatedOne=false;
     // _fetchAllUsers();
     });
@@ -312,6 +296,7 @@ class _ChatListPageState extends State<ChatListPage>
  Widget _buildUserRequestTile(BuildContext context, User user) {
   // Determine if request is already sent based on user's status
   bool requestSent = user.chat_request_status == 0 && user.chat_status == "pending";
+  print("sdcnksjdcnksdc ${user.chat_request_status} ${user.chat_status}");
 
   return Container(
     margin: EdgeInsets.symmetric(vertical: 8),
@@ -341,7 +326,17 @@ class _ChatListPageState extends State<ChatListPage>
           ),
         ),
         SizedBox(width: 10),
-        requestSent
+        (user.chat_request_status==1)?Container(
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Text(
+            'Accepted',
+            style: TextStyle(
+              color: Colors.grey,
+              fontFamily: 'Poppins Regular',
+              fontSize: 12,
+            ),
+          ),
+        ):requestSent
             ? Container(
                 padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Text(

@@ -29,6 +29,7 @@ import '../cubits/get_coins_cubit/coins_cubit.dart';
 import '../cubits/get_notification/get_notification_cubit.dart';
 import '../cubits/user_friends_cubit/user_friends_cubit.dart';
 import '../main.dart';
+import '../services/chat_socket_service.dart';
 import '../utils/common_app_bar.dart';
 import '../utils/common_file.dart';
 
@@ -206,9 +207,8 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver{
         Map<String,dynamic> data=event?.body??{};
 
         if(currentUserId!=''){
-          int userCurrentId=int.parse(currentUserId??"0");
           int target=int.parse(data["extra"]['userId']??"0");
-          context.read<CallSocketHandleCubit>().acceptCall(target, userCurrentId);
+          context.read<CallSocketHandleCubit>().acceptCall(target);
           Navigator.push(
               context,
               MaterialPageRoute(
@@ -495,13 +495,16 @@ class _HomeContentState extends State<HomeContent> {
 @override
   void initState() {
     super.initState();
-
-    context.read<CoinCubit>().setCoin(1000);
+    context.read<CoinCubit>().setCoin(100);
+    connectSocket();
   }
 
-  setCoin()async{
-
+  Future<void> connectSocket()async{
+    await ChatSocket.connectScoket();
   }
+
+
+
   @override
   Widget build(BuildContext context) {
      DateTime? lastPressed;

@@ -37,12 +37,18 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
   int? targetUserId;
   String?  callerName;
 
+
   final _config = {
     'iceServers': [
       {'urls': 'stun:stun.l.google.com:19302'}
     ]
   };
-
+   void userOpenCalling(){
+     // userOpenCallingPage=true;
+   }
+   void userCloseCalling(){
+     // userOpenCallingPage=false;
+   }
   Future<void> fetchAllUsers() async {
     final apiService = await ApiService.create();
     final FriendsResponse friendsResponse = await apiService.fetchFriends();
@@ -105,19 +111,17 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
           callerName: '${friends[findedIndex].friendName}',
         );
 
-        targetUserId = from;
+        targetUserId = int.parse(from??"0");
       }
     });
-
     callSocket.on('call-accepted', (data) {
-
       emit(CallAccepted());
       isLiveCallActive=true;
       FlutterCallkitIncoming.setCallConnected("sdkjcslkcmslkcmsdc");
     });
 
     callSocket.on('call-rejected', (_) {
-      print("sdlkcmlskdmc Call Redd");
+
 
       endCall();
     });
@@ -161,7 +165,9 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
 
     callSocket.on('call-ended', (data)async {
       isLiveCallActive=false;
-      emit(CallRejected());
+      // if(userOpenCallingPage){
+        emit(CallRejected());
+      // }
       FlutterCallkitIncoming.endCall("sdkjcslkcmslkcmsdc");
 
       await hangup();
@@ -260,7 +266,10 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
       }
     });
   }
-  void acceptCall(int targetUser, int currentUserId) async {
+  void acceptCall(int targetUser) async {
+    final prefs = await SharedPreferences.getInstance();
+    String? userId= prefs.getString("user_id");
+    int currentUserId =int.parse(userId??"0");
     await connectNewUser(targetUser, currentUserId);
     initiateWebRTCCall(targetId: targetUser, currentUserId: currentUserId,);
 
@@ -282,7 +291,15 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
       'to': targetId,
       "userName": targettedUserName
     }} _${{'from': currentUserId, 'to': targetId}} ${callSocket.connected}");
-    callSocket.emit('call-user', {'from': currentUserId, 'to': targetId});
+    callSocket.emit('call-user', {
+      'from': currentUserId,
+      'to': targetId,
+    "type": "incoming_call",
+    "caller_id": currentUserId,           // ✅ safe replacement
+    "receiver_id": targetId,
+    "deep_link": "/call/${currentUserId}"
+    });
+
     callSocket.emit('incoming-call', {
       'from': currentUserId,
       'to': targetId,
@@ -416,8 +433,10 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
     _remoteRenderer.dispose();
   }
   Future<bool> endCall() async {
+    // if(userOpenCallingPage){
 
-    emit(CallRejected());
+      emit(CallRejected());
+    // }
     callSocket.emit('end-call', {'to': targetUserId});
     await hangup();
     await FlutterCallkitIncoming.endAllCalls();
@@ -479,58 +498,59 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
   }
 
 
-  void showFlutterCallNotification({
-    required String callSessionId,
-    required String userId,
-    required String callerName,
-    String? avatar,
-  }) async {
-    final params = CallKitParams(
-      id: callSessionId,
-      nameCaller: callerName,
-      appName: 'Picturo',
-      handle: "  Call From $callerName",
-      type: 0,
-      duration: 30000,
-      textAccept: 'Accept',
-      textDecline: 'Decline',
-      missedCallNotification: const NotificationParams(
-        showNotification: true,
-        subtitle: 'Missed call',
-      ),
-      extra: <String, dynamic>{'userId': '$userId'},
-      android: const AndroidParams(
-        isCustomNotification: false,
-        isShowLogo: true,
-        isShowCallID: true,
-        isShowFullLockedScreen: true,
-        isImportant: true,
-        ringtonePath: 'system_ringtone_default',
-        backgroundColor: '#ffffff',
-        actionColor: '#FF8C00',
-        textColor: '#FF8C00',
-      ),
-      ios: IOSParams(
-        iconName: callerName,
-        handleType: '',
-        supportsVideo: true,
-        maximumCallGroups: 2,
-        maximumCallsPerCallGroup: 1,
-        audioSessionMode: 'default',
-        audioSessionActive: true,
-        audioSessionPreferredSampleRate: 44100.0,
-        audioSessionPreferredIOBufferDuration: 0.005,
-        supportsDTMF: true,
-        supportsHolding: true,
-        supportsGrouping: false,
-        supportsUngrouping: false,
-        ringtonePath: 'system_ringtone_default',
-      ),
-    );
-    await FlutterCallkitIncoming.showCallkitIncoming(params);
-  }
 
   Future<void> resetCubit()async {
     emit(CallSocketHandleInitial());
   }
+}
+
+void showFlutterCallNotification({
+  required String callSessionId,
+  required String userId,
+  required String callerName,
+  String? avatar,
+}) async {
+  final params = CallKitParams(
+    id: callSessionId,
+    nameCaller: callerName,
+    appName: 'Picturo',
+    handle: "  Call From $callerName",
+    type: 0,
+    duration: 30000,
+    textAccept: 'Accept',
+    textDecline: 'Decline',
+    missedCallNotification: const NotificationParams(
+      showNotification: true,
+      subtitle: 'Missed call',
+    ),
+    extra: <String, dynamic>{'userId': '$userId'},
+    android: const AndroidParams(
+      isCustomNotification: false,
+      isShowLogo: true,
+      isShowCallID: true,
+      isShowFullLockedScreen: true,
+      isImportant: true,
+      ringtonePath: 'system_ringtone_default',
+      backgroundColor: '#ffffff',
+      actionColor: '#FF8C00',
+      textColor: '#FF8C00',
+    ),
+    ios: IOSParams(
+      iconName: callerName,
+      handleType: '',
+      supportsVideo: true,
+      maximumCallGroups: 2,
+      maximumCallsPerCallGroup: 1,
+      audioSessionMode: 'default',
+      audioSessionActive: true,
+      audioSessionPreferredSampleRate: 44100.0,
+      audioSessionPreferredIOBufferDuration: 0.005,
+      supportsDTMF: true,
+      supportsHolding: true,
+      supportsGrouping: false,
+      supportsUngrouping: false,
+      ringtonePath: 'system_ringtone_default',
+    ),
+  );
+  await FlutterCallkitIncoming.showCallkitIncoming(params);
 }
