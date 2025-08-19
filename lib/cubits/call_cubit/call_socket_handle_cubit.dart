@@ -64,9 +64,12 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
     callSocket.dispose();
   }
 
-  Future<void> initCallSocket({required int currentUserId}) async {
+  Future<void> initCallSocket() async {
     FirebaseMessaging messaging = FirebaseMessaging.instance;
     String? token = await messaging.getToken();
+
+    final prefs = await SharedPreferences.getInstance();
+    String? userId = prefs.getString("user_id");
 
     callSocket = IO.io(
         'https://picturoenglish.com:2027',
@@ -74,7 +77,7 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
             .setTransports(['websocket']) // for Flutter or Dart VM
             .disableAutoConnect()
             .setQuery({
-          'userId': currentUserId,
+          'userId': userId,
           'fcmToken': token,
         })
             .build(),);
@@ -85,7 +88,7 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
 
     callSocket.onConnect((_) {
       callSocket.emit('register', {
-        "userId": currentUserId,
+        "userId": userId,
         "fcmToken": token
       });
     });
@@ -137,7 +140,7 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
         final rtcDesc = RTCSessionDescription(description['sdp'], description['type']);
 
         if (rtcDesc.type == 'offer') {
-          await connectNewUser(from, currentUserId);
+          await connectNewUser(from, int.parse(userId ?? '0'));
           await peerConnections[from.toString()]?.setRemoteDescription(rtcDesc);
 
           final answer = await peerConnections[from.toString()]!.createAnswer();
@@ -145,7 +148,7 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
 
           callSocket.emit('signal', {
             'to': from,
-            'from': currentUserId,
+            'from': userId,
             'description': answer.toMap(),
           });
         } else if (rtcDesc.type == 'answer') {
@@ -285,6 +288,8 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
   }){
     callerName=targettedUserName;
     targetUserId=targetId;
+
+      log("📞 Initiating call to $targettedUserName (ID: $targetId)");
 
     print("ldkjmclksdmclkdsc _ ${ {
       'from': currentUserId,

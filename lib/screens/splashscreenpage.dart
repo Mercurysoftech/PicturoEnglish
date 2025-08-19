@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:picturo_app/main.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -51,24 +52,27 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   }
 
   // Simulate user login status check using SharedPreferences
-  Future<void> _checkLoginStatus() async {
-    final prefs = await SharedPreferences.getInstance();
-    final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
-
-    if (mounted) {
-
-     bool? isFirst= prefs.getBool("isFirstTime");
-
-       Navigator.of(context).pushReplacement(
-         MaterialPageRoute(
-           builder: (context) => isLoggedIn ? const Homepage() : const LoginScreen(),
-         ),
-       );
-
-
-
+  // In SplashScreen's _checkLoginStatus
+Future<void> _checkLoginStatus() async {
+  final prefs = await SharedPreferences.getInstance();
+  final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+  
+  // Check if we have an initial notification payload
+  final hasNotificationPayload = initialNotificationPayload != null;
+  
+  if (mounted) {
+    bool? isFirst = prefs.getBool("isFirstTime");
+    
+    // If we have a notification, don't navigate here - let the notification handler do it
+    if (!hasNotificationPayload) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => isLoggedIn ? const Homepage() : const LoginScreen(),
+        ),
+      );
     }
   }
+}
 
   void _startTypingAnimation() {
     const typingSpeed = Duration(milliseconds: 25);

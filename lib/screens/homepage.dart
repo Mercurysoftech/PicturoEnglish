@@ -11,6 +11,7 @@ import 'package:phone_state/phone_state.dart';
 import 'package:picturo_app/cubits/bottom_navigator_index_cubit.dart';
 import 'package:picturo_app/providers/profileprovider.dart';
 import 'package:picturo_app/responses/books_response.dart';
+import 'package:picturo_app/screens/call/widgets/call_receive_widget.dart';
 import 'package:picturo_app/screens/chatbotpage.dart';
 import 'package:picturo_app/screens/chatlistpage.dart';
 import 'package:picturo_app/screens/gamespage.dart';
@@ -33,16 +34,14 @@ import '../services/chat_socket_service.dart';
 import '../utils/common_app_bar.dart';
 import '../utils/common_file.dart';
 
-class Homepage extends StatefulWidget{
-
+class Homepage extends StatefulWidget {
   const Homepage({super.key});
 
   @override
   _HomepageState createState() => _HomepageState();
 }
 
-class _HomepageState extends State<Homepage> with WidgetsBindingObserver{
-  
+class _HomepageState extends State<Homepage> with WidgetsBindingObserver {
   DateTime? lastPressed;
   ApiService? apiService;
   bool _isLoading = true;
@@ -68,7 +67,8 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver{
       if (response.statusCode == 200) {
         print('✅ FCM token updated successfully: ${response.body}');
       } else {
-        print('❌ Failed to update FCM token: ${response.statusCode} - ${response.body}');
+        print(
+            '❌ Failed to update FCM token: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
       print('🔥 Error updating FCM token: $e');
@@ -105,7 +105,10 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver{
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
       ),
-      'page': TopicsScreen(title: 'Verbs',topicId: 1,),
+      'page': TopicsScreen(
+        title: 'Verbs',
+        topicId: 1,
+      ),
     },
     {
       'image': 'assets/adverb.png',
@@ -115,7 +118,10 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver{
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
       ),
-      'page': TopicsScreen(title: 'Adverbs',topicId: 2,),
+      'page': TopicsScreen(
+        title: 'Adverbs',
+        topicId: 2,
+      ),
     },
     {
       'image': 'assets/adjective.png',
@@ -125,7 +131,10 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver{
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
       ),
-      'page': TopicsScreen(title: 'Adjectives',topicId: 3,),
+      'page': TopicsScreen(
+        title: 'Adjectives',
+        topicId: 3,
+      ),
     },
     {
       'image': 'assets/phrasal verb.png',
@@ -135,7 +144,10 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver{
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
       ),
-      'page': TopicsScreen(title: 'Phrasal Verbs',topicId: 4,),
+      'page': TopicsScreen(
+        title: 'Phrasal Verbs',
+        topicId: 4,
+      ),
     },
     {
       'image': 'assets/idioms.png',
@@ -145,7 +157,10 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver{
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
       ),
-      'page': TopicsScreen(title: 'Idiom',topicId: 5,),
+      'page': TopicsScreen(
+        title: 'Idiom',
+        topicId: 5,
+      ),
     },
     {
       'image': 'assets/waiting.png',
@@ -157,21 +172,23 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver{
       ),
     },
   ];
-  String? currentUserId='';
+  String? currentUserId = '';
 
   // Define the different pages/screens for each bottom navigation item
   final List<Widget> _pages = [];
   Future<void> getCurrentUserAvatar() async {
-      context.read<AvatarCubit>().loadAvatar();
+    context.read<AvatarCubit>().loadAvatar();
   }
+
   @override
   void initState() {
     getCurrentUserAvatar();
     updateFcmToken();
     WidgetsBinding.instance.addObserver(this);
     super.initState();
- 
-    _pages.add(HomeContent(gridItems: _gridItems)); // Pass _gridItems to HomeContent
+
+    _pages.add(
+        HomeContent(gridItems: _gridItems)); // Pass _gridItems to HomeContent
     _pages.add(ChatListPage());
     _pages.add(GamesPage());
     _pages.add(NotificationScreen());
@@ -194,59 +211,62 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver{
       PermissionStatus.restricted ||
       PermissionStatus.limited ||
       PermissionStatus.permanentlyDenied =>
-      false,
+        false,
       PermissionStatus.provisional || PermissionStatus.granted => true,
     };
   }
-  void handleCall(){
+
+  void handleCall() {
     FlutterCallkitIncoming.onEvent.listen((event) {
+      print('Calling Listen: ${event?.event}');
 
 
-      if(event?.event==Event.actionCallAccept){
+      if (event?.event == Event.actionCallAccept) {
+        Map<String, dynamic> data = event?.body ?? {};
 
-        Map<String,dynamic> data=event?.body??{};
-
-        if(currentUserId!=''){
-          int target=int.parse(data["extra"]['userId']??"0");
+        if (currentUserId != '') {
+          int target = int.parse(data["extra"]['userId'] ?? "0");
           context.read<CallSocketHandleCubit>().acceptCall(target);
           Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => VoiceCallScreen(callerId:target,callerName: "${data['nameCaller']}", callerImage:'',isIncoming: false),
-              ),);
+            context,
+            MaterialPageRoute(
+              builder: (context) => VoiceCallScreen(
+                  callerId: target,
+                  callerName: "${data['nameCaller']}",
+                  callerImage: '',
+                  isIncoming: false),
+            ),
+          );
         }
-
-      }else if(event?.event==Event.actionCallDecline){
-
-        Map<String,dynamic> data=event?.body??{};
-        int target=int.parse(data["extra"]['userId']??"0");
+      } else if (event?.event == Event.actionCallDecline) {
+        Map<String, dynamic> data = event?.body ?? {};
+        int target = int.parse(data["extra"]['userId'] ?? "0");
         context.read<CallSocketHandleCubit>().endCall();
-
-      }else if(event?.event==Event.actionCallEnded){
-
-      }
-
+      } else if (event?.event == Event.actionCallEnded) {}
     });
   }
-  void callSocketInit()async{
-    final prefs = await SharedPreferences.getInstance();
-    String? userId= prefs.getString("user_id");
-    currentUserId=userId;
-    int? profileProvider=userId!=null&&userId!=''?int.parse(userId):null;
-    if(profileProvider!=null){
-      await context.read<CallSocketHandleCubit>().initCallSocket(currentUserId:profileProvider);
-     Future.delayed(Duration(seconds: 2),(){
-       context.read<CallSocketHandleCubit>().listenEvent("call-ended", (data){
-         CallTimerState state= context.read<CallTimerCubit>().state;
-         //  context.read<CallLogCubit>().postCallLog(
-         //   receiverId: widget.friendDetails.friendId.toString(),
-         //   callType: "audio",
-         //   status: "inCompleted",
-         //   duration: 0,
-         // );
-       });
 
-     });
+  void callSocketInit() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? userId = prefs.getString("user_id");
+    currentUserId = userId;
+    int? profileProvider =
+        userId != null && userId != '' ? int.parse(userId) : null;
+    if (profileProvider != null) {
+      await context
+          .read<CallSocketHandleCubit>()
+          .initCallSocket();
+      Future.delayed(Duration(seconds: 2), () {
+        context.read<CallSocketHandleCubit>().listenEvent("call-ended", (data) {
+          CallTimerState state = context.read<CallTimerCubit>().state;
+          //  context.read<CallLogCubit>().postCallLog(
+          //   receiverId: widget.friendDetails.friendId.toString(),
+          //   callType: "audio",
+          //   status: "inCompleted",
+          //   duration: 0,
+          // );
+        });
+      });
     }
   }
 
@@ -258,7 +278,7 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver{
     return "$hours:$minutes:$seconds";
   }
 
-   Future<void> initializeServices() async {
+  Future<void> initializeServices() async {
     try {
       // Initialize API service
       apiService = await ApiService.create();
@@ -268,10 +288,11 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver{
 
       // Update ProfileProvider with the fetched data
       if (mounted) {
-        final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+        final profileProvider =
+            Provider.of<ProfileProvider>(context, listen: false);
         await profileProvider.updateProfile(userResponse);
-        final userDetails=profileProvider.fetchProfile();
-print('Languages da: ${userResponse.speakingLanguage}');
+        final userDetails = profileProvider.fetchProfile();
+        print('Languages da: ${userResponse.speakingLanguage}');
         // This will update the provider state
 
         // Alternatively, you could directly set the user if needed:
@@ -288,7 +309,6 @@ print('Languages da: ${userResponse.speakingLanguage}');
     }
   }
 
-
   // Function to fetch books and update _gridItems
   Future<void> fetchBooksAndUpdateGrid() async {
     try {
@@ -297,7 +317,8 @@ print('Languages da: ${userResponse.speakingLanguage}');
       BookResponse bookResponse = await apiService.fetchBooks();
 
       // Extract the book names from the response
-      List<String> bookNames = bookResponse.data.map((book) => book.booksName).toList();
+      List<String> bookNames =
+          bookResponse.data.map((book) => book.booksName).toList();
 
       // Update _gridItems with the fetched book names
       setState(() {
@@ -336,7 +357,8 @@ print('Languages da: ${userResponse.speakingLanguage}');
 
   Future<bool> onWillPop() async {
     DateTime now = DateTime.now();
-    if (lastPressed == null || now.difference(lastPressed!) > Duration(seconds: 2)) {
+    if (lastPressed == null ||
+        now.difference(lastPressed!) > Duration(seconds: 2)) {
       lastPressed = now;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Press back again to exit')),
@@ -345,8 +367,6 @@ print('Languages da: ${userResponse.speakingLanguage}');
     }
     return true;
   }
-
-
 
   @override
   void dispose() {
@@ -372,116 +392,122 @@ print('Languages da: ${userResponse.speakingLanguage}');
   }
 
   @override
-Widget build(BuildContext context) {
+  Widget build(BuildContext context) {
+    // ignore: deprecated_member_use
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (context) => NotificationCubit(),
+        )
+      ],
+      child: BlocBuilder<BottomNavigatorIndexCubit, BottomNavigatorIndexState>(
+        builder: (context, bottomNavState) {
+          if (bottomNavState is BottomNavigatorIndexInitial) {
+            return StreamBuilder<PhoneState>(
+                stream:
+                    PhoneState.stream, // assuming this is a Stream<PhoneState>
+                builder: (context, snapshot) {
+                  final state = snapshot.data;
 
-
-  // ignore: deprecated_member_use
-  return  MultiBlocProvider(
-  providers: [
-    BlocProvider(
-  create: (context) => NotificationCubit(),
-)
-  ],
-  child: BlocBuilder<BottomNavigatorIndexCubit, BottomNavigatorIndexState>(
-  builder: (context, bottomNavState) {
-    if(bottomNavState is BottomNavigatorIndexInitial){
-      return StreamBuilder<PhoneState>(
-          stream: PhoneState.stream, // assuming this is a Stream<PhoneState>
-          builder: (context, snapshot) {
-            final state = snapshot.data;
-
-            if (snapshot.connectionState == ConnectionState.active && state != null) {
-              // Perform logic based on new PhoneState
-              if (state.status == PhoneStateStatus.CALL_STARTED) {
-                // Example: Start a timer
-                context.read<CallSocketHandleCubit>().onNativeCallStart();
-                // context.read<CallTimerCubit>().startTimer();
-              } else if (state.status == PhoneStateStatus.CALL_ENDED) {
-                context.read<CallSocketHandleCubit>().onNativeCallEnd();
-              }
-            }
-            return WillPopScope(
-              onWillPop: onWillPop,
-              child: Scaffold(
-                backgroundColor: Color(0xFFE0F7FF),
-                body: _pages[bottomNavState.selectedIndex],
-                bottomNavigationBar: BottomNavigationBar(
-                  type: BottomNavigationBarType.fixed,
-                  backgroundColor: Colors.white,
-                  currentIndex: bottomNavState.selectedIndex,
-                  onTap: (index) {
-                    context.read<BottomNavigatorIndexCubit>().onChageIndex(index);
-                  },
-                  items: List.generate(4, (index) {
-                    return BottomNavigationBarItem(
-                      icon: Image.asset(
-                        bottomNavState.selectedIndex == index
-                            ? _navIconsSelected[index]
-                            : _navIcons[index],
-                        width: 23,
-                        height: 28,
-                        color:bottomNavState.selectedIndex==index? Color(0xFF49329A).withValues(alpha: .8):Colors.grey.shade500,
+                  if (snapshot.connectionState == ConnectionState.active &&
+                      state != null) {
+                    // Perform logic based on new PhoneState
+                    if (state.status == PhoneStateStatus.CALL_STARTED) {
+                      // Example: Start a timer
+                      context.read<CallSocketHandleCubit>().onNativeCallStart();
+                      // context.read<CallTimerCubit>().startTimer();
+                    } else if (state.status == PhoneStateStatus.CALL_ENDED) {
+                      context.read<CallSocketHandleCubit>().onNativeCallEnd();
+                    }
+                  }
+                  return WillPopScope(
+                    onWillPop: onWillPop,
+                    child: Scaffold(
+                      backgroundColor: Color(0xFFE0F7FF),
+                      body: _pages[bottomNavState.selectedIndex],
+                      bottomNavigationBar: BottomNavigationBar(
+                        type: BottomNavigationBarType.fixed,
+                        backgroundColor: Colors.white,
+                        currentIndex: bottomNavState.selectedIndex,
+                        onTap: (index) {
+                          context
+                              .read<BottomNavigatorIndexCubit>()
+                              .onChageIndex(index);
+                        },
+                        items: List.generate(4, (index) {
+                          return BottomNavigationBarItem(
+                            icon: Image.asset(
+                              bottomNavState.selectedIndex == index
+                                  ? _navIconsSelected[index]
+                                  : _navIcons[index],
+                              width: 23,
+                              height: 28,
+                              color: bottomNavState.selectedIndex == index
+                                  ? Color(0xFF49329A).withValues(alpha: .8)
+                                  : Colors.grey.shade500,
+                            ),
+                            label: _navLabels[index],
+                          );
+                        }),
+                        selectedItemColor: Color(0xFF49329A),
+                        selectedLabelStyle:
+                            TextStyle(fontWeight: FontWeight.w800),
+                        unselectedFontSize: 13,
+                        unselectedLabelStyle: TextStyle(
+                            color: Colors.black,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700),
+                        unselectedItemColor: Colors.grey,
                       ),
-                      label: _navLabels[index],
-                    );
-                  }),
-                  selectedItemColor: Color(0xFF49329A),
-                  selectedLabelStyle: TextStyle(
-                      fontWeight: FontWeight.w800
-                  ),
-                  unselectedFontSize: 13,
-                  unselectedLabelStyle: TextStyle(
-                      color: Colors.black,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700
-
-                  ),
-                  unselectedItemColor: Colors.grey,
-                ),
-                floatingActionButton: bottomNavState.selectedIndex == 0
-                    ? ClipOval(
-                  child: Material(
-                    color: Color(0xFF49329A), // Transparent background
-                    child: InkWell(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => ChatBotScreen()),
-                        );
-                      },
-                      child: Container(
-                        width: 45, // Maintain the size of the button
-                        height: 45, // Keep the FAB size
-                        alignment: Alignment.center, // Center the image within the button
-                        child: Image.asset(
-                          'assets/fluent_bot-28-filled.png', // Replace with the image you want to use
-                          width: 28, // Image size, smaller than the button
-                          height: 28, // Image size, smaller than the button
-                        ),
-                      ),
+                      floatingActionButton: bottomNavState.selectedIndex == 0
+                          ? ClipOval(
+                              child: Material(
+                                color:
+                                    Color(0xFF49329A), // Transparent background
+                                child: InkWell(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) =>
+                                              ChatBotScreen()),
+                                    );
+                                  },
+                                  child: Container(
+                                    width:
+                                        45, // Maintain the size of the button
+                                    height: 45, // Keep the FAB size
+                                    alignment: Alignment
+                                        .center, // Center the image within the button
+                                    child: Image.asset(
+                                      'assets/fluent_bot-28-filled.png', // Replace with the image you want to use
+                                      width:
+                                          28, // Image size, smaller than the button
+                                      height:
+                                          28, // Image size, smaller than the button
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            )
+                          : null,
+                      floatingActionButtonLocation:
+                          FloatingActionButtonLocation.endFloat,
                     ),
-                  ),
-                ):null,
-                floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-              ),
-            );
+                  );
+                });
+          } else {
+            return Scaffold();
           }
-      );
-    }else{
-      return Scaffold();
-    }
-
-  },
-),
-);
-}
-
+        },
+      ),
+    );
+  }
 }
 
 // Define the different content widgets for each page
 class HomeContent extends StatefulWidget {
   final List<Map<String, dynamic>> gridItems;
-
 
   const HomeContent({super.key, required this.gridItems});
 
@@ -490,171 +516,197 @@ class HomeContent extends StatefulWidget {
 }
 
 class _HomeContentState extends State<HomeContent> {
-
-
-@override
+  @override
   void initState() {
     super.initState();
     context.read<CoinCubit>().setCoin(100);
     connectSocket();
   }
 
-  Future<void> connectSocket()async{
+  Future<void> connectSocket() async {
     await ChatSocket.connectScoket();
   }
 
-
-
   @override
   Widget build(BuildContext context) {
-     DateTime? lastPressed;
+    DateTime? lastPressed;
 
     Future<bool> onWillPop() async {
-    DateTime now = DateTime.now();
-    if (lastPressed == null || now.difference(lastPressed!) > Duration(seconds: 2)) {
-      lastPressed = now;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Press back again to exit')),
-      );
-      return false;
+      DateTime now = DateTime.now();
+      if (lastPressed == null ||
+          now.difference(lastPressed!) > Duration(seconds: 2)) {
+        lastPressed = now;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Press back again to exit')),
+        );
+        return false;
+      }
+      return true;
     }
-    return true;
-  }
 
     return WillPopScope(
       onWillPop: onWillPop,
-      child:
-    Scaffold(
-      backgroundColor: Color(0xFFE0F7FF),
-      appBar: CommonAppBar(title:"Home" ,isFromHomePage: true,),
-      body: FutureBuilder(
-        future: Future.value(widget.gridItems), // Use the gridItems passed to the widget
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text("Error loading data"));
-          } else {
-            List<Map<String, dynamic>> items = snapshot.data as List<Map<String, dynamic>>;
-            return Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Color(0xFFE0F7FF),
-                    Color(0xFFEAE4FF),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+      child: Scaffold(
+        backgroundColor: Color(0xFFE0F7FF),
+        appBar: CommonAppBar(
+          title: "Home",
+          isFromHomePage: true,
+        ),
+        body: FutureBuilder(
+          future: Future.value(
+              widget.gridItems), // Use the gridItems passed to the widget
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(child: CircularProgressIndicator());
+            } else if (snapshot.hasError) {
+              return Center(child: Text("Error loading data"));
+            } else {
+              List<Map<String, dynamic>> items =
+                  snapshot.data as List<Map<String, dynamic>>;
+              return Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Color(0xFFE0F7FF),
+                      Color(0xFFEAE4FF),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
                 ),
-              ),
-              child: Column(
-                children: [
-                  Align(
-                    alignment: Alignment.bottomLeft,
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 24, top: 18),
-                      child: Text(
-                        "Topics",
-                        textAlign: TextAlign.left,
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: AppConstants.commonFont,
-                          color: Color(0xFF414141),
+                child: Column(
+                  children: [
+                    Align(
+                      alignment: Alignment.bottomLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 24, top: 18),
+                        child: Text(
+                          "Topics",
+                          textAlign: TextAlign.left,
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: AppConstants.commonFont,
+                            color: Color(0xFF414141),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  Expanded(
-                    child: ListView.builder(
-                      padding: EdgeInsets.only(left: 24, right: 24, top: 5),
-                      itemCount: items.length,
-                      itemBuilder: (context, index) {
-                        var gridItem = items[index];
-                        return GestureDetector(
-                          onTap: () {
-                            if (gridItem['text'] == 'The essential language proces') {
-                              return;
-                            }
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => gridItem['page']),
-                            );
-                          },
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              Container(
-                                margin: EdgeInsets.symmetric(vertical: 10),
-                                decoration: BoxDecoration(
-                                  gradient:(gridItem['text'] == 'The essential language proces')?null:gridItem['gradient'],
-                                  color: (gridItem['text'] == 'The essential language proces')
-                                      ? Colors.grey.withValues(alpha: 0.44)
-                                      : null,
-                                  borderRadius: BorderRadius.circular(20),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.2),
-                                      spreadRadius: 1,
-                                      blurRadius: 6,
-                                      offset: Offset(0, 3),
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    Padding(
-                                      padding: const EdgeInsets.only(left: 18, top: 8, bottom: 8),
-                                      child: Container(
-                                        height: 55,
-                                        width: 55,
-                                        alignment: Alignment.bottomCenter,
-                                        decoration:(gridItem['text'] == 'The essential language proces')?null: BoxDecoration(
-                                          image: DecorationImage(
-                                            image: AssetImage(gridItem['image']),
-                                            fit: BoxFit.cover,
+                    Expanded(
+                      child: ListView.builder(
+                        padding: EdgeInsets.only(left: 24, right: 24, top: 5),
+                        itemCount: items.length,
+                        itemBuilder: (context, index) {
+                          var gridItem = items[index];
+                          return GestureDetector(
+                            onTap: () {
+                              if (gridItem['text'] ==
+                                  'The essential language proces') {
+                                return;
+                              }
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => gridItem['page']),
+                              );
+                            },
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Container(
+                                  margin: EdgeInsets.symmetric(vertical: 10),
+                                  decoration: BoxDecoration(
+                                    gradient: (gridItem['text'] ==
+                                            'The essential language proces')
+                                        ? null
+                                        : gridItem['gradient'],
+                                    color: (gridItem['text'] ==
+                                            'The essential language proces')
+                                        ? Colors.grey.withValues(alpha: 0.44)
+                                        : null,
+                                    borderRadius: BorderRadius.circular(20),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color:
+                                            Colors.black.withValues(alpha: 0.2),
+                                        spreadRadius: 1,
+                                        blurRadius: 6,
+                                        offset: Offset(0, 3),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                            left: 18, top: 8, bottom: 8),
+                                        child: Container(
+                                          height: 55,
+                                          width: 55,
+                                          alignment: Alignment.bottomCenter,
+                                          decoration: (gridItem['text'] ==
+                                                  'The essential language proces')
+                                              ? null
+                                              : BoxDecoration(
+                                                  image: DecorationImage(
+                                                    image: AssetImage(
+                                                        gridItem['image']),
+                                                    fit: BoxFit.cover,
+                                                  ),
+                                                ),
+                                          child: (gridItem['text'] ==
+                                                  'The essential language proces')
+                                              ? Center(
+                                                  child: Icon(
+                                                  Icons.lock,
+                                                  size: 30,
+                                                  color: Colors.white,
+                                                ))
+                                              : null,
+                                        ),
+                                      ),
+                                      SizedBox(width: 15),
+                                      Expanded(
+                                        child: Text(
+                                          "${capitalizeFirstLetter(gridItem['text'])}s",
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontFamily: AppConstants.commonFont,
+                                            fontWeight: (gridItem['text'] ==
+                                                    'The essential language process')
+                                                ? FontWeight.w500
+                                                : FontWeight.w900,
+                                            color: Colors.white,
                                           ),
                                         ),
-                                        child: (gridItem['text'] == 'The essential language proces')?Center(child: Icon(Icons.lock,size: 30,color: Colors.white,)):null,
                                       ),
-                                    ),
-                                    SizedBox(width: 15),
-                                    Expanded(
-                                      child: Text(
-                                        "${capitalizeFirstLetter(gridItem['text'])}s",
-                                        style: TextStyle(
-                                          fontSize: 18,
-                                          fontFamily: AppConstants.commonFont,
-                                          fontWeight:(gridItem['text'] == 'The essential language process')?FontWeight.w500: FontWeight.w900,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              if (gridItem['text'] == 'The essential language process')
-                                Positioned(
-                                  child: Icon(
-                                    Icons.lock,
-                                    color: Colors.white,
-                                    size: 40,
+                                    ],
                                   ),
                                 ),
-                            ],
-                          ),
-                        );
-                      },
+                                if (gridItem['text'] ==
+                                    'The essential language process')
+                                  Positioned(
+                                    child: Icon(
+                                      Icons.lock,
+                                      color: Colors.white,
+                                      size: 40,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            );
-          }
-        },
+                  ],
+                ),
+              );
+            }
+          },
+        ),
       ),
-    ),
     );
   }
 }

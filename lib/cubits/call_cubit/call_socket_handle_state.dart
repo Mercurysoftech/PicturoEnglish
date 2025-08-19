@@ -25,3 +25,4 @@ final class CallAccepted extends CallSocketHandleState {
   @override
   List<Object> get props => [];
 }
+

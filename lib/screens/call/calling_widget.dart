@@ -31,31 +31,37 @@ class CallingScreen extends StatefulWidget {
 }
 
 class _CallingScreenState extends State<CallingScreen> {
+   bool _isNavigating = false;
+
   @override
   void initState() {
     super.initState();
 
   }
 
-  Future<String> _getAvatarUrl(int avatarId) async {
+  Future<String> _getAvatarUrl(int? avatarId) async {
+    if (avatarId == null || avatarId == 0) {
+      return ''; 
+    }
+
     try {
       final apiService = await ApiService.create();
       final avatarResponse = await apiService.fetchAvatars();
-
       final avatar = avatarResponse.data.firstWhere(
-            (a) => a.id == avatarId,
+        (a) => a.id == avatarId,
         orElse: () => throw Exception('Avatar not found'),
       );
-
       return 'http://picturoenglish.com/admin/${avatar.avatarUrl}';
     } catch (e) {
       print('Error fetching avatar URL: $e');
-      throw e;
+      return ''; // Return empty string on error
     }
   }
 
-  Widget _buildUserAvatar(int avatarId) {
-    if (avatarId == 0) {
+
+   Widget _buildUserAvatar(int? avatarId) {
+    // Handle null or default avatar case
+    if (avatarId == null || avatarId == 0) {
       return const CircleAvatar(
         radius: 25,
         backgroundColor: Color(0xFF49329A),
@@ -75,18 +81,20 @@ class _CallingScreenState extends State<CallingScreen> {
               strokeWidth: 2,
             ),
           );
-        } else if (snapshot.hasError || !snapshot.hasData) {
+        }
+        
+        if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
           return const CircleAvatar(
             radius: 25,
             backgroundColor: Color(0xFF49329A),
             backgroundImage: AssetImage('assets/avatar2.png'),
           );
-        } else {
-          return CircleAvatar(
-            radius: 25,
-            backgroundImage: NetworkImage(snapshot.data!),
-          );
         }
+
+        return CircleAvatar(
+          radius: 25,
+          backgroundImage: NetworkImage(snapshot.data!),
+        );
       },
     );
   }
@@ -95,157 +103,147 @@ class _CallingScreenState extends State<CallingScreen> {
   Widget build(BuildContext context) {
     final double avatarRadius = 80;
 
+    final int safeFriendId = widget.friendId ?? 0; 
+
     return Scaffold(
-      body: BlocBuilder<CallSocketHandleCubit, CallSocketHandleState>(
-        builder: (context, state) {
-          print("skdcmklsdcmlskdc ${state.runtimeType}");
+      body: BlocListener<CallSocketHandleCubit, CallSocketHandleState>(
+        listener: (context, state) {
+          if (_isNavigating) return;
+
           if (state is CallRejected) {
-            Future.delayed(Duration.zero, () {
-              // if (context.mounted && Navigator.canPop(context)) {
-              //
-              //
-              // }
-              Navigator.pop(context);
-              context.read<CallSocketHandleCubit>().resetCubit();
-            });
+            _isNavigating = true;
+            Navigator.of(context).pop();
+            context.read<CallSocketHandleCubit>().resetCubit();
           } else if (state is CallAccepted) {
-            Future.delayed(Duration.zero, () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => VoiceCallScreen(
-                    callerId: widget.friendId??0,
-                    callerName: widget.callerName,
-                    callerImage: '',
-                    isIncoming: false,
-                  ),
+            _isNavigating = true;
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (context) => VoiceCallScreen(
+                  callerId: safeFriendId,
+                  callerName: widget.callerName,
+                  callerImage: '',
+                  isIncoming: false,
                 ),
-              ).then((_) {
-                if (context.mounted) {
-                  context.read<CallSocketHandleCubit>().resetCubit();
-                }
-              });
+              ),
+            ).then((_) {
+              if (mounted) {
+                context.read<CallSocketHandleCubit>().resetCubit();
+              }
             });
           }
-
-          return Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF1D2671), Color(0xFFC33764)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+        },
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF1D2671), Color(0xFFC33764)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            child: SafeArea(
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Avatar with shadow
-                    Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.white.withOpacity(0.2),
-                            blurRadius: 20,
-                            spreadRadius: 5,
-                          ),
-                        ],
-                      ),
-                      child: widget.avatarUrl == null
-                          ?  CircleAvatar(
-                        radius: avatarRadius,
-                        backgroundImage: AssetImage('assets/avatar2.png'),
-                      )
-                          : _buildUserAvatar(widget.avatarUrl!),
+          ),
+          child: SafeArea(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.white.withOpacity(0.2),
+                          blurRadius: 20,
+                          spreadRadius: 5,
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 30),
-
-                    // Blurred name card
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 12,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Colors.white24),
-                          ),
-                          child: Column(
-                            children: [
-                              Text(
-                                widget.callerName,
-                                style: const TextStyle(
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
+                    child: _buildUserAvatar(widget.avatarUrl),
+                  ),
+                  const SizedBox(height: 30),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.white24),
+                        ),
+                        child: Column(
+                          children: [
+                            Text(
+                              widget.callerName,
+                              style: const TextStyle(
+                                fontSize: 26,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
                               ),
-                              const SizedBox(height: 5),
-                              const Text(
-                                'Calling...',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.white70,
-                                ),
+                            ),
+                            const SizedBox(height: 5),
+                            const Text(
+                              'Calling...',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.white70,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                    const SizedBox(height: 80),
-
-                    // End Call Button
-                    GestureDetector(
-                      onTap: () async {
-                        context.read<CallSocketHandleCubit>().endCall();
-
+                  ),
+                  const SizedBox(height: 80),
+                  GestureDetector(
+                    onTap: () async {
+                      try {
+                        await context.read<CallSocketHandleCubit>().endCall();
                         await context.read<CallLogCubit>().postCallLog(
-                          receiverId: widget.friendId.toString(),
+                          receiverId: safeFriendId.toString(),
                           callType: "audio",
                           status: "inCompleted",
                           duration: 1,
                         );
-
-                        if (context.mounted && Navigator.canPop(context)) {
-                          Navigator.pop(context);
+                        if (mounted) Navigator.of(context).pop();
+                      } catch (e) {
+                        print('Error ending call: $e');
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error ending call: $e')),
+                          );
                         }
-                      },
-                      child: Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: const LinearGradient(
-                            colors: [Colors.redAccent, Colors.deepOrange],
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.redAccent.withOpacity(0.6),
-                              blurRadius: 12,
-                              offset: const Offset(0, 6),
-                            )
-                          ],
+                      }
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          colors: [Colors.redAccent, Colors.deepOrange],
                         ),
-                        padding: const EdgeInsets.all(20),
-                        child: const Icon(
-                          Icons.call_end,
-                          color: Colors.white,
-                          size: 32,
-                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.redAccent.withOpacity(0.6),
+                            blurRadius: 12,
+                            offset: const Offset(0, 6),
+                          )
+                        ],
+                      ),
+                      padding: const EdgeInsets.all(20),
+                      child: const Icon(
+                        Icons.call_end,
+                        color: Colors.white,
+                        size: 32,
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }
