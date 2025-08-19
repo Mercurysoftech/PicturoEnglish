@@ -14,10 +14,18 @@ class NotificationService {
   // IDs for different notifications
   static const int morningNotificationId = 1;
   static const int eveningNotificationId = 2;
+  static const int chatMessageNotificationId = 3;
 
   Future<void> init() async {
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
+
+         const DarwinInitializationSettings iosInitializationSettings =
+        DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+    );
 
     const InitializationSettings initializationSettings =
         InitializationSettings(
@@ -27,7 +35,7 @@ class NotificationService {
     await notificationsPlugin.initialize(
       initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse details) {
-        print("lsadkcmlsdkcmlskdcmlskcmsdlkcmasldkcmslvkj ${details.data}");
+        print("Notification tapped: ${details.data}");
         // Handle notification tap if needed
       },
     );
@@ -184,11 +192,56 @@ class NotificationService {
     );
   }
 
+   Future<void> showMessageNotification({
+    required String title,
+    required String body,
+    required String payload,
+    int id = chatMessageNotificationId,
+  }) async {
+    if (!await requestPermissions()) return;
+
+    const AndroidNotificationDetails androidNotificationDetails =
+        AndroidNotificationDetails(
+      'chat_messages',
+      'Chat Messages',
+      channelDescription: 'Notifications for new chat messages',
+      importance: Importance.high,
+      priority: Priority.high,
+      showWhen: true,
+      enableVibration: true,
+      playSound: true,
+    );
+
+    const DarwinNotificationDetails iosNotificationDetails =
+        DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    const NotificationDetails notificationDetails = NotificationDetails(
+      android: androidNotificationDetails,
+      iOS: iosNotificationDetails,
+    );
+
+    await notificationsPlugin.show(
+      id,
+      title,
+      body,
+      notificationDetails,
+      payload: payload,
+    );
+  }
+
   Future<void> cancelNotification(int id) async {
     await notificationsPlugin.cancel(id);
   }
 
   Future<void> cancelAllNotifications() async {
+    await notificationsPlugin.cancelAll();
+  }
+
+  void cancelAll() async {
     await notificationsPlugin.cancelAll();
   }
 }

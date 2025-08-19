@@ -139,13 +139,13 @@ class PushNotificationService {
     );
 
    FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
-  print("📲 Foreground FCM: ${message.data}");
+  print("📲 Foreground Data: ${message.data}");
 
   RemoteNotification? notification = message.notification;
   AndroidNotification? android = message.notification?.android;
 
-  if (notification != null && android != null) {
-    // Show notification manually while app is foreground
+  if (notification != null) {
+
     flutterLocalNotificationsPlugin.show(
       notification.hashCode,
       notification.title,
@@ -221,6 +221,30 @@ Payload: $payload
       payload: payload,
     );
   }
+
+  // Add this method to check if notification should be shown
+static bool _shouldShowNotification(Map<String, dynamic> data) {
+  // Skip if data is null or empty
+  if (data.isEmpty) {
+    log("⚠️ Skipping empty notification data");
+    return false;
+  }
+
+  // Skip notifications with null values
+  if ((data['username'] == null || data['username'] == 'null') &&
+      (data['sender_id'] == null || data['sender_id'] == 'null')) {
+    log("⚠️ Skipping notification with null values");
+    return false;
+  }
+
+  // Skip socket messages (they're handled by socket service)
+  if (data['type'] == 'socket_message') {
+    log("🔇 Skipping socket message (handled by socket service)");
+    return false;
+  }
+
+  return true;
+}
 
   static void _handleMessage(RemoteMessage message) {
     log("🔄 Handling notification message");

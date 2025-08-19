@@ -36,6 +36,10 @@ class ChatSocket {
     socket!.on('register', (data) {
       // Handle register response
     });
+
+     if (socket != null && socket!.connected) {
+      return;
+    }
   }
 
   static void dispose() {

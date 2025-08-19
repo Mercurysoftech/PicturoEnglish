@@ -47,9 +47,11 @@ class _CallAcceptScreenState extends State<CallAcceptScreen> {
           if (_isNavigating) return;
 
           if (state is CallRejected) {
-            _isNavigating = true;
-            Navigator.of(context).pop();
+            Future.delayed(Duration.zero, () {
+              _isNavigating = true;
+            //Navigator.of(context).pop();
             context.read<CallSocketHandleCubit>().resetCubit();
+            });
           } else if (state is CallAccepted) {
             _isNavigating = true;
             Navigator.of(context)
@@ -107,7 +109,7 @@ class _CallAcceptScreenState extends State<CallAcceptScreen> {
                     GestureDetector(
                       onTap: () async {
                         context.read<CallSocketHandleCubit>().endCall();
-                        if (mounted) Navigator.of(context).pop();
+                        //if (mounted) Navigator.of(context).pop();
                       },
                       child: Container(
                         padding: const EdgeInsets.all(20),

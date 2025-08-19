@@ -35,16 +35,20 @@ import '../utils/common_app_bar.dart';
 import '../utils/common_file.dart';
 
 class Homepage extends StatefulWidget {
-  const Homepage({super.key});
+  final int initialIndex;
+  const Homepage({super.key,this.initialIndex = 0});
 
   @override
   _HomepageState createState() => _HomepageState();
 }
 
 class _HomepageState extends State<Homepage> with WidgetsBindingObserver {
+  late int _currentIndex;
   DateTime? lastPressed;
   ApiService? apiService;
   bool _isLoading = true;
+
+  
 
   Future<void> updateFcmToken() async {
     const String url = 'https://picturoenglish.com/api/update_fcm_token.php';
@@ -186,9 +190,10 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver {
     updateFcmToken();
     WidgetsBinding.instance.addObserver(this);
     super.initState();
+    _currentIndex = widget.initialIndex;
 
     _pages.add(
-        HomeContent(gridItems: _gridItems)); // Pass _gridItems to HomeContent
+        HomeContent(gridItems: _gridItems)); 
     _pages.add(ChatListPage());
     _pages.add(GamesPage());
     _pages.add(NotificationScreen());
@@ -199,7 +204,6 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver {
     handleCall();
     context.read<CallSocketHandleCubit>().fetchAllUsers();
     context.read<UserFriendsCubit>().resetCubit();
-    // Fetch books data from the API
     fetchBooksAndUpdateGrid();
   }
 

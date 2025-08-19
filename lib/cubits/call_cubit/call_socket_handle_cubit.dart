@@ -300,7 +300,7 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
       'from': currentUserId,
       'to': targetId,
     "type": "incoming_call",
-    "caller_id": currentUserId,           // ✅ safe replacement
+    "caller_id": currentUserId,          
     "receiver_id": targetId,
     "deep_link": "/call/${currentUserId}"
     });

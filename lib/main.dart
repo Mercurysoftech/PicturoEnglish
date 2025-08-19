@@ -43,6 +43,7 @@ import 'package:picturo_app/screens/signupscreen.dart';
 import 'package:picturo_app/screens/splashscreenpage.dart';
 import 'package:picturo_app/screens/voicecallscreen.dart';
 import 'package:picturo_app/services/api_service.dart';
+import 'package:picturo_app/services/global_service.dart';
 import 'package:picturo_app/services/push_notification_service.dart';
 import 'package:picturo_app/socket/socketservice.dart';
 import 'package:picturo_app/utils/common_file.dart';
@@ -75,9 +76,8 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   try {
     if (message.data['type'] == 'incoming_call') {
       log("📞 Background call notification received");
-      await _showCallNotification(message.data);
+      //await _showCallNotification(message.data);
 
-      // Ensure the payload is properly formatted
       final callerId =
           int.tryParse(message.data['caller_id']?.toString() ?? "0") ?? 0;
       final callerName =
@@ -106,7 +106,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       );
     } else {
       log("💬 Background chat notification received");
-      _showNotification(message.data);
+      //_showNotification(message.data);
     }
   } catch (e) {
     log("⚠️ Error in background handler: $e");
@@ -200,46 +200,97 @@ class MyHttpOverrides extends HttpOverrides {
   }
 }
 
+Future<void> setupFlutterNotifications() async {
+  const AndroidInitializationSettings initializationSettingsAndroid =
+      AndroidInitializationSettings('@mipmap/ic_launcher'); // your app icon
+
+  const InitializationSettings initializationSettings =
+      InitializationSettings(android: initializationSettingsAndroid);
+
+  await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+}
+
 String? initialNotificationPayload;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   bool openedFromNotification = false;
   Map<String, dynamic>? notificationData;
+  await setupFlutterNotifications();
 
   await NotificationService().init();
+  
+
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+
+  Future<void> _showLocalNotification(RemoteMessage message) async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+      'high_importance_channel',
+      'High Importance Notifications',
+      importance: Importance.max,
+      priority: Priority.high,
+      showWhen: true,
+    );
+
+    const NotificationDetails platformChannelSpecifics =
+        NotificationDetails(android: androidPlatformChannelSpecifics);
+
+    await flutterLocalNotificationsPlugin.show(
+      DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      message.notification?.title ?? "📩 New Message",
+      message.notification?.body ?? "",
+      platformChannelSpecifics,
+      payload: message.data['deep_link'],
+    );
+  }
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-    log("📲 Foreground message received: ${message.data}");
+  await globalSocketService.initialize();
+  WidgetsBinding.instance.addObserver(AppLifecycleObserver());
 
-    if (message.data['type'] == 'incoming_call') {
-      log("📞 Foreground call notification");
-      _showCallNotification(message.data);
-    } else {
-      log("💬 Foreground chat notification");
-    }
+// FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
+//   log("📲 Foreground message received: ${message.data}");
 
-    if (message.data.isNotEmpty) {
-      _showNotification(message.data);
-    }
-  });
+//   // Skip if data is empty or invalid
+//   if (message.data.isEmpty ||
+//       (message.data['type'] == null && message.notification == null)) {
+//     log("⚠️ Skipping empty/invalid notification");
+//     return;
+//   }
 
-  FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-    log("📱 App opened from background with notification: ${message.data}");
+//   // Handle call notifications
+//   if (message.data['type'] == 'incoming_call') {
+//     log("📞 Foreground call notification");
+//     await _showCallNotification(message.data);
+//     return;
+//   }
 
-    if (message.data['type'] == "chat") {
-      log("💬 Opening chat from background notification");
-      final chatId = message.data['sender_id'];
-      if (Get.currentRoute != '/chat/$chatId') {
-        Get.toNamed('/chat/$chatId');
-      }
-    } else if (message.data['type'] == "incoming_call") {
-      log("📞 Opening call from background notification");
-    }
-  });
+//   // Handle chat notifications - only show if not from socket
+//   if (message.data['type'] != 'socket_message') {
+//     log("💬 Foreground chat notification from FCM");
+//     _showNotification(message.data);
+//   }
+// });
+
+// // Remove the duplicate _showNotification call that was causing duplicates
+
+//   FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+//     log("📱 App opened from background with notification: ${message.data}");
+
+//     if (message.data['type'] == "chat") {
+//       log("💬 Opening chat from background notification");
+//       final chatId = message.data['sender_id'];
+//       if (Get.currentRoute != '/chat/$chatId') {
+//         Get.toNamed('/chat/$chatId');
+//       }
+//     } else if (message.data['type'] == "incoming_call") {
+//       log("📞 Opening call from background notification");
+//     }
+//   });
 
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
@@ -442,9 +493,7 @@ class _MyAppState extends State<MyApp> {
   void _handleNotificationNavigation(String payload) async {
     log("🔄 Handling notification navigation with payload: $payload");
 
-    await context
-          .read<CallSocketHandleCubit>()
-          .initCallSocket();
+    await context.read<CallSocketHandleCubit>().initCallSocket();
 
     try {
       final data = jsonDecode(payload);
@@ -667,5 +716,26 @@ class _UserPageState extends State<UserPage> {
       appBar: AppBar(title: const Text('Hive Local User')),
       body: Text("sdcsdc"),
     );
+  }
+}
+
+class AppLifecycleObserver extends WidgetsBindingObserver {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.resumed:
+        globalSocketService.setAppState(true);
+        log('📱 App in foreground');
+        break;
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+        globalSocketService.setAppState(false);
+        log('📱 App in background');
+        break;
+      case AppLifecycleState.hidden:
+      log('📱 App is hidden');
+        break;
+    }
   }
 }

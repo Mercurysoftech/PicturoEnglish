@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:picturo_app/cubits/call_cubit/call_socket_handle_cubit.dart';
+import 'package:picturo_app/screens/homepage.dart';
 
 import '../cubits/call_cubit/call_duration_handler/call_duration_handle_cubit.dart';
 
@@ -156,7 +157,11 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
                 left: 20,
                 child: IconButton(
                   icon: Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () => Navigator.pushReplacement(
+  context,
+  MaterialPageRoute(builder: (context) => const Homepage()),
+)
+,
                 ),
               ),
             ],
