@@ -83,30 +83,36 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       final callerName =
           message.data['caller_username']?.toString() ?? "Unknown";
 
-      await flutterLocalNotificationsPlugin.show(
-        1,
-        "Incoming Call",
-        "From $callerName",
-        NotificationDetails(
-          android: AndroidNotificationDetails(
-            'call_channel',
-            'Call Notifications',
-            channelDescription: 'Incoming calls',
-            importance: Importance.max,
-            priority: Priority.high,
-            playSound: true,
-            fullScreenIntent: true,
-          ),
-        ),
-        payload: jsonEncode({
-          'type': 'incoming_call',
-          'caller_id': callerId.toString(),
-          'caller_username': callerName,
-        }),
-      );
+      // await flutterLocalNotificationsPlugin.show(
+      //   1,
+      //   "Incoming Call",
+      //   "From $callerName",
+      //   NotificationDetails(
+      //     android: AndroidNotificationDetails(
+      //       'call_channel',
+      //       'Call Notifications',
+      //       channelDescription: 'Incoming calls',
+      //       importance: Importance.max,
+      //       priority: Priority.high,
+      //       playSound: true,
+      //       fullScreenIntent: true,
+      //     ),
+      //   ),
+      //   payload: jsonEncode({
+      //     'type': 'incoming_call',
+      //     'caller_id': callerId.toString(),
+      //     'caller_username': callerName,
+      //   }),
+      // );
+
+      showFlutterCallNotification(
+          callSessionId: 'sdkjcslkcmslkcmsdc',
+          userId: callerId.toString(),
+          callerName: callerName,
+        );
     } else {
       log("💬 Background chat notification received");
-      //_showNotification(message.data);
+      _showNotification(message.data);
     }
   } catch (e) {
     log("⚠️ Error in background handler: $e");

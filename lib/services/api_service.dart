@@ -23,7 +23,7 @@ import 'package:picturo_app/responses/view_bank_response.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  static const String baseUrl = "https://picturoenglish.com/api/"; // Replace with your API URL
+  static const String baseUrl = "https://picturoenglish.com/api/"; 
   static const String smsApiUrl = "http://site.ping4sms.com/api/";
   late SharedPreferences _prefs;
   late Dio _dio;
