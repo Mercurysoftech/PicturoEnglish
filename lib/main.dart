@@ -136,14 +136,14 @@ Future<void> _showCallNotification(Map<String, dynamic> data) async {
     importance: Importance.max,
     priority: Priority.high,
     playSound: true,
-    timeoutAfter: 60000, // 1 minute timeout
-    fullScreenIntent: true, // Important for call notifications
+    timeoutAfter: 60000,
+    fullScreenIntent: true, 
   );
 
   final details = NotificationDetails(android: androidDetails);
 
   await flutterLocalNotificationsPlugin.show(
-    1, // Different ID for calls
+    1, 
     "Incoming Call",
     "From ${data['caller_username']}",
     details,
