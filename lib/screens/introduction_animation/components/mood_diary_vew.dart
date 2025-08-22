@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../genderandagepage.dart';
 import '../../homepage.dart';
-import '../../loginscreen.dart';
+
 
 class MoodDiaryVew extends StatelessWidget {
   final AnimationController animationController;

@@ -19,34 +19,14 @@ import 'package:picturo_app/cubits/referal_cubit/referal_cubit.dart';
 import 'package:picturo_app/providers/bankaccountprovider.dart';
 import 'package:picturo_app/providers/profileprovider.dart';
 import 'package:picturo_app/providers/userprovider.dart';
-import 'package:picturo_app/screens/actionsnappage.dart';
-import 'package:picturo_app/screens/call/calling_widget.dart';
-import 'package:picturo_app/screens/call/widgets/call_receive_widget.dart';
-import 'package:picturo_app/screens/chatbotpage.dart';
-import 'package:picturo_app/screens/chatlistpage.dart';
 import 'package:picturo_app/screens/chatscreenpage.dart';
-import 'package:picturo_app/screens/chooseavatarpage.dart';
-import 'package:picturo_app/screens/dragandlearnpage.dart';
-import 'package:picturo_app/screens/gamespage.dart';
-import 'package:picturo_app/screens/genderandagepage.dart';
-import 'package:picturo_app/screens/homepage.dart';
-import 'package:picturo_app/screens/indermidiateandreasonpage.dart';
-import 'package:picturo_app/screens/introduction_animation/introduction_animation_screen.dart';
-import 'package:picturo_app/screens/languageselectionpage.dart';
-import 'package:picturo_app/screens/learningtitlepage.dart';
-import 'package:picturo_app/screens/learnwordspage.dart';
-import 'package:picturo_app/screens/locationgetpage.dart';
-import 'package:picturo_app/screens/loginscreen.dart';
-import 'package:picturo_app/screens/myprofilepage.dart';
-import 'package:picturo_app/screens/premiumscreenpage.dart';
-import 'package:picturo_app/screens/signupscreen.dart';
 import 'package:picturo_app/screens/splashscreenpage.dart';
 import 'package:picturo_app/screens/voicecallscreen.dart';
 import 'package:picturo_app/services/api_service.dart';
 import 'package:picturo_app/services/global_service.dart';
+import 'package:picturo_app/services/navigation_service.dart';
 import 'package:picturo_app/services/push_notification_service.dart';
 import 'package:picturo_app/socket/socketservice.dart';
-import 'package:picturo_app/utils/common_file.dart';
 import 'package:provider/provider.dart';
 
 import 'cubits/bottom_navigator_index_cubit.dart';
@@ -83,28 +63,6 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       final callerName =
           message.data['caller_username']?.toString() ?? "Unknown";
 
-      // await flutterLocalNotificationsPlugin.show(
-      //   1,
-      //   "Incoming Call",
-      //   "From $callerName",
-      //   NotificationDetails(
-      //     android: AndroidNotificationDetails(
-      //       'call_channel',
-      //       'Call Notifications',
-      //       channelDescription: 'Incoming calls',
-      //       importance: Importance.max,
-      //       priority: Priority.high,
-      //       playSound: true,
-      //       fullScreenIntent: true,
-      //     ),
-      //   ),
-      //   payload: jsonEncode({
-      //     'type': 'incoming_call',
-      //     'caller_id': callerId.toString(),
-      //     'caller_username': callerName,
-      //   }),
-      // );
-
       showFlutterCallNotification(
           callSessionId: 'sdkjcslkcmslkcmsdc',
           userId: callerId.toString(),
@@ -112,88 +70,15 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
         );
     } else {
       log("💬 Background chat notification received");
-      _showNotification(message.data);
+      PushNotificationService.showNotification(message);
     }
   } catch (e) {
     log("⚠️ Error in background handler: $e");
   }
 }
 
-Future<void> _showCallNotification(Map<String, dynamic> data) async {
-  log("""
-📞 Showing call notification:
-- Caller ID: ${data['caller_id']}
-- Caller Name: ${data['caller_username']}
-- Type: ${data['type']}
-""");
 
-  final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
-  final androidDetails = AndroidNotificationDetails(
-    'call_channel',
-    'Call Notifications',
-    channelDescription: 'Incoming calls',
-    importance: Importance.max,
-    priority: Priority.high,
-    playSound: true,
-    timeoutAfter: 60000, // 1 minute timeout
-    fullScreenIntent: true, // Important for call notifications
-  );
-
-  final details = NotificationDetails(android: androidDetails);
-
-  await flutterLocalNotificationsPlugin.show(
-    1, // Different ID for calls
-    "Incoming Call",
-    "From ${data['caller_username']}",
-    details,
-    payload: jsonEncode(data),
-  );
-}
-
-void _showNotification(Map<String, dynamic> data) async {
-  log("""
-💬 Showing chat notification:
-- Sender ID: ${data['sender_id']}
-- Username: ${data['username']}
-- Avatar ID: ${data['avatar_id']}
-- Message: ${data['body']}
-""");
-
-  final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
-
-  final bigPicture = data['avatar_url']?.isNotEmpty == true
-      ? BigPictureStyleInformation(
-          FilePathAndroidBitmap(data['avatar_url']),
-          contentTitle: data['title'],
-          summaryText: data['body'],
-        )
-      : null;
-
-  final androidDetails = AndroidNotificationDetails(
-    'chat_channel',
-    'Chat Notifications',
-    channelDescription: 'New chat messages',
-    styleInformation: bigPicture,
-    largeIcon: data['avatar_url']?.isNotEmpty == true
-        ? FilePathAndroidBitmap(data['avatar_url'])
-        : null,
-    importance: Importance.high,
-    priority: Priority.high,
-  );
-
-  final details = NotificationDetails(android: androidDetails);
-
-  await flutterLocalNotificationsPlugin.show(
-    0,
-    "${data['username']} • ${data['title']}",
-    data['body'],
-    details,
-    payload: data['deep_link'],
-  );
-}
-
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
@@ -219,84 +104,16 @@ Future<void> setupFlutterNotifications() async {
 String? initialNotificationPayload;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  bool openedFromNotification = false;
-  Map<String, dynamic>? notificationData;
+
   await setupFlutterNotifications();
-
-  await NotificationService().init();
-  
-
-  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-      FlutterLocalNotificationsPlugin();
-
-  Future<void> _showLocalNotification(RemoteMessage message) async {
-    const AndroidNotificationDetails androidPlatformChannelSpecifics =
-        AndroidNotificationDetails(
-      'high_importance_channel',
-      'High Importance Notifications',
-      importance: Importance.max,
-      priority: Priority.high,
-      showWhen: true,
-    );
-
-    const NotificationDetails platformChannelSpecifics =
-        NotificationDetails(android: androidPlatformChannelSpecifics);
-
-    await flutterLocalNotificationsPlugin.show(
-      DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      message.notification?.title ?? "📩 New Message",
-      message.notification?.body ?? "",
-      platformChannelSpecifics,
-      payload: message.data['deep_link'],
-    );
-  }
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-
+  await NotificationService().requestPermissions();
+  PushNotificationService.initialize();
   await globalSocketService.initialize();
   WidgetsBinding.instance.addObserver(AppLifecycleObserver());
-
-// FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
-//   log("📲 Foreground message received: ${message.data}");
-
-//   // Skip if data is empty or invalid
-//   if (message.data.isEmpty ||
-//       (message.data['type'] == null && message.notification == null)) {
-//     log("⚠️ Skipping empty/invalid notification");
-//     return;
-//   }
-
-//   // Handle call notifications
-//   if (message.data['type'] == 'incoming_call') {
-//     log("📞 Foreground call notification");
-//     await _showCallNotification(message.data);
-//     return;
-//   }
-
-//   // Handle chat notifications - only show if not from socket
-//   if (message.data['type'] != 'socket_message') {
-//     log("💬 Foreground chat notification from FCM");
-//     _showNotification(message.data);
-//   }
-// });
-
-// // Remove the duplicate _showNotification call that was causing duplicates
-
-//   FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-//     log("📱 App opened from background with notification: ${message.data}");
-
-//     if (message.data['type'] == "chat") {
-//       log("💬 Opening chat from background notification");
-//       final chatId = message.data['sender_id'];
-//       if (Get.currentRoute != '/chat/$chatId') {
-//         Get.toNamed('/chat/$chatId');
-//       }
-//     } else if (message.data['type'] == "incoming_call") {
-//       log("📞 Opening call from background notification");
-//     }
-//   });
 
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
@@ -308,7 +125,7 @@ void main() async {
       log("✅ Call accepted via CallKit");
       final data = event?.body ?? {};
       final target = int.parse(data["extra"]['userId'] ?? "0");
-      final cubit = navigatorKey.currentContext?.read<CallSocketHandleCubit>();
+      final cubit = NavigationService.instance.navigationKey.currentContext?.read<CallSocketHandleCubit>();
 
       if (cubit == null) {
         log("⚠️ Call cubit not available");
@@ -320,9 +137,9 @@ void main() async {
         return;
       }
 
-      cubit.acceptCall(target);
+
       Navigator.push(
-        navigatorKey.currentContext!,
+        NavigationService.instance.navigationKey.currentContext!,
         MaterialPageRoute(
           builder: (context) => VoiceCallScreen(
             callerId: target,
@@ -334,12 +151,11 @@ void main() async {
       );
     } else if (event?.event == Event.actionCallDecline) {
       log("❌ Call declined via CallKit");
-      navigatorKey.currentContext?.read<CallSocketHandleCubit>().endCall();
+      NavigationService.instance.navigationKey.currentContext?.read<CallSocketHandleCubit>().endCall();
     }
   });
 
-  await NotificationService().requestPermissions();
-  PushNotificationService.initialize();
+
 
   // Get the launch details (if app opened from terminated state)
   final NotificationAppLaunchDetails? launchDetails =
@@ -359,7 +175,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => UserProvider()),
         ChangeNotifierProvider(create: (_) => SocketService()),
         ChangeNotifierProvider(create: (context) => ProfileProvider()),
-        BlocProvider(create: (context) => CallSocketHandleCubit()),
+        BlocProvider(create: (context) => CallSocketHandleCubit()..initCallSocket()),
         BlocProvider(create: (context) => DragLearnCubit()),
         BlocProvider(create: (context) => SubtopicCubit()),
         BlocProvider(create: (context) => AvatarCubit()),
@@ -384,92 +200,6 @@ void main() async {
   );
 }
 
-class DraggableFloatingButton extends StatefulWidget {
-  final VoidCallback onTap;
-
-  const DraggableFloatingButton({super.key, required this.onTap});
-
-  @override
-  _DraggableFloatingButtonState createState() =>
-      _DraggableFloatingButtonState();
-}
-
-class _DraggableFloatingButtonState extends State<DraggableFloatingButton> {
-  Offset position = const Offset(20, 100);
-  String formatDuration(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    final hours = twoDigits(duration.inHours);
-    final minutes = twoDigits(duration.inMinutes.remainder(60));
-    final seconds = twoDigits(duration.inSeconds.remainder(60));
-    return "$hours:$minutes:$seconds";
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      left: position.dx,
-      top: position.dy,
-      child: GestureDetector(
-        onPanUpdate: (details) {
-          setState(() {
-            position += details.delta;
-          });
-        },
-        child: BlocBuilder<CallSocketHandleCubit, CallSocketHandleState>(
-          builder: (context, state) {
-            final callCubit =
-                BlocProvider.of<CallSocketHandleCubit>(context, listen: true);
-            final isActive = callCubit.isLiveCallActive;
-
-            return (isActive)
-                ? InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => VoiceCallScreen(
-                              callerId: context
-                                      .watch<CallSocketHandleCubit>()
-                                      .targetUserId ??
-                                  0,
-                              callerName: "Testd",
-                              callerImage: '',
-                              isIncoming: false),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      height: 30,
-                      margin: EdgeInsets.only(right: 2),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(30),
-                        color: Colors.green.withOpacity(0.12),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                        child: Center(
-                          child: BlocBuilder<CallTimerCubit, CallTimerState>(
-                            builder: (context, state) {
-                              return Text(
-                                formatDuration(state.duration),
-                                style: TextStyle(
-                                    fontFamily: AppConstants.commonFont,
-                                    fontSize: 16,
-                                    color: Colors.green),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                    ),
-                  )
-                : SizedBox();
-          },
-        ),
-      ),
-    );
-  }
-}
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
@@ -505,26 +235,7 @@ class _MyAppState extends State<MyApp> {
       final data = jsonDecode(payload);
 
       if (data['type'] == 'incoming_call') {
-        log("📞 Handling incoming call notification navigation");
-        final callerId =
-            int.tryParse(data['caller_id']?.toString() ?? "0") ?? 0;
-        final callerName = data['caller_username']?.toString() ?? "Unknown";
 
-        if (navigatorKey.currentContext == null) {
-          log("⚠️ Navigator context not available");
-          return;
-        }
-
-        Navigator.of(navigatorKey.currentContext!).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (context) => CallAcceptScreen(
-              callerName: callerName,
-              avatarUrl: 0,
-              callerId: callerId,
-            ),
-          ),
-          (route) => false,
-        );
       } else {
         log("💬 Handling chat notification navigation");
         final senderName = data['username']?.toString() ?? "Unknown";
@@ -532,7 +243,7 @@ class _MyAppState extends State<MyApp> {
             int.tryParse(data['avatar_id']?.toString() ?? "0") ?? 0;
         final userId = int.tryParse(data['sender_id']?.toString() ?? "0") ?? 0;
 
-        Navigator.of(navigatorKey.currentContext!).pushAndRemoveUntil(
+        Navigator.of(NavigationService.instance.navigationKey.currentContext!).pushAndRemoveUntil(
           MaterialPageRoute(
             builder: (context) => ChatScreen(
               avatarWidget:
@@ -603,8 +314,9 @@ class _MyAppState extends State<MyApp> {
       throw e;
     }
   }
-
-  Future<dynamic> getCurrentCall() async {
+  String? callerName;
+  int? targetId;
+  Future<Map<String,dynamic>?> getCurrentCall() async {
     var calls = await FlutterCallkitIncoming.activeCalls();
     if (calls is List) {
       if (calls.isNotEmpty) {
@@ -612,8 +324,14 @@ class _MyAppState extends State<MyApp> {
 
         if (accepted) {
           setState(() {
+            callConnectd=true;
+            callerName=calls[0]['nameCaller'];
+             targetId = int.parse(calls[0]["extra"]['userId'] ?? "0");
             _currentUuid = calls[0]['id'];
           });
+          FlutterCallkitIncoming.endCall("sdkjcslkcmslkcmsdc");
+        }else{
+          FlutterCallkitIncoming.endCall("sdkjcslkcmslkcmsdc");
         }
 
         return calls[0];
@@ -622,48 +340,61 @@ class _MyAppState extends State<MyApp> {
         return null;
       }
     }
+    return null;
   }
-
+  bool callConnectd=false;
   Future<void> checkAndNavigationCallingPage() async {
-    var currentCall = await getCurrentCall();
-    BuildContext? contextx = navigatorKey.currentContext;
 
-    if (contextx != null) {
-      if (currentCall != null) {
-        int userCurrentId = int.parse(_currentUuid ?? "0");
-        int target = int.parse(currentCall["extra"]['userId'] ?? "0");
-        context.read<CallSocketHandleCubit>().acceptCall(target);
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => VoiceCallScreen(
-                callerId: target,
-                callerName: "${currentCall['nameCaller']}",
-                callerImage: '',
-                isIncoming: false),
-          ),
-        );
+    Map<String,dynamic>? currentCall = await getCurrentCall();
+
+    BuildContext? contextx=NavigationService.instance.navigationKey.currentContext;
+    if(contextx!=null){
+      if(currentCall!=null){
+
+     Future.delayed(Duration.zero,(){
+       if(contextx.mounted){
+         int target = int.parse(currentCall["extra"]['userId'] ?? "0");
+
+         Navigator.push(
+           contextx,
+           MaterialPageRoute(
+             builder: (context) => VoiceCallScreen(
+                 callerId: target,
+                 callerName: "${currentCall['nameCaller']}",
+                 callerImage: '',
+                 isIncoming: false),
+           ),
+         );
+       }
+
+     });
       }
-    } else {
+    }else{
       if (currentCall != null) {
-        bool accepted = currentCall['accepted'];
+        bool accepted=currentCall['accepted'];
 
-        if (accepted) {
-          int target = int.parse(currentCall["extra"]['userId'] ?? "0");
-          context.read<CallSocketHandleCubit>().acceptCall(target);
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => VoiceCallScreen(
-                  callerId: target,
-                  callerName: "${currentCall['nameCaller']}",
-                  callerImage: '',
-                  isIncoming: false),
-            ),
-          );
+        if(accepted){
+
+
+            setState(() {
+              callConnectd=true;
+            });
+
+
+          Future.delayed(const Duration(seconds: 2),()async{
+
+            callConnectd=false;
+            _currentUuid='';
+            setState(() {
+
+            });
+          });
+
         }
+
       }
     }
+
   }
 
   @override
@@ -679,26 +410,43 @@ class _MyAppState extends State<MyApp> {
     return BlocProvider(
       create: (context) => TopicCubit(),
       child: GetMaterialApp(
-        navigatorKey: navigatorKey,
+        navigatorKey:NavigationService.instance.navigationKey,
         debugShowCheckedModeBanner: false,
-        initialRoute: initialRoute,
-        routes: {
-          '/': (context) => SplashScreen(),
-          '/login': (context) => LoginScreen(),
-          '/homepage': (context) => Homepage(),
-          '/signup': (context) => Signupscreen(),
-          '/gender&age': (context) => GenderAgeScreen(),
-          '/gamespage': (context) => GamesPage(),
-          '/profile': (context) => MyProfileScreen(),
-          '/location': (context) => LocationGetPage(
-                isFromProfile: false,
-              ),
-          '/language': (context) => LanguageSelectionApp(),
-        },
+          home: (_currentUuid!=null&&_currentUuid!='')?(callConnectd)?
+          VoiceCallScreen(
+              callerId: targetId??0,
+              callerName: "${callerName}",
+              callerImage: '',
+              isIncoming: false)
+              :const LoadedrSatste():
+          const SplashScreen())
+    );
+  }
+}
+class LoadedrSatste extends StatefulWidget {
+  const LoadedrSatste({super.key});
+
+  @override
+  State<LoadedrSatste> createState() => _LoadedrSatsteState();
+}
+
+class _LoadedrSatsteState extends State<LoadedrSatste> {
+
+  @override
+  void initState() {
+
+    super.initState();
+  }
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(
+        child: CircularProgressIndicator(),
       ),
     );
   }
 }
+
 
 String capitalizeFirstLetter(String input) {
   if (input.isEmpty) return input;

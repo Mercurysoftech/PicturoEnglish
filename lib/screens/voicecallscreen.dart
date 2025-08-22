@@ -40,6 +40,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
     if(!context.read<CallSocketHandleCubit>().isLiveCallActive) {
       context.read<CallTimerCubit>().resetTimer();
     }
+    context.read<CallSocketHandleCubit>().acceptCall(widget.callerId);
     context.read<CallTimerCubit>().startTimer();
     super.initState();
 

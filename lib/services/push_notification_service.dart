@@ -13,6 +13,7 @@ import 'package:picturo_app/screens/call/widgets/call_receive_widget.dart';
 
 import '../screens/chatscreenpage.dart';
 import 'api_service.dart';
+import 'navigation_service.dart';
 
 class PushNotificationService {
   static final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -111,14 +112,17 @@ class PushNotificationService {
     await flutterLocalNotificationsPlugin.initialize(initializationSettings,
         onDidReceiveNotificationResponse:
             (NotificationResponse response) async {
+
       Map<String, dynamic> data = jsonDecode(response.payload ?? '{}');
+      log("djfnvkjdfnkdfv ${data}");
+
       Future.delayed(const Duration(milliseconds: 500), () {
         Get.to(() => ChatScreen(
               avatarWidget: buildUserAvatar(data['sender_profile'] == "null"
                   ? 0
                   : int.parse(data['sender_profile'] ?? '0')),
-              userName: data['sender_Name'] ?? 'N/A',
-              userId: int.parse(data['sender_Id'] ?? '0'),
+              userName: data['username'] ?? 'N/A',
+              userId: int.parse(data['sender_id'] ?? '0'),
               profilePicId: data['sender_profile'] == "null"
                   ? 0
                   : int.parse(data['sender_profile'] ?? '0'),
@@ -140,26 +144,7 @@ class PushNotificationService {
 
    FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
   print("📲 Foreground Data: ${message.data}");
-
-  RemoteNotification? notification = message.notification;
-  AndroidNotification? android = message.notification?.android;
-
-  if (notification != null) {
-
-    flutterLocalNotificationsPlugin.show(
-      notification.hashCode,
-      notification.title,
-      notification.body,
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'default_channel_id',
-          'Default Channel',
-          importance: Importance.max,
-          priority: Priority.high,
-        ),
-      ),
-    );
-  }
+  showNotification(message);
 });
 
 
@@ -190,67 +175,37 @@ ${const JsonEncoder.withIndent('  ').convert(payload)}
 """);
   }
 
-  static Future<void> _showNotification({
-    required String title,
-    required String body,
-    required String payload,
-  }) async {
-    log("""
-📨 Showing Notification
-----------------------
-Title: $title
-Body: $body
-Payload: $payload
-----------------------
-""");
-    await flutterLocalNotificationsPlugin.show(
-      DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      title,
-      body,
-      NotificationDetails(
-        android: AndroidNotificationDetails(
-          channel.id,
-          channel.name,
-          channelDescription: channel.description,
-          importance: Importance.max,
-          priority: Priority.high,
-          playSound: true,
-          icon: '@mipmap/ic_launcher',
+  static void showNotification(RemoteMessage message){
+    RemoteNotification? notification = message.notification;
+    AndroidNotification? android = message.notification?.android;
+    if (notification != null) {
+      flutterLocalNotificationsPlugin.show(
+        payload:jsonEncode( {
+          "sender_id":"${message.data['sender_id']}",
+          "username":"${message.data['username']}"
+        }),
+        notification.hashCode,
+        notification.title,
+        notification.body,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'default_channel_id',
+            'Default Channel',
+            importance: Importance.max,
+            priority: Priority.high,
+          ),
         ),
-      ),
-      payload: payload,
-    );
+      );
+    }
+
   }
 
-  // Add this method to check if notification should be shown
-static bool _shouldShowNotification(Map<String, dynamic> data) {
-  // Skip if data is null or empty
-  if (data.isEmpty) {
-    log("⚠️ Skipping empty notification data");
-    return false;
-  }
-
-  // Skip notifications with null values
-  if ((data['username'] == null || data['username'] == 'null') &&
-      (data['sender_id'] == null || data['sender_id'] == 'null')) {
-    log("⚠️ Skipping notification with null values");
-    return false;
-  }
-
-  // Skip socket messages (they're handled by socket service)
-  if (data['type'] == 'socket_message') {
-    log("🔇 Skipping socket message (handled by socket service)");
-    return false;
-  }
-
-  return true;
-}
 
   static void _handleMessage(RemoteMessage message) {
     log("🔄 Handling notification message");
     _logFullPayload(message.data, "Handling");
 
-    if (navigatorKey.currentContext == null) {
+    if (NavigationService.instance.navigationKey.currentContext == null) {
       log("⚠️ No navigatorKey context available");
       return;
     }
@@ -277,7 +232,7 @@ static bool _shouldShowNotification(Map<String, dynamic> data) {
 - Avatar ID: $profilePicId
 """);
 
-    Navigator.of(navigatorKey.currentContext!).pushAndRemoveUntil(
+    Navigator.of(NavigationService.instance.navigationKey.currentContext!).pushAndRemoveUntil(
       MaterialPageRoute(
         builder: (context) => ChatScreen(
           avatarWidget: buildUserAvatar(profilePicId),
@@ -296,7 +251,7 @@ static bool _shouldShowNotification(Map<String, dynamic> data) {
   log("📞 Processing incoming call notification");
 
   try {
-    final cubit = navigatorKey.currentContext?.read<CallSocketHandleCubit>();
+    final cubit = NavigationService.instance.navigationKey.currentContext?.read<CallSocketHandleCubit>();
     if (cubit == null) {
       log("⚠️ Call cubit not available in context");
       return;
@@ -315,10 +270,10 @@ static bool _shouldShowNotification(Map<String, dynamic> data) {
 📞 Incoming Call Details:
 - Caller ID: $callerId
 - Caller Name: $callerName
-- Current User ID: ${navigatorKey.currentContext?.read<UserProvider>().userId}
+- Current User ID: ${NavigationService.instance.navigationKey.currentContext?.read<UserProvider>().userId}
 """);
 
-    Navigator.of(navigatorKey.currentContext!).pushAndRemoveUntil(
+    Navigator.of(NavigationService.instance.navigationKey.currentContext!).pushAndRemoveUntil(
       MaterialPageRoute(
         builder: (context) => CallAcceptScreen(
           callerName: callerName,

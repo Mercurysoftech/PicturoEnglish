@@ -230,7 +230,7 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver {
 
         if (currentUserId != '') {
           int target = int.parse(data["extra"]['userId'] ?? "0");
-          context.read<CallSocketHandleCubit>().acceptCall(target);
+
           Navigator.push(
             context,
             MaterialPageRoute(
