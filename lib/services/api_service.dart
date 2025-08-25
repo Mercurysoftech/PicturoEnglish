@@ -1771,5 +1771,35 @@ Future<bool?> sendMessagesToAPI({required Map<String,dynamic> messageMap}) async
       throw Exception('Failed to unblock user');
     }
   }
+  // Add this method to your ApiService class
+Future<Map<String, dynamic>> rejectCall(int callerId) async {
+  final String endpoint = "reject.php";
+  
+  String? token = await getAuthToken();
+
+  try {
+    Response response = await _dio.post(
+      endpoint,
+      data: jsonEncode({
+        "to": callerId.toString(),
+      }),
+      options: Options(
+        headers: {
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json",
+        },
+      ),
+    );
+
+    if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
+      return response.data;
+    } else {
+      return {"status": false, "message": "Failed to reject call"};
+    }
+  } on DioException catch (e) {
+    print("Reject call error: ${e.message}");
+    return {"status": false, "message": "Network error"};
+  }
+}
 
 }

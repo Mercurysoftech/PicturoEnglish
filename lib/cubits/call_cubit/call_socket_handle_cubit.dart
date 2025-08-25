@@ -300,7 +300,7 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
       'from': currentUserId,
       'to': targetId,
     "type": "incoming_call",
-    "caller_id": currentUserId,          
+    "caller_id": currentUserId,           // ✅ safe replacement
     "receiver_id": targetId,
     "deep_link": "/call/${currentUserId}"
     });
@@ -513,6 +513,8 @@ void showFlutterCallNotification({
   required String callSessionId,
   required String userId,
   required String callerName,
+  int callerId = 0,
+  int receiverId = 0,
   String? avatar,
 }) async {
   final params = CallKitParams(
@@ -528,7 +530,9 @@ void showFlutterCallNotification({
       showNotification: true,
       subtitle: 'Missed call',
     ),
-    extra: <String, dynamic>{'userId': '$userId'},
+    extra: <String, dynamic>{'userId': '$userId',
+    'callerId': callerId.toString(),
+      'receiverId': receiverId.toString(),},
     android: const AndroidParams(
       isCustomNotification: false,
       isShowLogo: true,

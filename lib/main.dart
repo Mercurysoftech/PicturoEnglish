@@ -14,6 +14,7 @@ import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_navigation/src/root/get_material_app.dart';
 import 'package:picturo_app/classes/services/notification_service.dart';
+import 'package:picturo_app/classes/services/typing_state_manager.dart';
 import 'package:picturo_app/cubits/premium_cubit/premium_plans_cubit.dart';
 import 'package:picturo_app/cubits/referal_cubit/referal_cubit.dart';
 import 'package:picturo_app/providers/bankaccountprovider.dart';
@@ -26,6 +27,7 @@ import 'package:picturo_app/services/api_service.dart';
 import 'package:picturo_app/services/global_service.dart';
 import 'package:picturo_app/services/navigation_service.dart';
 import 'package:picturo_app/services/push_notification_service.dart';
+import 'package:picturo_app/services/socket_notifications_service.dart';
 import 'package:picturo_app/socket/socketservice.dart';
 import 'package:provider/provider.dart';
 
@@ -62,15 +64,18 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
           int.tryParse(message.data['caller_id']?.toString() ?? "0") ?? 0;
       final callerName =
           message.data['caller_username']?.toString() ?? "Unknown";
+      final receiverId = int.tryParse(message.data['receiver_id']?.toString() ?? "0") ?? 0;    
 
       showFlutterCallNotification(
           callSessionId: 'sdkjcslkcmslkcmsdc',
           userId: callerId.toString(),
           callerName: callerName,
+          callerId: callerId,
+          receiverId: receiverId,
         );
     } else {
       log("💬 Background chat notification received");
-      PushNotificationService.showNotification(message);
+      //PushNotificationService.showNotification(message);
     }
   } catch (e) {
     log("⚠️ Error in background handler: $e");
@@ -112,13 +117,14 @@ void main() async {
   );
   await NotificationService().requestPermissions();
   PushNotificationService.initialize();
-  await globalSocketService.initialize();
-  WidgetsBinding.instance.addObserver(AppLifecycleObserver());
+  await SocketNotificationsService.initialize();
+  //await globalSocketService.initialize();
+  //WidgetsBinding.instance.addObserver(AppLifecycleObserver());
 
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
   // Register plugins in background isolate
-  FlutterCallkitIncoming.onEvent.listen((event) {
+  FlutterCallkitIncoming.onEvent.listen((event) async {
     log("📞 CallKit event received: ${event?.event}");
 
     if (event?.event == Event.actionCallAccept) {
@@ -151,7 +157,27 @@ void main() async {
       );
     } else if (event?.event == Event.actionCallDecline) {
       log("❌ Call declined via CallKit");
-      NavigationService.instance.navigationKey.currentContext?.read<CallSocketHandleCubit>().endCall();
+     // Extract caller and receiver IDs from the call data
+    final data = event?.body ?? {};
+    final callerId = int.tryParse(data["extra"]['callerId']?.toString() ?? "0") ?? 0;
+    final receiverId = int.tryParse(data["extra"]['receiverId']?.toString() ?? "0") ?? 0;
+    
+    // Make API call to reject the call
+    try {
+      final apiService = await ApiService.create();
+      final result = await apiService.rejectCall(callerId);
+      
+      if (result['status'] == true) {
+        log("✅ Call rejection API call successful: ${result['message']}");
+      } else {
+        log("⚠️ Call rejection API call failed: ${result['message']}");
+      }
+    } catch (e) {
+      log("❌ Error making reject call API: $e");
+    }
+    
+    // End the call locally
+    NavigationService.instance.navigationKey.currentContext?.read<CallSocketHandleCubit>().endCall();
     }
   });
 
@@ -175,6 +201,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => UserProvider()),
         ChangeNotifierProvider(create: (_) => SocketService()),
         ChangeNotifierProvider(create: (context) => ProfileProvider()),
+        ChangeNotifierProvider(create: (_) => TypingStateManager()),
         BlocProvider(create: (context) => CallSocketHandleCubit()..initCallSocket()),
         BlocProvider(create: (context) => DragLearnCubit()),
         BlocProvider(create: (context) => SubtopicCubit()),
@@ -473,23 +500,32 @@ class _UserPageState extends State<UserPage> {
   }
 }
 
-class AppLifecycleObserver extends WidgetsBindingObserver {
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    switch (state) {
-      case AppLifecycleState.resumed:
-        globalSocketService.setAppState(true);
-        log('📱 App in foreground');
-        break;
-      case AppLifecycleState.inactive:
-      case AppLifecycleState.paused:
-      case AppLifecycleState.detached:
-        globalSocketService.setAppState(false);
-        log('📱 App in background');
-        break;
-      case AppLifecycleState.hidden:
-      log('📱 App is hidden');
-        break;
-    }
+class ChatScreenTracker {
+  static String? activeChatUserId;
+
+    static bool isInChatWithUser(String userId) {
+    return activeChatUserId == userId;
   }
 }
+
+
+// class AppLifecycleObserver extends WidgetsBindingObserver {
+//   @override
+//   void didChangeAppLifecycleState(AppLifecycleState state) {
+//     switch (state) {
+//       case AppLifecycleState.resumed:
+//         globalSocketService.setAppState(true);
+//         log('📱 App in foreground');
+//         break;
+//       case AppLifecycleState.inactive:
+//       case AppLifecycleState.paused:
+//       case AppLifecycleState.detached:
+//         globalSocketService.setAppState(false);
+//         log('📱 App in background');
+//         break;
+//       case AppLifecycleState.hidden:
+//       log('📱 App is hidden');
+//         break;
+//     }
+//   }
+// }
