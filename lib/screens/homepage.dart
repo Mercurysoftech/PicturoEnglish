@@ -528,7 +528,7 @@ class _HomeContentState extends State<HomeContent> {
   }
 
   Future<void> connectSocket() async {
-    await ChatSocket.connectScoket();
+    await ChatSocket.connectSocket();
   }
 
   @override

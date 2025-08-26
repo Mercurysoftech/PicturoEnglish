@@ -152,7 +152,6 @@ Widget buildBlurImageCard(String imageUrl, String title, String subtitle) {
     borderRadius: BorderRadius.circular(20),
     child: Stack(
       children: [
-        // Background Image
         Image.asset(
           imageUrl,
           width: double.infinity,

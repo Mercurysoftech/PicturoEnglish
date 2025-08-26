@@ -1,18 +1,18 @@
+import 'dart:convert';
+import 'dart:developer';
+
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:picturo_app/main.dart';
 import 'package:picturo_app/services/socket_notifications_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
-import 'dart:convert';
-import 'dart:developer';
 
 class ChatSocket {
-  static IO.Socket? socket; // made nullable so we can check if it's initialized
+  static IO.Socket? socket;
 
-  static Future<void> connectScoket() async {
-    // ✅ Check if socket exists and is already connected
+  static Future<void> connectSocket() async {
     if (socket != null && socket!.connected) {
-      print("Socket already connected. Skipping reconnect.");
+      log("⚡ Socket already connected.");
       return;
     }
 
@@ -22,53 +22,63 @@ class ChatSocket {
     socket = IO.io('https://picturoenglish.com:2025', <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false,
+      'reconnection': true,
+      'reconnectionAttempts': 10,
+      'reconnectionDelay': 2000,
     });
 
     socket?.connect();
 
-    FirebaseMessaging messaging = FirebaseMessaging.instance;
-    String? token = await messaging.getToken();
+    final token = await FirebaseMessaging.instance.getToken();
 
     socket?.onConnect((_) {
+      log("✅ Socket connected");
       socket?.emit("userOnline", {'user_id': userId, 'is_online': true});
       socket?.emit('register', {"user_id": userId, "fcm_token": token});
     });
 
-    socket!.on('register', (data) {
-      // Handle register response
-    });
+    socket?.onDisconnect((_) => log("🔌 Socket disconnected"));
+    socket?.onConnectError((err) => log("❌ Connect error: $err"));
+    socket?.onError((err) => log("⚠️ Socket error: $err"));
 
     socket?.on('newMessage', (data) {
       try {
-        // Pretty-print JSON if possible
-        final pretty = const JsonEncoder.withIndent('  ').convert(data);
-        log("📩 NewMessage Raw Payload:\n$pretty");
-      } catch (e) {
-        // Fallback if not JSON encodable
-        log("📩 NewMessage Raw Payload (fallback): $data");
+        log("📩 NewMessage: ${const JsonEncoder.withIndent('  ').convert(data)}");
+      } catch (_) {
+        log("📩 NewMessage: $data");
       }
 
       final senderId = data['sender_id']?.toString() ?? '';
       final userName = data['sender_username']?.toString() ?? '';
       final message = data['message']?.toString() ?? '';
 
-      // Show notification only if NOT in the active chat
       if (ChatScreenTracker.activeChatUserId != senderId) {
         SocketNotificationsService.showNotification(
           title: userName,
           body: message,
-          payloadData: data
+          payloadData: data,
         );
       }
     });
 
-    if (socket != null && socket!.connected) {
-      return;
-    }
+    // Handle token refresh
+    FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
+      if (userId != null && socket!.connected) {
+        socket?.emit('register', {"user_id": userId, "fcm_token": newToken});
+      }
+    });
   }
 
-  static void dispose() {
+  static Future<void> dispose() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString('user_id');
+
+    if (userId != null && socket?.connected == true) {
+      socket?.emit("userOnline", {"user_id": userId, "is_online": false});
+    }
+
+    socket?.disconnect();
     socket?.dispose();
-    socket = null; // Reset so it can connect again later if needed
+    socket = null;
   }
 }

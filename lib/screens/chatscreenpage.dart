@@ -83,8 +83,9 @@ class _ChatScreenState extends State<ChatScreen> {
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getString('user_id');
     _userId = userId;
-    await ChatSocket.connectScoket();
+    await ChatSocket.connectSocket();
     print("ksjdcnksjdcnksjcnsd ${ChatSocket.socket?.connected}");
+    
     ChatSocket.socket?.on('newMessage', (data) {
       log("ksjdcnksjdcnksjcnsd  New Msg ${data}");
       _handleIncomingMessage(data);

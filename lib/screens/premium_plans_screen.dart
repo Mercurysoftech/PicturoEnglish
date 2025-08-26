@@ -35,7 +35,7 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select a valid plan")),
+        const SnackBar(content: Text("Please select a valid plan",style: TextStyle(fontFamily: 'Poppins Regular',),)),
       );
     }
   }
@@ -48,11 +48,11 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
     Colors.teal.shade100,
   ];
   final List<List<Color>> cardGradients = [
-    [Color(0xFF1F1C2C), Color(0xFF928DAB)], // dark purple to grey
-    [Color(0xFF0F2027), Color(0xFF2C5364)], // dark teal to blue
-    [Color(0xFF232526), Color(0xFF414345)], // dark grey to light grey
-    [Color(0xFF141E30), Color(0xFF243B55)], // navy to steel blue
-    [Color(0xFF3C1053), Color(0xFFAD5389)], // deep purple to pink
+    [Color(0xFF1F1C2C), Color(0xFF928DAB)], 
+    [Color(0xFF0F2027), Color(0xFF2C5364)], 
+    [Color(0xFF232526), Color(0xFF414345)], 
+    [Color(0xFF141E30), Color(0xFF243B55)], 
+    [Color(0xFF3C1053), Color(0xFFAD5389)], 
   ];
   @override
   Widget build(BuildContext context) {
@@ -71,6 +71,7 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
             'Premium Plans',
             style: TextStyle(
               color: Colors.black87,
+              fontFamily: 'Poppins Medium',
               fontWeight: FontWeight.w700,
               fontSize: 20,
             ),
@@ -215,6 +216,7 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
                                       style: const TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.w700,
+                                        fontFamily: 'Poppins Regular',
                                         color: Colors.white,
                                       ),
                                     ),
@@ -225,6 +227,7 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
                                   "${plan.price} ${(plan.validityDays?.isEmpty ?? false) ? "" : "(${plan.validityDays} Days)"}",
                                   style: const TextStyle(
                                     fontSize: 16,
+                                    fontFamily: 'Poppins Regular',
                                     fontWeight: FontWeight.w600,
                                     color: Colors.tealAccent,
                                   ),
@@ -247,7 +250,7 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
               ),
             );
           } else if (state is PlanError) {
-            return Center(child: Text(state.message));
+            return Center(child: Text(state.message,style: TextStyle(fontFamily: 'Poppins Medium',),));
           }
           return const SizedBox();
         },
@@ -269,7 +272,7 @@ decoration: BoxDecoration(
             child: Text(
               text,
               style: const TextStyle(
-                  fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                  fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white,fontFamily: 'Poppins Regular',),
             ),
           ),
           Expanded(
@@ -293,7 +296,7 @@ decoration: BoxDecoration(
             flex: 2,
             child: Text(
               title,
-              style: const TextStyle(color: Colors.white),
+              style: const TextStyle(color: Colors.white,fontFamily: 'Poppins Regular'),
               overflow: TextOverflow.ellipsis, // Avoids overflow
             ),
           ),
@@ -301,7 +304,7 @@ decoration: BoxDecoration(
             flex: 3,
             child: Text(
               value,
-              style: const TextStyle(fontWeight: FontWeight.w600,color: Colors.white),
+              style: const TextStyle(fontWeight: FontWeight.w600,color: Colors.white,fontFamily: 'Poppins Regular'),
               overflow: TextOverflow.visible, // Allows wrapping
             ),
           ),
@@ -346,6 +349,7 @@ decoration: BoxDecoration(
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
+                      fontFamily: 'Poppins Regular',
                       color: Colors.white,
                     ),
                   ),
@@ -355,6 +359,7 @@ decoration: BoxDecoration(
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
+                    fontFamily: 'Poppins Regular',
                     color: Colors.white,
                   ),
                 ),
@@ -406,8 +411,8 @@ decoration: BoxDecoration(
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title, style: const TextStyle(color: Colors.black54)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text(title, style: const TextStyle(color: Colors.black54,fontFamily: 'Poppins Regular',)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold,fontFamily: 'Poppins Regular',)),
         ],
       ),
     );

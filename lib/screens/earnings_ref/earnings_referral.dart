@@ -76,14 +76,7 @@ class _WalletReferralPageState extends State<WalletReferralPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text(
-          "My Wallet",
-          style: TextStyle(color: Colors.white),
-        ),
-        backgroundColor: const Color(0xFF49329A),
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
+      appBar: _buildAppBar(),
       body: BlocBuilder<ReferralCubit, ReferralState>(
         builder: (context, state) {
           if (state is ReferralLoading) {
@@ -123,7 +116,8 @@ class _WalletReferralPageState extends State<WalletReferralPage> {
                                       style: TextStyle(
                                         fontSize: 14,
                                         color: Colors.white70,
-                                        fontWeight: FontWeight.w500,
+                                        fontFamily: 'Poppins Medium',
+                                        fontWeight: FontWeight.w700,
                                       ),
                                     ),
                                     const SizedBox(height: 8),
@@ -133,6 +127,7 @@ class _WalletReferralPageState extends State<WalletReferralPage> {
                                           : "****",
                                       style: const TextStyle(
                                         fontSize: 24,
+                                        fontFamily: 'Poppins Regular',
                                         fontWeight: FontWeight.bold,
                                         color: Colors.white,
                                       ),
@@ -147,7 +142,7 @@ class _WalletReferralPageState extends State<WalletReferralPage> {
                                       ),
                                       label: Text(
                                         showBalance ? "Hide" : "Show",
-                                        style: const TextStyle(color: Colors.white),
+                                        style: const TextStyle(color: Colors.white,fontFamily: 'Poppins Regular',),
                                       ),
                                       style: TextButton.styleFrom(
                                         foregroundColor: Colors.white,
@@ -168,6 +163,7 @@ class _WalletReferralPageState extends State<WalletReferralPage> {
                                   style: TextStyle(
                                     fontWeight: FontWeight.w500,
                                     fontSize: 14,
+                                    fontFamily: 'Poppins Regular',
                                     color: Colors.black87,
                                   ),
                                 ),
@@ -176,6 +172,7 @@ class _WalletReferralPageState extends State<WalletReferralPage> {
                                   "${data.totalReferrals}",
                                   style: const TextStyle(
                                     fontSize: 20,
+                                    fontFamily: 'Poppins Regular',
                                     fontWeight: FontWeight.bold,
                                     color: Color(0xFF49329A),
                                   ),
@@ -189,10 +186,10 @@ class _WalletReferralPageState extends State<WalletReferralPage> {
                   ),
                   
                   const SizedBox(height: 24),
-                  Text("Last Transaction",style: TextStyle(fontSize: 18,fontWeight: FontWeight.bold),),
+                  Text("Last Transaction",style: TextStyle(fontSize: 18,fontWeight: FontWeight.bold,fontFamily: 'Poppins Regular',),),
                   const SizedBox(height: 10,),
                   (transactions.isEmpty)?
-                      Text("No transaction found"):ListView.separated(
+                      Text("No transaction found",style: TextStyle(fontFamily: 'Poppins Regular'),):ListView.separated(
                     shrinkWrap: true,
                     physics: NeverScrollableScrollPhysics(),
                     itemCount: transactions.length,
@@ -205,12 +202,14 @@ class _WalletReferralPageState extends State<WalletReferralPage> {
                           color: Colors.grey.shade100
                         ),
                         child: ListTile(
-                          title: Text(tx.description),
+                          title: Text(tx.description,style: TextStyle(fontFamily: 'Poppins Regular'),),
                           subtitle: Text(tx.createdAt),
                           trailing: Text(
                             "+ ₹${tx.amount.toStringAsFixed(2)}",
                             style: TextStyle(
                               color: tx.type == "referral" ? Colors.green : Colors.black,
+                              fontFamily: 'Poppins Medium',
+                              fontSize: 14,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -222,10 +221,46 @@ class _WalletReferralPageState extends State<WalletReferralPage> {
               ),
             );
           } else if (state is ReferralError) {
-            return Center(child: Text("Error: ${state.message}"));
+            return Center(child: Text("Error: ${state.message}",style: TextStyle(fontFamily: 'Poppins Regular'),));
           }
           return const SizedBox();
         },
+      ),
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar() {
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(80),
+      child: AppBar(
+        backgroundColor: const Color(0xFF49329A),
+        leading: Padding(
+          padding: const EdgeInsets.only(top: 15.0, left: 24.0),
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 26),
+            onPressed: () {
+              Navigator.pop(context);
+
+            },
+          ),
+        ),
+        title: const Padding(
+          padding: EdgeInsets.only(top: 15.0),
+          child: Text(
+            'My Wallet',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontFamily: 'Poppins Medium',
+            ),
+          ),
+        ),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.only(
+            bottomLeft: Radius.circular(20),
+            bottomRight: Radius.circular(20),
+          ),
+        ),
       ),
     );
   }

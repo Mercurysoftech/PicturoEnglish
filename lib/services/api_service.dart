@@ -1775,7 +1775,6 @@ Future<bool?> sendMessagesToAPI({required Map<String,dynamic> messageMap}) async
 Future<Map<String, dynamic>> rejectCall(int callerId) async {
   final String endpoint = "reject.php";
   
-  String? token = await getAuthToken();
 
   try {
     Response response = await _dio.post(
@@ -1785,7 +1784,6 @@ Future<Map<String, dynamic>> rejectCall(int callerId) async {
       }),
       options: Options(
         headers: {
-          "Authorization": "Bearer $token",
           "Content-Type": "application/json",
         },
       ),

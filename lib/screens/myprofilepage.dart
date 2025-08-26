@@ -793,21 +793,30 @@ class CoinBadge extends StatelessWidget {
         } else if (state is CoinLoaded) {
           return Padding(
             padding: const EdgeInsets.only(right: 10.0),
-            child: Badge(
-              label: Text(
-                "${state.coins}",
-                style: const TextStyle(
-                  color: Color(0xFF49329A),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              backgroundColor: Colors.white,
-              child: const Icon(
-                Icons.workspace_premium,
-                color: Colors.yellow,
-                size: 30,
-              ),
-            ),
+            child: InkWell(
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => WalletReferralPage()),
+    );
+  },
+  child: Badge(
+    label: Text(
+      "${state.coins}",
+      style: const TextStyle(
+        color: Color(0xFF49329A),
+        fontWeight: FontWeight.w600,
+      ),
+    ),
+    backgroundColor: Colors.white,
+    child: const Icon(
+      Icons.workspace_premium,
+      color: Colors.yellow,
+      size: 30,
+    ),
+  ),
+)
+
           );
         } else if (state is CoinError) {
           return SizedBox();

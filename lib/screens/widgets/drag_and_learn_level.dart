@@ -88,8 +88,8 @@ class _DragLearnPageState extends State<DragLearnPage> {
                                             borderRadius: BorderRadius.circular(10)
                                         ),
                                         backgroundColor: Colors.white,
-                                        title: Text("Are you Sure want Start",style: TextStyle(fontSize: 16,),textAlign: TextAlign.center,),
-                                        content: Text("Every level use 1 coin",textAlign: TextAlign.center,),
+                                        title: Text("Are you Sure want Start",style: TextStyle(fontSize: 16,fontFamily: AppConstants.commonFont,),textAlign: TextAlign.center,),
+                                        content: Text("Every level use 1 coin",textAlign: TextAlign.center,style: TextStyle(fontFamily: AppConstants.commonFont,),),
                                         actions: [
                                           Row(
                                             mainAxisAlignment: MainAxisAlignment.end,
@@ -101,7 +101,7 @@ class _DragLearnPageState extends State<DragLearnPage> {
                                                   style: ButtonStyle(
                                                     padding: WidgetStateProperty.all(EdgeInsets.symmetric(horizontal: 20)),
                                                   ),
-                                                  child: Text("Cancel")
+                                                  child: Text("Cancel",style: TextStyle(fontFamily: AppConstants.commonFont,),)
                                               ),
                                               SizedBox(
                                                 child: TextButton(
@@ -123,7 +123,7 @@ class _DragLearnPageState extends State<DragLearnPage> {
 
 
                                                     },
-                                                    child: Text(" Start",style: TextStyle(color: Colors.white ),)
+                                                    child: Text(" Start",style: TextStyle(color: Colors.white,fontFamily: AppConstants.commonFont,),)
                                                 ),
                                               ),
                                             ],
@@ -250,16 +250,18 @@ class GameLockedScreen extends StatelessWidget {
               Text(
                 "Game is unopen 😕",
                 style: TextStyle(
-                  fontSize: 22,
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
+                  fontFamily: AppConstants.commonFont,
                   color: Color(0xFF49329A),
                 ),
               ),
               Text(
                 "You have Completed ${percentage}/100",
                 style: TextStyle(
-                  fontSize: 22,
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
+                  fontFamily: AppConstants.commonFont,
                   color: Color(0xFF49329A),
                 ),
               ),
@@ -269,6 +271,7 @@ class GameLockedScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,
+                  fontFamily: AppConstants.commonFont,
                   color: Colors.black87,
                 ),
               ),
@@ -292,6 +295,7 @@ class GameLockedScreen extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 16,
                     color: Colors.white,
+                    fontFamily: AppConstants.commonFont,
                     letterSpacing: 1,
                   ),
                 ),
