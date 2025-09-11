@@ -5,7 +5,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:intl/intl.dart';
+import 'package:picturo_app/classes/services/connectivity_service.dart';
 import 'package:picturo_app/classes/svgfiles.dart';
+import 'package:picturo_app/providers/unread_count_provider.dart';
 import 'package:picturo_app/providers/userprovider.dart';
 import 'package:picturo_app/responses/allusers_response.dart';
 import 'package:picturo_app/responses/friends_response.dart';
@@ -14,6 +16,7 @@ import 'package:picturo_app/screens/calllogspage.dart';
 import 'package:picturo_app/screens/chatscreenpage.dart';
 import 'package:picturo_app/screens/myprofilepage.dart';
 import 'package:picturo_app/screens/widgets/chat_friends_tab.dart';
+import 'package:picturo_app/screens/widgets/offline_overlay.dart';
 import 'package:picturo_app/services/api_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -102,9 +105,75 @@ class _ChatListPageState extends State<ChatListPage>
     _tabController = TabController(length: 3, vsync: this);
     _searchController.addListener(_onSearchChanged);
 
+    _tabController.addListener(_handleTabSelection);
+
     connectSocket();
     _fetchAllUsers();
     context.read<GetFriendsListCubit>().fetchAllFriends();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<GetFriendsListCubit>().stream.listen((state) {
+        if (state is GetFriendsListLoaded) {
+          _updateTotalUnreadCount(state.friends);
+        }
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.removeListener(_handleTabSelection);
+    _tabController.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _handleTabSelection() {
+    if (_tabController.indexIsChanging) {
+      return;
+    }
+
+    // Refresh data when switching to All Users tab (index 1)
+    if (_tabController.index == 1) {
+      _refreshAllUsers();
+    }
+    // Refresh data when switching to Friends tab (index 0)
+    else if (_tabController.index == 0) {
+      context.read<GetFriendsListCubit>().fetchAllFriends();
+    }
+  }
+
+  Future<void> _refreshAllUsers() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = '';
+    });
+
+    try {
+      await _fetchAllUsers();
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Failed to load users: $e';
+      });
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  void _updateTotalUnreadCount(List<Friends> friends) {
+    final currentUserId =
+        Provider.of<UserProvider>(context, listen: false).userId;
+
+    // Calculate total unread count excluding current user
+    int totalUnread = friends
+        .where((friend) => friend.friendId != currentUserId)
+        .fold(0, (sum, friend) => sum + (friend.unreadCount ?? 0));
+
+    // Update the provider
+    Provider.of<UnreadCountProvider>(context, listen: false)
+        .updateTotalUnreadCount(totalUnread);
   }
 
   List<String>? countViewList = [];
@@ -127,7 +196,14 @@ class _ChatListPageState extends State<ChatListPage>
   }
 
   Future<void> _fetchAllUsers() async {
-    context.read<UserFriendsCubit>().fetchAllUsersAndFriends();
+    try {
+      // Clear the cached data to force fresh fetch
+      context.read<UserFriendsCubit>().fetchAllUsersAndFriends();
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Error fetching users: $e';
+      });
+    }
   }
 
   void _updateCounts() {
@@ -158,167 +234,192 @@ class _ChatListPageState extends State<ChatListPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Color(0xFFE0F7FF),
-      appBar: CommonAppBar(
-        title: "Chats",
-        isFromHomePage: true,
-      ),
-      body: BlocBuilder<UserFriendsCubit, UserFriendsState>(
-        builder: (context, userListFrntState) {
-          print('State is : $userListFrntState');
-          if (userListFrntState is UserFriendsLoaded) {
-            Future.delayed(Duration.zero, () {
-              if (updatedOne == false) {
-                allUsers = userListFrntState.allUsers;
-                friends = userListFrntState.friends;
-                context
-                    .read<CallSocketHandleCubit>()
-                    .updateFriendsList(friends);
-                friendsCount = userListFrntState.friendsCount;
-                allUsersCount = userListFrntState.allUsersCount;
-                setState(() {
-                  isLoading = false;
-                });
-                updatedOne = true;
-              }
-            });
-            return Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Color(0xFFE0F7FF),
-                    Color(0xFFEAE4FF),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+    return Consumer<ConnectivityService>(
+    builder: (context, connectivityService, child) {
+      final bool isOnline = connectivityService.isOnline;
+      
+        return Stack(
+          children: [
+            Scaffold(
+              backgroundColor: Color(0xFFE0F7FF),
+              appBar: CommonAppBar(
+                title: "Chats",
+                isFromHomePage: true,
+              ),
+              body: BlocListener<UserFriendsCubit, UserFriendsState>(
+              listener: (context, state) {
+            if (state is UserFriendsLoaded) {
+              setState(() {
+                allUsers = state.allUsers;
+                friends = state.friends;
+                friendsCount = state.friendsCount;
+                allUsersCount = state.allUsersCount;
+                isLoading = false;
+              });
+            
+              context.read<CallSocketHandleCubit>().updateFriendsList(state.friends);
+            }
+              },
+                child: BlocBuilder<UserFriendsCubit, UserFriendsState>(
+                  builder: (context, userListFrntState) {
+                    print('State is : $userListFrntState');
+                    if (userListFrntState is UserFriendsLoaded) {
+                      // allUsers = userListFrntState.allUsers;
+                      // friends = userListFrntState.friends;
+                      // context.read<CallSocketHandleCubit>().updateFriendsList(friends);
+                      // friendsCount = userListFrntState.friendsCount;
+                      // allUsersCount = userListFrntState.allUsersCount;
+            
+                      // if (isLoading) {
+                      //   setState(() {
+                      //     isLoading = false;
+                      //   });
+                      // }
+            
+                      return Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Color(0xFFE0F7FF),
+                              Color(0xFFEAE4FF),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Padding(
+                              padding: EdgeInsets.fromLTRB(15, 15, 15, 10),
+                              child: Container(
+                                padding: EdgeInsets.symmetric(horizontal: 20),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(25),
+                                  border: Border.all(
+                                    color: Color(0xFF49329A),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: TextField(
+                                  controller: _searchController,
+                                  decoration: InputDecoration(
+                                    icon: Icon(Icons.search, color: Color(0xFF49329A)),
+                                    hintText: 'Search',
+                                    hintStyle: TextStyle(fontFamily: 'Poppins Regular'),
+                                    border: InputBorder.none,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            TabBar(
+                              tabAlignment: TabAlignment.center,
+                              onTap: (index) {
+                                setState(() {
+                                  _searchController.clear();
+                                  if (index == 0) {
+                                    context
+                                        .read<GetFriendsListCubit>()
+                                        .fetchAllFriends();
+                                  }
+                                });
+                              },
+                              controller: _tabController,
+                              isScrollable: true,
+                              indicatorColor: Color(0xFF49329A),
+                              labelStyle: TextStyle(
+                                fontFamily: 'Poppins Regular',
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+            
+                              labelPadding:
+                                  EdgeInsets.only(right: 20), // more breathing room
+                              tabs: [
+                                Tab(
+                                    child: FittedBox(
+                                        child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.people,
+                                      color: Color(0xFF49329A),
+                                      size: 20,
+                                    ),
+                                    SizedBox(
+                                      width: 3,
+                                    ),
+                                    Text(
+                                      "Friends ($friendsCount)",
+                                      style: TextStyle(color: Color(0xFF49329A)),
+                                    ),
+                                  ],
+                                ))),
+                                Tab(
+                                    child: FittedBox(
+                                        child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.language,
+                                      color: Color(0xFF49329A),
+                                      size: 20,
+                                    ),
+                                    SizedBox(
+                                      width: 3,
+                                    ),
+                                    Text(
+                                      "All Users ($allUsersCount)",
+                                      style: TextStyle(color: Color(0xFF49329A)),
+                                    ),
+                                  ],
+                                ))),
+                                Tab(
+                                    child: FittedBox(
+                                        child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.call,
+                                      color: Color(0xFF49329A),
+                                      size: 20,
+                                    ),
+                                    SizedBox(
+                                      width: 3,
+                                    ),
+                                    Text(
+                                      "Calls",
+                                      style: TextStyle(color: Color(0xFF49329A)),
+                                    ),
+                                  ],
+                                ))),
+                              ],
+                            ),
+                            Expanded(
+                              child: TabBarView(
+                                controller: _tabController,
+                                children: [
+                                  ChatFriendsTab(),
+                                  _buildAllUsersTab(),
+                                  CallLogPage(
+                                    allUsers: allUsers,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    } else {
+                      return Center(
+                        child: CircularProgressIndicator(),
+                      );
+                    }
+                  },
                 ),
               ),
-              child: Column(
-                children: [
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(15, 15, 15, 10),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: 20),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(25),
-                        border: Border.all(
-                          color: Color(0xFF49329A),
-                          width: 1,
-                        ),
-                      ),
-                      child: TextField(
-                        controller: _searchController,
-                        decoration: InputDecoration(
-                          icon: Icon(Icons.search, color: Color(0xFF49329A)),
-                          hintText: 'Search',
-                          hintStyle: TextStyle(fontFamily: 'Poppins Regular'),
-                          border: InputBorder.none,
-                        ),
-                      ),
-                    ),
-                  ),
-                  TabBar(
-                    tabAlignment: TabAlignment.center,
-                    onTap: (index) {
-                      setState(() {
-                        _searchController.clear();
-                        if (index == 0) {
-                          context.read<GetFriendsListCubit>().fetchAllFriends();
-                        }
-                      });
-                    },
-                    controller: _tabController,
-                    isScrollable: true,
-                    indicatorColor: Color(0xFF49329A),
-                    labelStyle: TextStyle(
-                      fontFamily: 'Poppins Regular',
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
-
-                    labelPadding:
-                        EdgeInsets.only(right: 20), // more breathing room
-                    tabs: [
-                      Tab(
-                          child: FittedBox(
-                              child: Row(
-                        children: [
-                          Icon(
-                            Icons.people,
-                            color: Color(0xFF49329A),
-                            size: 20,
-                          ),
-                          SizedBox(
-                            width: 3,
-                          ),
-                          Text(
-                            "Friends ($friendsCount)",
-                            style: TextStyle(color: Color(0xFF49329A)),
-                          ),
-                        ],
-                      ))),
-                      Tab(
-                          child: FittedBox(
-                              child: Row(
-                        children: [
-                          Icon(
-                            Icons.language,
-                            color: Color(0xFF49329A),
-                            size: 20,
-                          ),
-                          SizedBox(
-                            width: 3,
-                          ),
-                          Text(
-                            "All Users ($allUsersCount)",
-                            style: TextStyle(color: Color(0xFF49329A)),
-                          ),
-                        ],
-                      ))),
-                      Tab(
-                          child: FittedBox(
-                              child: Row(
-                        children: [
-                          Icon(
-                            Icons.call,
-                            color: Color(0xFF49329A),
-                            size: 20,
-                          ),
-                          SizedBox(
-                            width: 3,
-                          ),
-                          Text(
-                            "Calls",
-                            style: TextStyle(color: Color(0xFF49329A)),
-                          ),
-                        ],
-                      ))),
-                    ],
-                  ),
-                  Expanded(
-                    child: TabBarView(
-                      controller: _tabController,
-                      children: [
-                        ChatFriendsTab(),
-                        _buildAllUsersTab(),
-                        CallLogPage(
-                          allUsers: allUsers,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          } else {
-            return Center(
-              child: CircularProgressIndicator(),
-            );
-          }
-        },
-      ),
+            ),
+            if (!isOnline) const OfflineOverlay(),
+          ],
+        );
+      }
     );
   }
 
@@ -459,13 +560,13 @@ class _ChatListPageState extends State<ChatListPage>
       final apiService = await ApiService.create();
       final profile = await apiService.fetchProfileDetails();
 
-      if (profile.avatarId == null || profile.avatarId == 0) {
+      if (profile.user.avatarId == null || profile.user.avatarId == 0) {
         throw Exception('Using default avatar');
       }
 
       final avatarResponse = await apiService.fetchAvatars();
       final avatar = avatarResponse.data.firstWhere(
-        (a) => a.id == profile.avatarId,
+        (a) => a.id == profile.user.avatarId,
         orElse: () => throw Exception('Avatar not found'),
       );
 
@@ -533,8 +634,14 @@ class _ChatListPageState extends State<ChatListPage>
   }
 
   Widget _buildAllUsersTab() {
+    //   WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   if (mounted) {
+    //     _refreshAllUsers();
+    //   }
+    // });
+
     final userProvider = Provider.of<UserProvider>(context, listen: false);
-    final currentUserId = userProvider.userId; // Get current user ID
+    final currentUserId = userProvider.userId;
 
     List<User> displayUsers = _searchController.text.isEmpty
         ? allUsers

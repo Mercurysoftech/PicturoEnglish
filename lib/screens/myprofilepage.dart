@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:picturo_app/classes/services/connectivity_service.dart';
 import 'package:picturo_app/classes/svgfiles.dart';
 import 'package:picturo_app/providers/profileprovider.dart';
 import 'package:picturo_app/responses/my_profile_response.dart';
@@ -52,7 +53,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     
     if (mounted) {
       setState(() {
-        _currentAvatarId = userResponse.avatarId;
+        _currentAvatarId = userResponse.user.avatarId;
       });
       await _loadAvatar(); // Load avatar after setting the ID
     }
@@ -135,6 +136,16 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     ApiService.create().then((service) {
       _apiService = service;
     });
+
+    final connectivityService =
+        Provider.of<ConnectivityService>(context, listen: false);
+
+    connectivityService.addListener(() {
+      if (connectivityService.isOnline) {
+        // Re-fetch profile when internet comes back
+        context.read<ProfileProvider>().fetchProfile();
+      }
+    });
   }
   
 
@@ -174,7 +185,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                             children: [
                           _buildProfileCard(context, profileProvider),
                           SizedBox(height: 10),
-                          _buildUserDetailsCard(profileProvider.user!),
+                          _buildUserDetailsCard(profileProvider.user!,profileProvider.wallet!),
                           SizedBox(height: 10),
 
                           PremiumButton(userName: profileProvider.username??'',),
@@ -195,10 +206,10 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                           SizedBox(height: 10),
                           _buildSettingsOption(Icons.block, "Blocked users", context,profileProvider),
                           SizedBox(height: 10),
-                           _buildSettingsOption(Icons.help_outline, "Help", context,profileProvider),
-                           SizedBox(height: 10),
-                              _buildSettingsOption(Icons.share, "Share This App", context,profileProvider),
-                           SizedBox(height: 10),
+                          _buildSettingsOption(Icons.help_outline, "Help", context,profileProvider),
+                          SizedBox(height: 10),
+                          _buildSettingsOption(Icons.share, "Share This App", context,profileProvider),
+                          SizedBox(height: 10),
                           _buildSettingsOption(Icons.delete_outline, "Delete Account", context,profileProvider),
                           SizedBox(height: 10),
                           _buildLogoutButton(),
@@ -280,7 +291,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     );
   }
 
-  Widget _buildUserDetailsCard(UserResponse user) {
+  Widget _buildUserDetailsCard(User user,Wallet wallet) {
     return Card(
       color: Colors.white,
       elevation: 0,
@@ -291,9 +302,10 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildDetailRow("User name", user.username),
-            _buildDetailRow("Referral code", user.referralCode), // Replace with actual user code if available
-            _buildDetailRow("Numbers of referral", "0"), // Replace with actual referral count if available
-            _buildDetailRow("Total earning", "₹ 0"), // Replace with actual earning if available
+            _buildDetailRow("Referral code", user.referralCode), 
+            _buildDetailRow("Numbers of referral",wallet?.transactions?.length.toString() ?? "0"), 
+            _buildDetailRow("Total earning", "₹ ${wallet?.totalBalance ?? 0}"),
+            _buildDetailRow("Plan Ends", user?.planEndTime ?? "No Active Plans"), 
             _buildDetailRow("Location", user.location),
           ],
         ),
@@ -801,19 +813,19 @@ class CoinBadge extends StatelessWidget {
     );
   },
   child: Badge(
-    label: Text(
-      "${state.coins}",
-      style: const TextStyle(
-        color: Color(0xFF49329A),
-        fontWeight: FontWeight.w600,
-      ),
-    ),
-    backgroundColor: Colors.white,
-    child: const Icon(
-      Icons.workspace_premium,
-      color: Colors.yellow,
-      size: 30,
-    ),
+    // label: Text(
+    //   "${state.coins}",
+    //   style: const TextStyle(
+    //     color: Color(0xFF49329A),
+    //     fontWeight: FontWeight.w600,
+    //   ),
+    // ),
+     backgroundColor: Colors.transparent,
+    child: const ImageIcon(
+  AssetImage('assets/wallet.png'), // path to your image asset
+  color: Colors.white,
+  size: 28,
+)
   ),
 )
 

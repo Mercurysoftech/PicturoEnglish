@@ -13,18 +13,28 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_navigation/src/root/get_material_app.dart';
+import 'package:picturo_app/classes/helper/bot_calls_refresh.dart';
+import 'package:picturo_app/classes/services/connectivity_service.dart';
 import 'package:picturo_app/classes/services/notification_service.dart';
 import 'package:picturo_app/classes/services/typing_state_manager.dart';
 import 'package:picturo_app/cubits/premium_cubit/premium_plans_cubit.dart';
 import 'package:picturo_app/cubits/referal_cubit/referal_cubit.dart';
+import 'package:picturo_app/cubits/user_status/user_status_cubit.dart';
 import 'package:picturo_app/providers/bankaccountprovider.dart';
 import 'package:picturo_app/providers/online_status_provider.dart';
 import 'package:picturo_app/providers/profileprovider.dart';
+import 'package:picturo_app/providers/remaining_bot_calls_provider';
+import 'package:picturo_app/providers/requests_provider.dart';
+import 'package:picturo_app/providers/unread_count_provider.dart';
 import 'package:picturo_app/providers/userprovider.dart';
 import 'package:picturo_app/screens/chatscreenpage.dart';
+import 'package:picturo_app/screens/earnings_ref/referral_details.dart';
+import 'package:picturo_app/screens/homepage.dart';
+import 'package:picturo_app/screens/premiumscreenpage.dart';
 import 'package:picturo_app/screens/splashscreenpage.dart';
 import 'package:picturo_app/screens/voicecallscreen.dart';
 import 'package:picturo_app/services/api_service.dart';
+import 'package:picturo_app/services/app_lifecycle_manager.dart';
 import 'package:picturo_app/services/chat_socket_service.dart';
 import 'package:picturo_app/services/global_service.dart';
 import 'package:picturo_app/services/navigation_service.dart';
@@ -70,17 +80,17 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       final receiverId =
           int.tryParse(message.data['receiver_id']?.toString() ?? "0") ?? 0;
 
-           // Set up CallKit event listener for background call handling
+      // Set up CallKit event listener for background call handling
       FlutterCallkitIncoming.onEvent.listen((event) async {
         log("📞 Background CallKit event: ${event?.event}");
-        
+
         if (event?.event == Event.actionCallDecline) {
           log("❌ Background call declined via CallKit");
-          
+
           // Make API call to reject the call
           try {
             final apiService = await ApiService.create();
-            final result = await apiService.rejectCall(callerId);
+            final result = await apiService.rejectCall(callerId, receiverId);
 
             if (result['status'] == true) {
               log("✅ Background call rejection API successful: ${result['message']}");
@@ -103,11 +113,30 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
         callerId: callerId,
         receiverId: receiverId,
       );
-    } else if (message.data['type'] == 'end-call') {
+    } else if (message.data['type'] == 'end_call' ||
+        message.data['type'] == 'missed_call' ||
+        message.data['type'] == 'Missed Call') {
       log("📞 Background outgoing call notification received");
-          FlutterCallkitIncoming.endCall("sdkjcslkcmslkcmsdc");
-    }
-    else {
+      FlutterCallkitIncoming.endCall("sdkjcslkcmslkcmsdc");
+    } else if (message.data['type'] == 'refer') {
+      log("📞 Background referral notification received");
+
+      // Show a local notification with payload so we can catch it later
+      await flutterLocalNotificationsPlugin.show(
+        0,
+        "Referral Bonus 🎁",
+        "Tap to view your premium plans!",
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'refer_channel', // channel id
+            'Referral Notifications', // channel name
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
+        ),
+        payload: jsonEncode({"type": "refer"}),
+      );
+    } else {
       log("💬 Background chat notification received");
       //PushNotificationService.showNotification(message);
     }
@@ -141,6 +170,8 @@ Future<void> setupFlutterNotifications() async {
 String? initialNotificationPayload;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  //await AppLifecycleManager().initialize();
 
   await setupFlutterNotifications();
 
@@ -237,8 +268,14 @@ void main() async {
         ChangeNotifierProvider(create: (_) => UserProvider()),
         ChangeNotifierProvider(create: (_) => SocketService()),
         ChangeNotifierProvider(create: (context) => ProfileProvider()),
-         ChangeNotifierProvider(create: (_) => OnlineStatusProvider()),
+        ChangeNotifierProvider(create: (_) => OnlineStatusProvider()),
         ChangeNotifierProvider(create: (_) => TypingStateManager()),
+        ChangeNotifierProvider(create: (_) => ConnectivityService()),
+        ChangeNotifierProvider(create: (_) => RemainingBotCallsProvider()),
+        ChangeNotifierProvider(
+            create: (_) => RequestsProvider()..fetchRequestsCount()),
+        ChangeNotifierProvider(
+            create: (_) => UnreadCountProvider()..totalUnreadCount),
         BlocProvider(
             create: (context) => CallSocketHandleCubit()..initCallSocket()),
         BlocProvider(create: (context) => DragLearnCubit()),
@@ -259,8 +296,19 @@ void main() async {
         BlocProvider(create: (context) => GetFriendsListCubit()),
         BlocProvider(create: (context) => PlanCubit()),
         BlocProvider(create: (context) => ReferralCubit()),
+        BlocProvider(create: (_) => UserStatusCubit())
       ],
-      child: MyApp(),
+      child:Builder(
+      builder: (context) {
+        // 👇 inject the cubit into ChatSocket
+        ChatSocket.init(context.read<UserStatusCubit>());
+         WidgetsBinding.instance.addPostFrameCallback((_) {
+        context.read<RemainingBotCallsProvider>().fetchRemainingBotCalls();
+      });
+      
+        return const MyApp();
+      },
+    ),
     ),
   );
 }
@@ -287,6 +335,7 @@ class _MyAppState extends State<MyApp> {
         initialNotificationPayload = null;
       });
     }
+    _initializeApp();
     checkAndNavigationCallingPage();
   }
 
@@ -294,6 +343,23 @@ class _MyAppState extends State<MyApp> {
   void dispose() {
     //AppLifecycleService().dispose();
     super.dispose();
+  }
+
+  Future<void> _initializeApp() async {
+    // Initialize SharedPreferences first
+    final prefs = await SharedPreferences.getInstance();
+
+    // Check if user is logged in (has auth token)
+    final authToken = prefs.getString('auth_token');
+
+    if (authToken != null && authToken.isNotEmpty) {
+      // Initialize ProfileProvider if user is logged in
+      final profileProvider = Provider.of<ProfileProvider>(
+          NavigationService.instance.navigationKey.currentContext!,
+          listen: false);
+
+      await profileProvider.initialize();
+    }
   }
 
   void _handleNotificationNavigation(String payload) async {
@@ -305,6 +371,21 @@ class _MyAppState extends State<MyApp> {
       final data = jsonDecode(payload);
 
       if (data['type'] == 'incoming_call') {
+      } else if (data['type'] == 'refer') {
+        log("🎁 Navigating to Premium Page");
+        Navigator.of(NavigationService.instance.navigationKey.currentContext!)
+            .push(MaterialPageRoute(
+          builder: (context) => ReferralPage(),
+        ));
+      } else if (data['type'] == 'end_call' ||
+          data['type'] == 'missed_call' ||
+          data['type'] == 'Missed Call') {
+        log("🏠 Navigating to Home after call end/missed");
+        Navigator.of(NavigationService.instance.navigationKey.currentContext!)
+            .pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const Homepage()),
+          (route) => false,
+        );
       } else {
         log("💬 Handling chat notification navigation");
         final senderName = data['username']?.toString() ?? "Unknown";
@@ -462,6 +543,10 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     // Important!
     String initialRoute = '/';
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+        BotCallsRefreshService.startPeriodicRefresh(context);
+      });
 
     // If app opened from terminated state via notification
     if (initialNotificationPayload != null) {

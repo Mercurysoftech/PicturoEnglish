@@ -84,7 +84,7 @@ class MoodDiaryVew extends StatelessWidget {
             children: [
               Text(
                 "Chat & Call",
-                style: TextStyle(fontSize: 26.0, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 26.0, fontWeight: FontWeight.bold,fontFamily: 'Poppins Medium'),
               ),
               SlideTransition(
                 position: moodFirstHalfAnimation,
@@ -95,6 +95,7 @@ class MoodDiaryVew extends StatelessWidget {
                         left: 64, right: 64, top: 16, bottom: 16),
                     child: Text(
                       "Stay connected with seamless messaging and high-quality voice or video calls, enjoy group chats, and experience secure, real-time communication anytime, anywhere.",
+                      style: TextStyle(fontFamily: 'Poppins Regular'),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -139,6 +140,7 @@ class MoodDiaryVew extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 18,
                             color: Colors.black,
+                            fontFamily: 'Poppins Regular'
                           ),
                         ),
                       ),
@@ -172,6 +174,7 @@ class MoodDiaryVew extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 18,
                             color: Colors.white,
+                            fontFamily: 'Poppins Medium'
                           ),
                         ),
                       ),

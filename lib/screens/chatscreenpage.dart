@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:developer';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -8,6 +9,7 @@ import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:picturo_app/classes/services/notification_service.dart';
 import 'package:picturo_app/classes/svgfiles.dart';
+import 'package:picturo_app/cubits/user_status/user_status_cubit.dart';
 import 'package:picturo_app/main.dart';
 import 'package:picturo_app/screens/chatmessagelayout.dart';
 import 'package:picturo_app/screens/homepage.dart';
@@ -63,6 +65,8 @@ class _ChatScreenState extends State<ChatScreen> {
   Timer? _typingTimer;
   bool _isUserTyping = false;
   String? _userId;
+  bool _isBlocked = false;
+
   @override
   void initState() {
     super.initState();
@@ -85,10 +89,21 @@ class _ChatScreenState extends State<ChatScreen> {
     _userId = userId;
     await ChatSocket.connectSocket();
     print("ksjdcnksjdcnksjcnsd ${ChatSocket.socket?.connected}");
-    
+
     ChatSocket.socket?.on('newMessage', (data) {
       log("ksjdcnksjdcnksjcnsd  New Msg ${data}");
       _handleIncomingMessage(data);
+    });
+
+    ChatSocket.socket?.on('messageBlocked', (data) {
+      log("🚫 Message Blocked Event: $data");
+      if (mounted) {
+        // _showMessageBlockedDialog(data['message'] ??
+        //     "Cannot send message. One of the users is blocked.");
+      }
+      setState(() {
+        _isBlocked = true;
+      });
     });
 
     ChatSocket.socket?.onError((handler) {});
@@ -113,6 +128,31 @@ class _ChatScreenState extends State<ChatScreen> {
         'is_typing': false,
       });
     });
+  }
+
+  void _showMessageBlockedDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(
+          'Message Blocked',
+          style: TextStyle(fontFamily: AppConstants.commonFont),
+        ),
+        content: Text(
+          message,
+          style: TextStyle(fontFamily: AppConstants.commonFont),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'OK',
+              style: TextStyle(fontFamily: AppConstants.commonFont),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void sendMessage(String senderId, String receiverId, String message) {
@@ -281,6 +321,11 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _sendMessage() async {
+    if (_isBlocked) {
+      _showMessageBlockedDialog(
+          'Cannot send message. One of the users is blocked.');
+      return;
+    }
     if (_messageController.text.isNotEmpty) {
       final prefs = await SharedPreferences.getInstance();
 
@@ -422,21 +467,29 @@ class _ChatScreenState extends State<ChatScreen> {
                               fontSize: 16),
                         ),
                       ),
-                      Text(
-                        _isUserTyping
-                            ? 'Typing...'
-                            : _isOnline
-                                ? 'Online'
-                                : 'Offline',
-                        style: TextStyle(
-                            color: _isUserTyping
-                                ? Colors.green
-                                : _isOnline
-                                    ? Colors.white
-                                    : Colors.white,
-                            fontSize: 12,
-                            fontFamily: 'Poppins Regular'),
-                      )
+                      BlocBuilder<UserStatusCubit, Map<String, bool>>(
+                        builder: (context, userStatus) {
+                          final isOnline =
+                              userStatus[widget.userId.toString()] ?? false;
+
+                          return Text(
+                            _isUserTyping
+                                ? 'Typing...'
+                                : isOnline
+                                    ? 'Online'
+                                    : 'Offline',
+                            style: TextStyle(
+                              color: _isUserTyping
+                                  ? Colors.green
+                                  : isOnline
+                                      ? Colors.white
+                                      : Colors.white,
+                              fontSize: 12,
+                              fontFamily: 'Poppins Regular',
+                            ),
+                          );
+                        },
+                      ),
                     ],
                   ),
                 ],
@@ -640,6 +693,8 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _showBlockConfirmationDialog() {
+    FocusScope.of(context).unfocus();
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -691,17 +746,17 @@ class _ChatScreenState extends State<ChatScreen> {
 // Add this method to handle the actual blocking
   Future<void> _blockUser() async {
     try {
-      // Implement your block user API call here
-      // Example:
       await _apiService.blockUser(widget.userId);
+
+      // refresh friends on cubit
       context.read<UserFriendsCubit>().fetchAllUsersAndFriends();
-      // Show a success message
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('User blocked successfully')),
       );
 
-      // Optionally navigate back
-      Navigator.of(context).pop();
+      // Pop ChatScreen with a result
+      Navigator.of(context).pop(true);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to block user: $e')),

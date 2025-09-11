@@ -79,7 +79,7 @@ class RelaxView extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 28.0),
                   child: Text(
                     "Play Game & Learn",
-                    style: TextStyle(fontSize: 26.0, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 26.0, fontWeight: FontWeight.bold,fontFamily: 'Poppins Medium'),
                   ),
                 ),
               ),
@@ -87,9 +87,10 @@ class RelaxView extends StatelessWidget {
               SlideTransition(
                 position: textAnimation,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 38.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 35.0),
                   child: Text(
                     "Play interactive games that make learning grammar fun while improving your skills through engaging challenges and real-time feedback.",
+                    style: TextStyle(fontFamily: 'Poppins Regular'),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -129,6 +130,7 @@ class RelaxView extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 18,
                           color: Colors.black,
+                          fontFamily: 'Poppins Medium'
                         ),
                       ),
                     ),

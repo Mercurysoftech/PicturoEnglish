@@ -198,12 +198,23 @@ class _TopicCardState extends State<TopicCard> {
           // Background image
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: CachedNetworkImageWidget(
-              imageUrl: "https://picturoenglish.com/admin/${widget.image}",
-              fit: BoxFit.cover,
-              height: double.infinity,
-              width: double.infinity,
-            ),
+            child: CachedNetworkImage(
+  imageUrl: "https://picturoenglish.com/admin/${widget.image}?v=${DateTime.now().millisecondsSinceEpoch}",
+  fit: BoxFit.cover,
+  height: double.infinity,
+  width: double.infinity,
+  placeholder: (context, url) => const Center(
+    child: CircularProgressIndicator(strokeWidth: 2),
+  ),
+  errorWidget: (context, url, error) {
+    debugPrint("Image load failed: $url, error: $error");
+    return Container(
+      color: Colors.grey[300],
+      child: const Icon(Icons.broken_image, color: Colors.red),
+    );
+  },
+)
+
           ),
 
           // Semi-transparent overlay for text readability

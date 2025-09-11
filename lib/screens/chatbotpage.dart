@@ -6,17 +6,19 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
+//import 'package:permission_handler/permission_handler.dart';
 import 'package:picturo_app/classes/svgfiles.dart';
 import 'package:picturo_app/providers/profileprovider.dart';
+import 'package:picturo_app/providers/remaining_bot_calls_provider';
 import 'package:picturo_app/screens/chatbotmessagelayout%20.dart';
 import 'package:picturo_app/screens/myprofilepage.dart';
+import 'package:picturo_app/screens/premium_plans_screen.dart';
 import 'package:picturo_app/screens/threedotloading.dart';
 import 'package:picturo_app/screens/widgets/commons.dart';
 import 'package:picturo_app/services/chatbotapiservice.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
+//import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import '../cubits/get_coins_cubit/coins_cubit.dart';
 
@@ -34,47 +36,56 @@ class _ChatBotScreenState extends State<ChatBotScreen> with TickerProviderStateM
   Set<String> _mutedMessages = {};
   late ChatBotApiService _apiService;
   bool _isLoading = false;
-  late stt.SpeechToText _speech;
-  bool _isListening = false;
-  late AnimationController _scaleController;
-  late Animation<double> _scaleAnimation;
-  late AnimationController _colorController;
-  late Animation<Color?> _colorAnimation;
-  bool _isRecording = false;
+  //late stt.SpeechToText _speech;
+  //bool _isListening = false;
+  // late AnimationController _scaleController;
+  // late Animation<double> _scaleAnimation;
+  // late AnimationController _colorController;
+  // late Animation<Color?> _colorAnimation;
+  //bool _isRecording = false;
   bool _isAudioMuted = false;
   final AudioPlayer _audioPlayer = AudioPlayer();
 
   String? selectedScenario;
+  bool _hasEnoughPrompts = true;
 
   @override
   void initState() {
     super.initState();
     _initializeApiService();
-    _speech = stt.SpeechToText();
-    _initSpeech();
+    //_speech = stt.SpeechToText();
+    //_initSpeech();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _showWelcomeMessage();
+       _checkRemainingPrompts();
     });
 
-    _scaleController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 200),
-    );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.5).animate(_scaleController);
+    // _scaleController = AnimationController(
+    //   vsync: this,
+    //   duration: const Duration(milliseconds: 200),
+    // );
+    // _scaleAnimation = Tween<double>(begin: 1.0, end: 1.5).animate(_scaleController);
 
-    _colorController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 200),
-    );
-    _colorAnimation = ColorTween(
-      begin: const Color(0xFF49329A),
-      end: Colors.red,
-    ).animate(_colorController);
+    // _colorController = AnimationController(
+    //   vsync: this,
+    //   duration: const Duration(milliseconds: 200),
+    // );
+    // _colorAnimation = ColorTween(
+    //   begin: const Color(0xFF49329A),
+    //   end: Colors.red,
+    // ).animate(_colorController);
 
     _messageController.addListener(() {
       setState(() {});        
     });
     
+  }
+
+  void _checkRemainingPrompts() {
+    final botCallsProvider = context.read<RemainingBotCallsProvider>();
+    setState(() {
+      _hasEnoughPrompts = botCallsProvider.dailyRemainingPrompts > 0;
+    });
   }
 
   Future<void> _initializeApiService() async {
@@ -104,64 +115,64 @@ class _ChatBotScreenState extends State<ChatBotScreen> with TickerProviderStateM
     return '$displayHour:$minute $amPm';
   }
 
-  void _initSpeech() async {
-    var status = await Permission.microphone.request();
-    if (status.isGranted) {
-      bool available = await _speech.initialize(
-        onStatus: (status) {
-          if (status == 'notListening' && _isListening) {
-            setState(() => _isListening = false);
-          }
-        },
-        onError: (error) => print('Error: $error'),
-      );
-    } else {
-    }
-  }
+  // void _initSpeech() async {
+  //   var status = await Permission.microphone.request();
+  //   if (status.isGranted) {
+  //     bool available = await _speech.initialize(
+  //       onStatus: (status) {
+  //         if (status == 'notListening' && _isListening) {
+  //           setState(() => _isListening = false);
+  //         }
+  //       },
+  //       onError: (error) => print('Error: $error'),
+  //     );
+  //   } else {
+  //   }
+  // }
 
-  void _startListening() async {
-    if (!_isListening) {
-      bool available = await _speech.initialize();
-      if (available) {
-        setState(() {
-          _isListening = true;
-          _isRecording = true;
-        });
-        _scaleController.forward();
-        _colorController.forward();
-        _speech.listen(
-          onResult: (result) {
-            setState(() {
-              _messageController.text = result.recognizedWords;
-              _messageController.selection = TextSelection.fromPosition(
-                TextPosition(offset: _messageController.text.length),
-              );
-            });
-          },
-        );
-      }
-    }
-  }
+  // void _startListening() async {
+  //   if (!_isListening) {
+  //     bool available = await _speech.initialize();
+  //     if (available) {
+  //       setState(() {
+  //         _isListening = true;
+  //         _isRecording = true;
+  //       });
+  //       _scaleController.forward();
+  //       _colorController.forward();
+  //       _speech.listen(
+  //         onResult: (result) {
+  //           setState(() {
+  //             _messageController.text = result.recognizedWords;
+  //             _messageController.selection = TextSelection.fromPosition(
+  //               TextPosition(offset: _messageController.text.length),
+  //             );
+  //           });
+  //         },
+  //       );
+  //     }
+  //   }
+  // }
 
-  void _stopListening() {
-    if (_isListening) {
-      _speech.stop();
-      setState(() {
-        _isListening = false;
-        _isRecording = false;
-      });
+  // void _stopListening() {
+  //   if (_isListening) {
+  //     _speech.stop();
+  //     setState(() {
+  //       _isListening = false;
+  //       _isRecording = false;
+  //     });
                 
-      if (_messageController.text.isEmpty) {
-        _scaleController.reverse();
-        _colorController.reverse();
-      }
-    }
-  }
+  //     if (_messageController.text.isEmpty) {
+  //       _scaleController.reverse();
+  //       _colorController.reverse();
+  //     }
+  //   }
+  // }
 
   @override
   void dispose() {
-    _scaleController.dispose();
-    _colorController.dispose();
+    //_scaleController.dispose();
+    //_colorController.dispose();
     _audioPlayer.dispose();
     super.dispose();
   }
@@ -203,16 +214,24 @@ class _ChatBotScreenState extends State<ChatBotScreen> with TickerProviderStateM
 
   Future _sendMessage({required String scenario}) async {
   final message = _messageController.text.trim();
+   final botCallsProvider = context.read<RemainingBotCallsProvider>();
+  final remainingPrompts = botCallsProvider.dailyRemainingPrompts;
+
+   if (remainingPrompts <= 0) {
+      _showNoRemainingPromptsDialog();
+      return;
+    }
+
 
   SharedPreferences prefs = await SharedPreferences.getInstance();
  String userLanguage= prefs.getString('selectedLanguage')??"";
-  if (_isListening) {
-    _stopListening();
-  }
+  // if (_isListening) {
+  //   _stopListening();
+  // }
   
   setState(() {
-    _isRecording = false;
-    _isListening = false;
+    //_isRecording = false;
+    //_isListening = false;
     _messages.add({
       'message': message,
       'isMe': true,
@@ -223,10 +242,13 @@ class _ChatBotScreenState extends State<ChatBotScreen> with TickerProviderStateM
   });
   _scrollToBottom();
   _messageController.clear();
-  _scaleController.reverse();
-  _colorController.reverse();
+  //_scaleController.reverse();
+  //_colorController.reverse();
 
-  // try {
+  try {
+
+  botCallsProvider.decrementDailyPrompts();
+      _checkRemainingPrompts();
 
     final response = await _apiService.getChatbotResponse(
       message: message,
@@ -234,7 +256,7 @@ class _ChatBotScreenState extends State<ChatBotScreen> with TickerProviderStateM
       scenario: scenario,
     ).timeout(const Duration(seconds: 30));
 
-    context.read<CoinCubit>().useCoin(1);
+    //context.read<CoinCubit>().useCoin(1);
 
     String botMessage = response.response.isNotEmpty
         ? response.response
@@ -269,24 +291,76 @@ class _ChatBotScreenState extends State<ChatBotScreen> with TickerProviderStateM
       });
       _isLoading = false;
     });
-  // } catch (e) {
-  //   // Show the error from `error` key
-  //   setState(() {
-  //     _messages.add({
-  //       'message': e.toString().replaceFirst("Exception: ", ""),
-  //       'isMe': false,
-  //       'timestamp': _getCurrentTime(),
-  //       'audioBase64': '',
-  //       'translation': {},
-  //     });
-  //     _isLoading = false;
-  //   });
-  // }
+  } catch (e) {
+    // Show the error from `error` key
+    botCallsProvider.updateValues(dailyPrompts: remainingPrompts);
+    _checkRemainingPrompts();
+
+    setState(() {
+      _messages.add({
+        'message': e.toString().replaceFirst("Exception: ", ""),
+        'isMe': false,
+        'timestamp': _getCurrentTime(),
+        'audioBase64': '',
+        'translation': {},
+      });
+      _isLoading = false;
+    });
+  }
   _scrollToBottom();
 
 
 }
 
+
+void _showNoRemainingPromptsDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(
+            'No Chat Prompts Remaining',
+            style: TextStyle(
+              fontFamily: 'Poppins Regular',
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Text(
+            'You have used all your daily chatbot prompts. '
+            'Please upgrade your plan or wait until tomorrow for your prompts to reset.',
+            style: TextStyle(fontFamily: 'Poppins Regular'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'OK',
+                style: TextStyle(fontFamily: 'Poppins Regular'),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                // Navigate to premium screen
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => PremiumPlansScreen()),
+                );
+              },
+              child: Text(
+                'Upgrade Plan',
+                style: TextStyle(
+                  color: Color(0xFF49329A),
+                  fontFamily: 'Poppins Regular',
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
 
 
@@ -445,31 +519,90 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
           ),
           title: Padding(
             padding: const EdgeInsets.only(top: 10.0),
-            child: Row(
-              children: [
-               Image.asset('assets/ai_avatar.png',scale: 10,),
-                const SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
+            child: Consumer<RemainingBotCallsProvider>(
+              builder: (context, botCalls, child) {
+                 final remainingPrompts = botCalls.dailyRemainingPrompts;
+
+                return Row(
                   children: [
-                    Text(
-                      'Chat AI',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Poppins Regular',
-                        fontSize: 18
-                      ),
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Image.asset('assets/ai_avatar.png', scale: 10),
+                        if (remainingPrompts > 0)
+                          Positioned(
+                            top: 0,
+                            right: 0,
+                            child: Container(
+                              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              constraints: BoxConstraints(
+                                minWidth: 20,
+                                minHeight: 20,
+                              ),
+                              child: Text(
+                                '$remainingPrompts',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Poppins Regular',
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(width: 10),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Chat AI',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Poppins Regular',
+                            fontSize: 18
+                          ),
+                        ),
+                        if (remainingPrompts > 0)
+                          Text(
+                            '$remainingPrompts prompts left',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                              fontFamily: 'Poppins Regular',
+                            ),
+                          ),
+                      ],
                     ),
                   ],
-                ),
-              ],
+                );
+              },
             ),
           ),
           actions: [
-            CoinBadge(),
-            SizedBox(width: 25,)
+            //CoinBadge(),
+            SizedBox(width: 25),
+            IconButton(
+              icon: Icon(Icons.refresh, color: Colors.white),
+              onPressed: () {
+                context.read<RemainingBotCallsProvider>().fetchRemainingBotCalls();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Refreshing prompts...'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+              },
+              tooltip: 'Refresh prompts',
+            ),
           ],
           shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.only(
@@ -521,7 +654,7 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
                       alignment: Alignment.centerLeft,
                       child: Padding(
                         padding: const EdgeInsets.all(12.0),
-                        child: ThreeDotLoading(
+                        child: ThinkingText(
                           color: const Color(0xFF49329A),    
                         ),
                       ),
@@ -557,73 +690,32 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
                   ),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                   suffixIcon: Padding(
-                    padding: const EdgeInsets.only(right: 5),
-                    child: Material(
-                      color: Colors.transparent,
-                      borderRadius: BorderRadius.circular(30),
-                      child: GestureDetector(
-                        onLongPressStart: _messageController.text.isEmpty
-                            ? (_) {
-                          setState(() {
-                            _isRecording = true;
-                          });
-                          _scaleController.forward();
-                          _colorController.forward();
-                          _startListening();
-                        }
-                            : null,
-                        onLongPressEnd: _messageController.text.isEmpty
-                            ? (_) {
-                          if (_messageController.text.isEmpty) {
-                            _stopListening();
-                          }
-                        }
-                            : null,
-                        onTap: _messageController.text.isNotEmpty
-                            ? () async{
-                          if(_messageController.text.isNotEmpty){
-                            _sendMessage(scenario:selectedScenario??"" );
-                            context.read<CoinCubit>().useCoin(1);
-                            setState(() {
-                            });
-                          }
-
-                        }
-                            : null,
-                        child: AnimatedBuilder(
-                          animation: Listenable.merge([_scaleAnimation, _colorAnimation]),
-                          builder: (context, child) {
-                            final shouldScale = _isRecording && _messageController.text.isEmpty;
-                            return Transform.scale(
-                              scale: shouldScale ? _scaleAnimation.value : 1.0,
-                              child: Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: _messageController.text.isNotEmpty
-                                      ? const Color(0xFF49329A)
-                                      : _isRecording
-                                      ? _colorAnimation.value
-                                      : const Color(0xFF49329A),
-                                  borderRadius: BorderRadius.circular(30),
-                                ),
-                                child: _messageController.text.isNotEmpty
-                                    ? SvgPicture.string(
-                                  Svgfiles.sendSvg,
-                                  width: 24,
-                                  height: 24,
-                                )
-                                    : Icon(
-                                  _isRecording ? Icons.mic : Icons.mic_none,
-                                  color: Colors.white,
-                                  size: 24,
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  ),
+  padding: const EdgeInsets.only(right: 5),
+  child: Material(
+    color: Colors.transparent,
+    borderRadius: BorderRadius.circular(30),
+    child: GestureDetector(
+      onTap: _messageController.text.isNotEmpty
+          ? () async {
+              _sendMessage(scenario: selectedScenario ?? "");
+              context.read<CoinCubit>().useCoin(1);
+            }
+          : null,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFF49329A),
+          borderRadius: BorderRadius.circular(30),
+        ),
+        child: SvgPicture.string(
+          Svgfiles.sendSvg,
+          width: 24,
+          height: 24,
+        ),
+      ),
+    ),
+  ),
+),
                 ),
                 // onSubmitted: (_) =>  _sendMessage(scenario:selectedScenario??"" ),
               ),
@@ -667,6 +759,53 @@ class ChatBotQuickReplies extends StatelessWidget {
           child: Text(question,style: TextStyle(fontSize: 12),),
         );
       }).toList(),
+    );
+  }
+}
+class ThinkingText extends StatefulWidget {
+  final Color color;
+  const ThinkingText({super.key, this.color = Colors.black});
+
+  @override
+  _ThinkingTextState createState() => _ThinkingTextState();
+}
+
+class _ThinkingTextState extends State<ThinkingText>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<int> _dotAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller =
+        AnimationController(vsync: this, duration: const Duration(seconds: 1))
+          ..repeat();
+    _dotAnimation = StepTween(begin: 0, end: 3).animate(_controller);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _dotAnimation,
+      builder: (context, child) {
+        String dots = '.' * _dotAnimation.value;
+        return Text(
+          "Thinking$dots",
+          style: TextStyle(
+            color: widget.color,
+            fontSize: 16,
+            fontFamily: 'Poppins Medium',
+            fontWeight: FontWeight.bold
+          ),
+        );
+      },
     );
   }
 }

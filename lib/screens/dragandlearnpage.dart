@@ -178,38 +178,84 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
   bool pauseMusic=false;
 
   void _showCongratulationsPopup() {
-    final hasEnoughQuestions = (widget.preLevels?[widget.levelIndex+1].questions?.length ?? 0) >= 5;
+  final bool hasNextLevel =
+      widget.levelIndex + 1 < (widget.preLevels?.length ?? 0);
 
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Congratulations!", style: TextStyle(                   fontFamily: AppConstants.commonFont,fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF5E3FA0)), textAlign: TextAlign.center),
-          content: const Text("You matched all correctly.", textAlign: TextAlign.center, style: TextStyle(                   fontFamily: AppConstants.commonFont,fontSize: 16)),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text("OK", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+  final bool nextLevelIsPlayable = hasNextLevel &&
+      (widget.preLevels?[widget.levelIndex + 1].questions?.length ?? 0) >= 4;
+
+  showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text(
+          "Congratulations!",
+          style: TextStyle(
+            fontFamily: AppConstants.commonFont,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF5E3FA0),
+          ),
+          textAlign: TextAlign.center,
+        ),
+        content: Text(
+          nextLevelIsPlayable
+              ? "You matched all correctly. Ready for the next level?"
+              : "You matched all correctly. 🎉\nGame Completed!",
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontFamily: AppConstants.commonFont,
+            fontSize: 16,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              if (!nextLevelIsPlayable) {
+                Navigator.of(context).pop();
+              }
+            },
+            child: const Text(
+              "OK",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-            (!hasEnoughQuestions)?SizedBox():TextButton(
+          ),
+          if (nextLevelIsPlayable)
+            TextButton(
               onPressed: () {
                 Navigator.pop(context);
-
-
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => DragAndLearnApp(levelIndex: widget.levelIndex+1,topicId:widget.topicId,bookId: widget.bookId,level:  widget.preLevels?[widget.levelIndex+1],preLevels: widget.preLevels,),
+                    builder: (context) => DragAndLearnApp(
+                      levelIndex: widget.levelIndex + 1,
+                      topicId: widget.topicId,
+                      bookId: widget.bookId,
+                      level: widget.preLevels?[widget.levelIndex + 1],
+                      preLevels: widget.preLevels,
+                    ),
                   ),
                 );
               },
-              child: const Text("Next Level", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold,   fontFamily: AppConstants.commonFont,)),
+              child: const Text(
+                "Next Level",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: AppConstants.commonFont,
+                ),
+              ),
             ),
-          ],
-        );
-      },
-    );
-  }
+        ],
+      );
+    },
+  );
+}
+
 
   bool isVolumeMute=true;
   Map<String?, bool> incorrectDrop = {};
@@ -569,7 +615,7 @@ class ImageWordMatchGrid extends StatelessWidget {
                   word ?? '',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontFamily: 'YourFont',
+                    fontFamily: 'Poppins',
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: Color(0xFF49329A),

@@ -15,6 +15,7 @@ final class GetFriendsListLoading extends GetFriendsListState {
 final class GetFriendsListLoaded extends GetFriendsListState {
   const GetFriendsListLoaded({required this.friends});
   final List<Friends> friends;
+  
   @override
   List<Object> get props => [friends];
 }

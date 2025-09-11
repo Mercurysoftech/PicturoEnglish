@@ -1,0 +1,198 @@
+import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'dart:log' as developer;
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
+class RemainingBotCallsProvider with ChangeNotifier {
+  int _dailyRemainingMinutes = 0;
+  int _monthlyRemainingMinutes = 0;
+  dynamic _dailyRemainingPrompts = 0; // Can be int or String ("unlimited")
+  dynamic _monthlyRemainingPrompts = 0; // Can be int or String ("unlimited")
+  bool _isLoading = false;
+  String? _error;
+  DateTime? _lastUpdated;
+  bool _isUnlimitedCall = false;
+  bool _isUnlimitedChat = false;
+
+  // Getters
+  int get dailyRemainingMinutes => _dailyRemainingMinutes;
+  int get monthlyRemainingMinutes => _monthlyRemainingMinutes;
+  dynamic get dailyRemainingPrompts => _dailyRemainingPrompts;
+  dynamic get monthlyRemainingPrompts => _monthlyRemainingPrompts;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
+  DateTime? get lastUpdated => _lastUpdated;
+  bool get isUnlimitedCall => _isUnlimitedCall;
+  bool get isUnlimitedChat => _isUnlimitedChat;
+
+  // Check if prompts are unlimited
+  bool get isDailyPromptsUnlimited => _dailyRemainingPrompts == "unlimited";
+  bool get isMonthlyPromptsUnlimited => _monthlyRemainingPrompts == "unlimited";
+
+  // Method to fetch remaining bot calls
+  Future<void> fetchRemainingBotCalls() async {
+    if (_isLoading || (_lastUpdated != null && 
+        DateTime.now().difference(_lastUpdated!).inSeconds < 10)) {
+      return;
+    }
+
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("auth_token");
+
+      if (token == null) {
+        _error = "No authentication token found";
+        _isLoading = false;
+        notifyListeners();
+        return;
+      }
+
+      final response = await http.get(
+        Uri.parse("https://picturoenglish.com/api/remaining-bot-call-view.php"),
+        headers: {
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json"
+        },
+      );
+
+      developer.log("Remaining Bot Calls API Response: ${response.body}");
+      
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        
+        // Update values from response
+        _updateFromResponse(jsonData);
+        _lastUpdated = DateTime.now();
+        _error = null;
+      } else {
+        _error = "Failed to fetch data. Status code: ${response.statusCode}";
+      }
+    } catch (e) {
+      _error = "Error fetching remaining bot calls: $e";
+      developer.log("Error fetching remaining bot calls: $e");
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // Method to update values from API response
+  void _updateFromResponse(Map<String, dynamic> jsonData) {
+    if (jsonData['status'] == true) {
+      final oldDailyMinutes = _dailyRemainingMinutes;
+      final oldMonthlyMinutes = _monthlyRemainingMinutes;
+
+      // Update unlimited flags
+      if (jsonData['merged_usage'] != null) {
+        _isUnlimitedCall = jsonData['merged_usage']?['is_unlimited_call'] as bool? ?? false;
+        _isUnlimitedChat = jsonData['merged_usage']?['is_unlimited_chat'] as bool? ?? false;
+      }
+
+      // Update monthly usage
+      if (jsonData['merged_usage']?['monthly'] != null) {
+        final monthly = jsonData['merged_usage']?['monthly'];
+        _monthlyRemainingMinutes = _parseInt(monthly?['balance_call_minutes']) ?? 0;
+        _monthlyRemainingPrompts = monthly?['balance_chatbot_prompts'] ?? 0;
+      }
+
+      // Update daily usage
+      if (jsonData['merged_usage']?['daily'] != null) {
+        final daily = jsonData['merged_usage']?['daily'];
+        _dailyRemainingMinutes = _parseInt(daily?['remaining_call_minutes']) ?? 0;
+        _dailyRemainingPrompts = daily?['remaining_chatbot_prompts'] ?? 0;
+      }
+
+      if (oldDailyMinutes != _dailyRemainingMinutes || 
+          oldMonthlyMinutes != _monthlyRemainingMinutes) {
+        notifyListeners();
+      }
+    }
+  }
+
+  // Helper method to parse dynamic values to int
+  int? _parseInt(dynamic value) {
+    if (value is int) {
+      return value;
+    } else if (value is String) {
+      return int.tryParse(value);
+    }
+    return null;
+  }
+
+  // Method to manually update values (for testing or when you know they changed)
+  void updateValues({
+    int? dailyMinutes,
+    int? monthlyMinutes,
+    dynamic dailyPrompts,
+    dynamic monthlyPrompts,
+    bool? isUnlimitedCall,
+    bool? isUnlimitedChat,
+  }) {
+    if (dailyMinutes != null) _dailyRemainingMinutes = dailyMinutes;
+    if (monthlyMinutes != null) _monthlyRemainingMinutes = monthlyMinutes;
+    if (dailyPrompts != null) _dailyRemainingPrompts = dailyPrompts;
+    if (monthlyPrompts != null) _monthlyRemainingPrompts = monthlyPrompts;
+    if (isUnlimitedCall != null) _isUnlimitedCall = isUnlimitedCall;
+    if (isUnlimitedChat != null) _isUnlimitedChat = isUnlimitedChat;
+    notifyListeners();
+  }
+
+  // Method to decrement daily minutes (when a call is made)
+  void decrementDailyMinutes(int minutesUsed) {
+    if (!_isUnlimitedCall) {
+      _dailyRemainingMinutes = (_dailyRemainingMinutes - minutesUsed).clamp(0, _dailyRemainingMinutes);
+      notifyListeners();
+    }
+  }
+
+  // Method to decrement daily prompts (when a prompt is used)
+  void decrementDailyPrompts() {
+    if (!_isUnlimitedChat && _dailyRemainingPrompts is int) {
+      _dailyRemainingPrompts = (_dailyRemainingPrompts - 1).clamp(0, _dailyRemainingPrompts);
+      notifyListeners();
+    }
+  }
+
+  // Clear error
+  void clearError() {
+    _error = null;
+    notifyListeners();
+  }
+
+  // Check if user can make calls (has remaining minutes or is unlimited)
+  bool get canMakeCall {
+    return _isUnlimitedCall || _dailyRemainingMinutes > 0;
+  }
+
+  // Check if user can use chatbot (has remaining prompts or is unlimited)
+  bool get canUseChatbot {
+    return _isUnlimitedChat || 
+           (_dailyRemainingPrompts is int && _dailyRemainingPrompts > 0) ||
+           _dailyRemainingPrompts == "unlimited";
+  }
+
+  // Get formatted remaining prompts text
+  String get formattedDailyPrompts {
+    if (_dailyRemainingPrompts == "unlimited") {
+      return "Unlimited";
+    } else if (_dailyRemainingPrompts is int) {
+      return _dailyRemainingPrompts.toString();
+    }
+    return "0";
+  }
+
+  // Get formatted monthly prompts text
+  String get formattedMonthlyPrompts {
+    if (_monthlyRemainingPrompts == "unlimited") {
+      return "Unlimited";
+    } else if (_monthlyRemainingPrompts is int) {
+      return _monthlyRemainingPrompts.toString();
+    }
+    return "0";
+  }
+}

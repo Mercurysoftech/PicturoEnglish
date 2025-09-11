@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:picturo_app/classes/services/connectivity_service.dart';
+import 'package:picturo_app/providers/requests_provider.dart';
+import 'package:picturo_app/screens/earnings_ref/referral_details.dart';
 import 'package:picturo_app/screens/myprofilepage.dart';
 import 'package:picturo_app/screens/requestspage.dart';
+import 'package:picturo_app/screens/widgets/offline_overlay.dart';
 import 'package:picturo_app/services/api_service.dart';
+import 'package:picturo_app/services/navigation_service.dart';
 import 'package:picturo_app/utils/common_file.dart';
+import 'package:provider/provider.dart';
 
 import '../cubits/bottom_navigator_index_cubit.dart';
 import '../cubits/get_avatar_cubit/get_avatar_cubit.dart';
@@ -29,54 +35,95 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        backgroundColor: Color(0xFFE0F7FF),
-          appBar: CommonAppBar(title:"Notification" ,isFromHomePage: true,),
-        body: Column(
+    return Consumer<ConnectivityService>(
+    builder: (context, connectivityService, child) {
+      final bool isOnline = connectivityService.isOnline;
+      
+        return Stack(
           children: [
-            // TabBar placed outside of AppBar
-            TabBar(onTap: (index){
-              if(index==0){
-
-              }
-              context.read<NotificationCubit>().fetchNotifications();
+            DefaultTabController(
+              length: 2,
+              child: Scaffold(
+                backgroundColor: Color(0xFFE0F7FF),
+                  appBar: CommonAppBar(title:"Notification" ,isFromHomePage: true,),
+                body: Column(
+                  children: [
+                    // TabBar placed outside of AppBar
+                    TabBar(onTap: (index){
+                      if(index==0){
+            
+                      }
+                      context.read<NotificationCubit>().fetchNotifications();
+                    },
+                      labelStyle: TextStyle(fontWeight: FontWeight.bold,fontFamily: AppConstants.commonFont,),
+            
+                      tabs: [
+              const Tab(text: 'Notifications'),
+              Consumer<RequestsProvider>(
+            builder: (context, requestsProvider, _) {
+              final count = requestsProvider.requestsCount;
+              return Tab(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('Requests'),
+                    if (count > 0) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        child: Text(
+                          '$count',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              );
             },
-              labelStyle: TextStyle(fontWeight: FontWeight.bold,fontFamily: AppConstants.commonFont,),
-
-              tabs: [
-                Tab(
-                    text: 'Notifications'),
-                Tab(text: 'Requests'),
-              ],
-            ),
-            Expanded(
+              ),
+            ],
+            
+                    ),
+                    Expanded(
+                      child:
+                Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Color(0xFFE0F7FF),
+                    Color(0xFFEAE4FF),
+                  ], // Set your gradient colors here
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
               child:
-        Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Color(0xFFE0F7FF),
-            Color(0xFFEAE4FF),
-          ], // Set your gradient colors here
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child:
-        TabBarView(
-          children: [
-            DailyTaskTab(),
-            RequestsPage()
+                TabBarView(
+                  children: [
+                    DailyTaskTab(),
+                    RequestsPage()
+                  ],
+                ),
+            
+              ),
+              ),
+                  ],
+                )
+              ),
+            ),
+            if (!isOnline) const OfflineOverlay(),
           ],
-        ),
-
-      ),
-      ),
-          ],
-        )
-      ),
+        );
+      }
     );
   }
 
@@ -85,20 +132,20 @@ class _NotificationScreenState extends State<NotificationScreen> {
     final apiService = await ApiService.create();
     final profile = await apiService.fetchProfileDetails();
 
-    if (profile.avatarId == null || profile.avatarId == 0) {
+    if (profile.user.avatarId == null || profile.user.avatarId == 0) {
       throw Exception('Using default avatar');
     }
 
     final avatarResponse = await apiService.fetchAvatars();
     final avatar = avatarResponse.data.firstWhere(
-      (a) => a.id == profile.avatarId,
+      (a) => a.id == profile.user.avatarId,
       orElse: () => throw Exception('Avatar not found'),
     );
 
     return 'https://picturoenglish.com/admin/${avatar.avatarUrl}';
   } catch (e) {
     print('Error fetching current user avatar: $e');
-    throw e; // This will trigger the default avatar fallback
+    throw e;
   }
 }
 }
@@ -165,7 +212,15 @@ class DailyTaskTab extends StatelessWidget {
                           onPressed: () {
                             if((notifications[index].body.toString().toLowerCase().contains("game")||notifications[index].title.toLowerCase().toString().contains("game"))){
                               context.read<BottomNavigatorIndexCubit>().onChageIndex(2);
-                            }else{
+                            } else if(notifications[index].body.toString().toLowerCase().contains("refer")||notifications[index].title.toLowerCase().toString().contains("refer")){
+                               Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (context) => ReferralPage(),
+  ),
+);
+                            }
+                            else{
                               context.read<BottomNavigatorIndexCubit>().onChageIndex(0);
                             }
                           },

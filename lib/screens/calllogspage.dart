@@ -67,80 +67,101 @@ class _CallLogPageState extends State<CallLogPage> {
                         final isIncoming = !isOutgoing;
 
                         return Card(
-                          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          elevation: 0,
-                          color: isOutgoing
-                              ? Colors.white 
-                              : Colors.white,
-                          child: ListTile(
-                            dense: true,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                            leading: CircleAvatar(
-                              radius: 22,
-                              backgroundColor: isOutgoing
-                                  ? Colors.green[100] 
-                                  : Colors.red[100],
-                              child: Icon(
-                                isVideo ? Icons.videocam : Icons.call,
-                                color: isOutgoing ? Colors.green : Colors.red,
-                                size: 20,
-                              ),
-                            ),
-                            title: Text(
-                              isOutgoing ? 'Outgoing Call' : 'Incoming Call',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                fontFamily: 'Poppins Regular',
-                                color: isOutgoing ? Colors.green[800] : Colors.red[800],
-                              ),
-                            ),
-                            subtitle: Padding(
-                              padding: const EdgeInsets.only(top: 4),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        isOutgoing
-                                            ? Icons.call_made
-                                            : (isMissed ? Icons.call_missed : Icons.call_received),
-                                        color: isOutgoing
-                                            ? Colors.green
-                                            : (isMissed ? Colors.red : Colors.blue),
-                                        size: 16,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        isOutgoing
-                                            ? 'Outgoing'
-                                            : (isMissed ? 'Missed' : 'Received'),
-                                        style: TextStyle(
-                                          color: isOutgoing
-                                              ? Colors.green
-                                              : (isMissed ? Colors.red : Colors.blue),
-                                          fontWeight: FontWeight.w500,
-                                          fontFamily: 'Poppins Regular',
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  Text(
-                                    '${log.duration}s',
-                                    style: const TextStyle(color: Colors.grey, fontSize: 12.5,fontFamily: 'Poppins Regular',),
-                                  ),
-                                  Text(
-                                    log.createdAt,
-                                    style: const TextStyle(color: Colors.grey, fontSize: 12.5,fontFamily: 'Poppins Regular',),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        );
+  margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+  elevation: 0,
+  color: Colors.white,
+  child: Stack(
+    children: [
+      ListTile(
+        dense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        leading: CircleAvatar(
+          radius: 22,
+          backgroundColor: isOutgoing ? Colors.green[100] : Colors.red[100],
+          child: Icon(
+            isVideo ? Icons.videocam : Icons.call,
+            color: isOutgoing ? Colors.green : Colors.red,
+            size: 20,
+          ),
+        ),
+        title: Text(
+          isOutgoing ? 'Outgoing Call' : 'Incoming Call',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+            fontFamily: 'Poppins Regular',
+            color: isOutgoing ? Colors.green[800] : Colors.red[800],
+          ),
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    isOutgoing
+                        ? Icons.call_made
+                        : (isMissed ? Icons.call_missed : Icons.call_received),
+                    color: isOutgoing
+                        ? Colors.green
+                        : (isMissed ? Colors.red : Colors.blue),
+                    size: 16,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    isOutgoing ? 'Outgoing' : (isMissed ? 'Missed' : 'Received'),
+                    style: TextStyle(
+                      color: isOutgoing
+                          ? Colors.green
+                          : (isMissed ? Colors.red : Colors.blue),
+                      fontWeight: FontWeight.w500,
+                      fontFamily: 'Poppins Regular',
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+              Text(
+                '${log.duration}s',
+                style: const TextStyle(
+                  color: Colors.grey,
+                  fontSize: 12.5,
+                  fontFamily: 'Poppins Regular',
+                ),
+              ),
+              Text(
+                log.createdAt,
+                style: const TextStyle(
+                  color: Colors.grey,
+                  fontSize: 12.5,
+                  fontFamily: 'Poppins Regular',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+
+      Positioned(
+        top: 8,
+        right: 12,
+        child: Text(
+          log.callerUserName ?? "Unknown", 
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            fontFamily: 'Poppins Regular',
+            color: Colors.black87,
+          ),
+        ),
+      ),
+    ],
+  ),
+);
+
                       },
                     );
             } else if (state is CallLogError) {

@@ -20,13 +20,13 @@ class AvatarCubit extends Cubit<AvatarState> {
     final apiService = await ApiService.create();
     final profile = await apiService.fetchProfileDetails();
 
-    if (profile.avatarId == null || profile.avatarId == 0) {
+    if (profile.user.avatarId == null || profile.user.avatarId == 0) {
       throw Exception('Using default avatar');
     }
 
     final avatarResponse = await apiService.fetchAvatars();
     final avatar = avatarResponse.data.firstWhere(
-          (a) => a.id == profile.avatarId,
+          (a) => a.id == profile.user.avatarId,
       orElse: () => throw Exception('Avatar not found'),
     );
 

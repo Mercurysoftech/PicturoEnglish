@@ -944,52 +944,42 @@ Future<bool?> readMarkAsRead({required String bookId,required String topicId,req
 Future<UserResponse> fetchProfileDetails() async {
   final String endpoint = "users.php"; // Replace with your actual endpoint
 
-  // try {
-    // Fetch the saved auth token
-    String? token = await getAuthToken();
+  // Fetch the saved auth token
+  String? token = await getAuthToken();
 
-    if (token == null || token.isEmpty) {
-      throw Exception("Authorization token is missing. Please log in.");
-    }
+  if (token == null || token.isEmpty) {
+    throw Exception("Authorization token is missing. Please log in.");
+  }
 
-    // Make the GET request with the auth token
-    Response response = await _dio.get(
-      endpoint,
-      options: Options(headers: {
-        "Authorization": "Bearer $token",
-        "Content-Type": "application/json",
-      }),
-    );
+  // Make the GET request with the auth token
+  Response response = await _dio.get(
+    endpoint,
+    options: Options(headers: {
+      "Authorization": "Bearer $token",
+      "Content-Type": "application/json",
+    }),
+  );
 
-    // Debugging: Print the raw API response
-    // Check if the response status code is 200 (OK)
-    if (response.statusCode == 200) {
-      if (response.data is Map<String, dynamic>) {
-        Map<String, dynamic> responseData = response.data;
+  if (response.statusCode == 200) {
+    if (response.data is Map<String, dynamic>) {
+      Map<String, dynamic> responseData = response.data;
 
-        dev.log("lskdmclksdmcsdlc ${responseData}");
-        // Ensure the response has required user details
-        if (responseData.containsKey("id") &&
-            responseData.containsKey("username") &&
-            responseData.containsKey("email")) {
-          return UserResponse.fromJson(responseData);
-        } else {
-          throw Exception("Invalid API response: Missing required fields.");
-        }
+      dev.log("API Response: $responseData");
+
+      // ✅ Check API "status" instead of "id"/"username"
+      if (responseData["status"] == true) {
+        return UserResponse.fromJson(responseData);
       } else {
-        throw Exception("Invalid API response: Expected a JSON object.");
+        throw Exception("API returned failure: ${responseData.toString()}");
       }
     } else {
-      throw Exception("Failed to fetch user details: ${response.statusMessage}");
+      throw Exception("Invalid API response: Expected a JSON object.");
     }
-  // } on DioException catch (e) {
-  //   print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
-  //   throw Exception("Error fetching user details: ${e.message}");
-  // } catch (e) {
-  //   print("Unexpected Error: $e");
-  //   throw Exception("An unexpected error occurred: $e");
-  // }
+  } else {
+    throw Exception("Failed to fetch user details: ${response.statusMessage}");
+  }
 }
+
 Future<UserResponse> fetchUserProfileDetails(String token) async {
   final String endpoint = "users.php"; // Replace with your actual endpoint
 
@@ -1392,6 +1382,44 @@ Future<Map<String, dynamic>> acceptChatRequest({
   }
 }
 
+Future<Map<String, dynamic>> declineChatRequest({
+  required int requestId,
+}) async {
+  try {
+    String? token = await getAuthToken();
+
+    if (token == null || token.isEmpty) {
+      return {"error": "Authorization token is missing. Please log in.", "success": false};
+    }
+
+    // Create the request body
+    Map<String, dynamic> params = {
+      "request_id": requestId,
+    };
+
+    Response response = await _dio.post(
+      "decline_chat_request.php",  
+      data: jsonEncode(params),
+      options: Options(
+        headers: {
+          "Authorization": "Bearer $token", 
+          "Content-Type": "application/json",
+        },
+      ),
+    );
+
+    print("API Response: ${response.data}"); 
+
+    if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
+      return response.data;
+    } else {
+      return {"error": response.data["message"] ?? "Something went wrong", "success": false};
+    }
+  } on DioException catch (e) {
+    return {"error": e.response?.data["message"] ?? "Network error", "success": false};
+  }
+}
+
 Future<Map<String, dynamic>> deleteAccount() async {
   try {
     // Retrieve the saved auth token
@@ -1772,7 +1800,7 @@ Future<bool?> sendMessagesToAPI({required Map<String,dynamic> messageMap}) async
     }
   }
   // Add this method to your ApiService class
-Future<Map<String, dynamic>> rejectCall(int callerId) async {
+Future<Map<String, dynamic>> rejectCall(int callerId,int calleeId) async {
   final String endpoint = "reject.php";
   
 
@@ -1780,6 +1808,7 @@ Future<Map<String, dynamic>> rejectCall(int callerId) async {
     Response response = await _dio.post(
       endpoint,
       data: jsonEncode({
+        "from": calleeId.toString(),
         "to": callerId.toString(),
       }),
       options: Options(

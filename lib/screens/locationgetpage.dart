@@ -15,7 +15,7 @@ import 'myprofilepage.dart';  // Import geocoding package
 
 class LocationGetPage extends StatefulWidget {
   const LocationGetPage({super.key, this.user,required this.isFromProfile});
-  final UserResponse? user;
+  final User? user;
   final bool isFromProfile;
 
   @override

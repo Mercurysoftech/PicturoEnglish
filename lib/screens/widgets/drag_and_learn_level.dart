@@ -68,7 +68,7 @@ class _DragLearnPageState extends State<DragLearnPage> {
                           final isCompleted = level?.completed??false;
 
 
-                          final hasEnoughQuestions = (level?.questions?.length ?? 0) >= 5;
+                          final hasEnoughQuestions = (level?.questions?.length ?? 0) >= 3;
 
                           if (!hasEnoughQuestions) return SizedBox();
 
@@ -79,7 +79,8 @@ class _DragLearnPageState extends State<DragLearnPage> {
                             onTap: isEnabled
                                 ? () async{
                               final int coinCount= await  context.read<CoinCubit>().getCoin();
-                              if (isEnabled && coinCount > 0) {
+                              //if (isEnabled && coinCount > 0) {. //uncommand this to get coinscheck
+                              if (isEnabled) {
                                 showDialog(
                                     context: context,
                                     builder: (context){
@@ -133,7 +134,7 @@ class _DragLearnPageState extends State<DragLearnPage> {
                                     }
                                 );
                               }else if(coinCount <=0){
-                                Fluttertoast.showToast(msg: 'Not enough Coin');
+                                //Fluttertoast.showToast(msg: 'Not enough Coin');
                               }
 
                             }

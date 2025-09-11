@@ -137,6 +137,7 @@ Widget build(BuildContext context) {
                     SizedBox(height: 10),
                     // Replace the existing Qualification TextField with this:
                     DropdownButtonFormField<String>(
+                      dropdownColor: Colors.white,
                       value: selectedQualification,
                       decoration: InputDecoration(
                         hintText: "Select qualification",
@@ -181,6 +182,7 @@ Widget build(BuildContext context) {
                     ),
                     SizedBox(height: 10),
                     DropdownButtonFormField<String>(
+                      dropdownColor: Colors.white,
                       value: selectedLevel,
                       decoration: InputDecoration(
                         enabledBorder: OutlineInputBorder(

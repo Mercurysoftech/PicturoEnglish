@@ -89,11 +89,12 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Current Plan Header
                   _sectionHeader("Current Plan"),
                   const SizedBox(height: 12),
 
-                  if (state.currentPlan != null && (state.currentPlan?.data?.isNotEmpty ??false))
+                  if (state.currentPlan != null &&
+    (state.currentPlan?.data?.isNotEmpty ?? false) &&
+    state.currentPlan!.data!.any((plan) => plan.status == "active"))
                     ListView.builder(
                       physics: const NeverScrollableScrollPhysics(),
                       shrinkWrap: true,
