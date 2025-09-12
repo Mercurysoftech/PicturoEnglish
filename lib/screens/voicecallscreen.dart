@@ -32,20 +32,21 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
   bool isSpeakerOn = false;
   bool isKeypadVisible = false;
   bool showCallControls = true;
+  late MediaStream _localStream;
+  late RTCPeerConnection _peerConnection;
 
 
   @override
   void initState() {
+    super.initState();
     context.read<CallSocketHandleCubit>().resetCubit();
     if(!context.read<CallSocketHandleCubit>().isLiveCallActive) {
       context.read<CallTimerCubit>().resetTimer();
     }
     context.read<CallSocketHandleCubit>().acceptCall(widget.callerId);
     context.read<CallTimerCubit>().startTimer();
-    super.initState();
 
   }
-
 
 
   String formatDuration(Duration duration) {

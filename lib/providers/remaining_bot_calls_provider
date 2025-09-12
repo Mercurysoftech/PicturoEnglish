@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
-import 'dart:log' as developer;
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -60,7 +59,7 @@ class RemainingBotCallsProvider with ChangeNotifier {
         },
       );
 
-      developer.log("Remaining Bot Calls API Response: ${response.body}");
+      print("Remaining Bot Calls API Response: ${response.body}");
       
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
@@ -71,10 +70,11 @@ class RemainingBotCallsProvider with ChangeNotifier {
         _error = null;
       } else {
         _error = "Failed to fetch data. Status code: ${response.statusCode}";
+        print("API Error: ${response.statusCode} - ${response.body}");
       }
     } catch (e) {
       _error = "Error fetching remaining bot calls: $e";
-      developer.log("Error fetching remaining bot calls: $e");
+      print("Error fetching remaining bot calls: $e");
     } finally {
       _isLoading = false;
       notifyListeners();
