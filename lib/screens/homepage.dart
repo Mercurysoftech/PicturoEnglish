@@ -201,7 +201,7 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver {
     initializeServices();
     requestPermission();
     callSocketInit();
-    handleCall();
+    // handleCall();
     context.read<CallSocketHandleCubit>().fetchAllUsers();
     context.read<UserFriendsCubit>().resetCubit();
     fetchBooksAndUpdateGrid();
@@ -219,36 +219,36 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver {
       PermissionStatus.provisional || PermissionStatus.granted => true,
     };
   }
-
-  void handleCall() {
-    FlutterCallkitIncoming.onEvent.listen((event) {
-      print('Calling Listen: ${event?.event}');
-
-
-      if (event?.event == Event.actionCallAccept) {
-        Map<String, dynamic> data = event?.body ?? {};
-
-        if (currentUserId != '') {
-          int target = int.parse(data["extra"]['userId'] ?? "0");
-
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => VoiceCallScreen(
-                  callerId: target,
-                  callerName: "${data['nameCaller']}",
-                  callerImage: '',
-                  isIncoming: false),
-            ),
-          );
-        }
-      } else if (event?.event == Event.actionCallDecline) {
-        Map<String, dynamic> data = event?.body ?? {};
-        int target = int.parse(data["extra"]['userId'] ?? "0");
-        context.read<CallSocketHandleCubit>().endCall();
-      } else if (event?.event == Event.actionCallEnded) {}
-    });
-  }
+  //
+  // void handleCall() {
+  //   FlutterCallkitIncoming.onEvent.listen((event) {
+  //     print('Calling Listen: ${event?.event}');
+  //
+  //
+  //     if (event?.event == Event.actionCallAccept) {
+  //       Map<String, dynamic> data = event?.body ?? {};
+  //
+  //       if (currentUserId != '') {
+  //         int target = int.parse(data["extra"]['userId'] ?? "0");
+  //
+  //         Navigator.push(
+  //           context,
+  //           MaterialPageRoute(
+  //             builder: (context) => VoiceCallScreen(
+  //                 callerId: target,
+  //                 callerName: "${data['nameCaller']}",
+  //                 callerImage: '',
+  //                 isIncoming: false),
+  //           ),
+  //         );
+  //       }
+  //     } else if (event?.event == Event.actionCallDecline) {
+  //       Map<String, dynamic> data = event?.body ?? {};
+  //       int target = int.parse(data["extra"]['userId'] ?? "0");
+  //       context.read<CallSocketHandleCubit>().endCall();
+  //     } else if (event?.event == Event.actionCallEnded) {}
+  //   });
+  // }
 
   void callSocketInit() async {
     final prefs = await SharedPreferences.getInstance();

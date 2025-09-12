@@ -176,9 +176,11 @@ ${const JsonEncoder.withIndent('  ').convert(payload)}
   }
 
   static void showNotification(RemoteMessage message){
+
     RemoteNotification? notification = message.notification;
     AndroidNotification? android = message.notification?.android;
-    if (notification != null) {
+
+    if (notification != null&&message.data['type'] != 'incoming_call') {
       flutterLocalNotificationsPlugin.show(
         payload:jsonEncode( {
           "sender_id":"${message.data['sender_id']}",

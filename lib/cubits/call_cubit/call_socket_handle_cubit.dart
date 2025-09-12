@@ -440,11 +440,12 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
   Future<bool> endCall() async {
     // if(userOpenCallingPage){
 
-      emit(CallRejected());
+
     // }
     callSocket.emit('end-call', {'to': targetUserId});
     await hangup();
     await FlutterCallkitIncoming.endAllCalls();
+    emit(CallRejected());
     return true;
   }
   Future<void> disposeLocalRender() async {

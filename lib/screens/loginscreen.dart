@@ -407,7 +407,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                     recognizer: TapGestureRecognizer()
                                       ..onTap = () {
-                                        Navigator.pushNamed(context, '/signup');
+                                     Navigator.push(context, MaterialPageRoute(builder: (context)=>Signupscreen()));
                                       },
                                   ),
                                 ],

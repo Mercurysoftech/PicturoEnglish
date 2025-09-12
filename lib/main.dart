@@ -112,8 +112,8 @@ void main() async {
   );
   await NotificationService().requestPermissions();
   PushNotificationService.initialize();
-  await globalSocketService.initialize();
-  WidgetsBinding.instance.addObserver(AppLifecycleObserver());
+  // await globalSocketService.initialize();
+  // WidgetsBinding.instance.addObserver(AppLifecycleObserver());
 
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
@@ -136,8 +136,6 @@ void main() async {
         log("⚠️ Call already active - ignoring duplicate");
         return;
       }
-
-
       Navigator.push(
         NavigationService.instance.navigationKey.currentContext!,
         MaterialPageRoute(
@@ -155,17 +153,12 @@ void main() async {
     }
   });
 
-
-
-  // Get the launch details (if app opened from terminated state)
   final NotificationAppLaunchDetails? launchDetails =
       await flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
 
   if (launchDetails?.didNotificationLaunchApp ?? false) {
     initialNotificationPayload = launchDetails!.notificationResponse?.payload;
   }
-
-  // Initialize notifications
 
   HttpOverrides.global = MyHttpOverrides();
   runApp(
@@ -332,6 +325,7 @@ class _MyAppState extends State<MyApp> {
           FlutterCallkitIncoming.endCall("sdkjcslkcmslkcmsdc");
         }else{
           FlutterCallkitIncoming.endCall("sdkjcslkcmslkcmsdc");
+          NavigationService.instance.navigationKey.currentContext?.read<CallSocketHandleCubit>().endCall();
         }
 
         return calls[0];
