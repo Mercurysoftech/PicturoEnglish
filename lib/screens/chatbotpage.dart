@@ -27,7 +27,8 @@ class ChatBotScreen extends StatefulWidget {
   State<ChatBotScreen> createState() => _ChatBotScreenState();
 }
 
-class _ChatBotScreenState extends State<ChatBotScreen> with TickerProviderStateMixin {
+class _ChatBotScreenState extends State<ChatBotScreen>
+    with TickerProviderStateMixin {
   final TextEditingController _messageController = TextEditingController();
   final List<Map<String, dynamic>> _messages = [];
   final ScrollController _scrollController = ScrollController();
@@ -54,6 +55,10 @@ class _ChatBotScreenState extends State<ChatBotScreen> with TickerProviderStateM
     _initSpeech();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _showWelcomeMessage();
+<<<<<<< Updated upstream
+=======
+      _checkRemainingPrompts();
+>>>>>>> Stashed changes
     });
 
     _scaleController = AnimationController(
@@ -72,19 +77,36 @@ class _ChatBotScreenState extends State<ChatBotScreen> with TickerProviderStateM
     ).animate(_colorController);
 
     _messageController.addListener(() {
-      setState(() {});        
+      setState(() {});
     });
-    
   }
 
+<<<<<<< Updated upstream
+=======
+  void _checkRemainingPrompts() {
+  final botCallsProvider = context.read<RemainingBotCallsProvider>();
+  final prompts = botCallsProvider.dailyRemainingPrompts;
+  setState(() {
+    if (prompts == "unlimited") {
+      _hasEnoughPrompts = true;
+    } else if (prompts is int) {
+      _hasEnoughPrompts = prompts > 0;
+    } else {
+      _hasEnoughPrompts = false;
+    }
+  });
+}
+
+
+>>>>>>> Stashed changes
   Future<void> _initializeApiService() async {
     _apiService = await ChatBotApiService.create();
-    
   }
 
   void _showWelcomeMessage() async {
-    const welcomeMessage = "Welcome to Picturo! I'm your AI English learning buddy. Let's begin!";
-    
+    const welcomeMessage =
+        "Welcome to Picturo! I'm your AI English learning buddy. Let's begin!";
+
     setState(() {
       _messages.insert(0, {
         'message': welcomeMessage,
@@ -97,8 +119,8 @@ class _ChatBotScreenState extends State<ChatBotScreen> with TickerProviderStateM
 
   String _getCurrentTime() {
     final now = DateTime.now();
-    final hour = now.hour % 12;           
-    final amPm = now.hour < 12 ? 'AM' : 'PM';            
+    final hour = now.hour % 12;
+    final amPm = now.hour < 12 ? 'AM' : 'PM';
     final minute = now.minute.toString().padLeft(2, '0');
     final displayHour = hour == 0 ? 12 : hour;
     return '$displayHour:$minute $amPm';
@@ -143,6 +165,7 @@ class _ChatBotScreenState extends State<ChatBotScreen> with TickerProviderStateM
     }
   }
 
+<<<<<<< Updated upstream
   void _stopListening() {
     if (_isListening) {
       _speech.stop();
@@ -157,6 +180,22 @@ class _ChatBotScreenState extends State<ChatBotScreen> with TickerProviderStateM
       }
     }
   }
+=======
+  // void _stopListening() {
+  //   if (_isListening) {
+  //     _speech.stop();
+  //     setState(() {
+  //       _isListening = false;
+  //       _isRecording = false;
+  //     });
+
+  //     if (_messageController.text.isEmpty) {
+  //       _scaleController.reverse();
+  //       _colorController.reverse();
+  //     }
+  //   }
+  // }
+>>>>>>> Stashed changes
 
   @override
   void dispose() {
@@ -167,41 +206,43 @@ class _ChatBotScreenState extends State<ChatBotScreen> with TickerProviderStateM
   }
 
   Future<void> _playAudio(String base64Audio) async {
-  if (_isAudioMuted || base64Audio.isEmpty) return;
-  
-  try {
-    // Stop any currently playing audio
-    await _audioPlayer.stop();
-    
-    // Create a temporary file with unique name
-    final dir = await getTemporaryDirectory();
-    final file = File('${dir.path}/temp_audio_${DateTime.now().millisecondsSinceEpoch}.mp3');
-    
-    // Write and play the file
-    await file.writeAsBytes(base64Decode(base64Audio));
-    await _audioPlayer.setFilePath(file.path);
-    await _audioPlayer.setVolume(1.0); // Ensure full volume
-    await _audioPlayer.play();
+    if (_isAudioMuted || base64Audio.isEmpty) return;
 
-    // Clean up after playback
-    _audioPlayer.playerStateStream.listen((state) async {
-      if (state.processingState == ProcessingState.completed) {
-        try {
-          await file.delete();
-        } catch (e) {
-          print('Error deleting audio file: $e');
+    try {
+      // Stop any currently playing audio
+      await _audioPlayer.stop();
+
+      // Create a temporary file with unique name
+      final dir = await getTemporaryDirectory();
+      final file = File(
+          '${dir.path}/temp_audio_${DateTime.now().millisecondsSinceEpoch}.mp3');
+
+      // Write and play the file
+      await file.writeAsBytes(base64Decode(base64Audio));
+      await _audioPlayer.setFilePath(file.path);
+      await _audioPlayer.setVolume(1.0); // Ensure full volume
+      await _audioPlayer.play();
+
+      // Clean up after playback
+      _audioPlayer.playerStateStream.listen((state) async {
+        if (state.processingState == ProcessingState.completed) {
+          try {
+            await file.delete();
+          } catch (e) {
+            print('Error deleting audio file: $e');
+          }
         }
-      }
-    }, onError: (e) {
-      print('Audio playback error: $e');
-      file.delete().catchError((_) {});
-    });
-  } catch (e) {
-    print('Error in _playAudio: $e');
+      }, onError: (e) {
+        print('Audio playback error: $e');
+        file.delete().catchError((_) {});
+      });
+    } catch (e) {
+      print('Error in _playAudio: $e');
+    }
   }
-}
 
   Future _sendMessage({required String scenario}) async {
+<<<<<<< Updated upstream
   final message = _messageController.text.trim();
 
   SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -258,17 +299,47 @@ class _ChatBotScreenState extends State<ChatBotScreen> with TickerProviderStateM
         r']+',
         unicode: true), '')
         .trim();
+=======
+    final message = _messageController.text.trim();
+    final botCallsProvider = context.read<RemainingBotCallsProvider>();
+    final remainingPrompts = botCallsProvider.dailyRemainingPrompts;
+
+   // ---- Safe check for prompts ----
+    bool hasPrompts;
+  if (remainingPrompts == null) {
+    hasPrompts = false;
+  } else if (remainingPrompts == "unlimited") {
+    hasPrompts = true;
+  } else if (remainingPrompts is int) {
+    hasPrompts = remainingPrompts > 0;
+  } else {
+    hasPrompts = false;
+  }
+
+  if (!hasPrompts) {
+    _showNoRemainingPromptsDialog();
+    return;
+  }
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String userLanguage = prefs.getString('selectedLanguage') ?? "";
+    // if (_isListening) {
+    //   _stopListening();
+    // }
+>>>>>>> Stashed changes
 
     setState(() {
+      //_isRecording = false;
+      //_isListening = false;
       _messages.add({
-        'message': botMessage,
-        'isMe': false,
+        'message': message,
+        'isMe': true,
         'timestamp': _getCurrentTime(),
-        'audioBase64': '',
-        'translation': response.translations,
       });
-      _isLoading = false;
+
+      _isLoading = true;
     });
+<<<<<<< Updated upstream
   // } catch (e) {
   //   // Show the error from `error` key
   //   setState(() {
@@ -288,83 +359,209 @@ class _ChatBotScreenState extends State<ChatBotScreen> with TickerProviderStateM
 }
 
 
+=======
+    _scrollToBottom();
+    _messageController.clear();
+    //_scaleController.reverse();
+    //_colorController.reverse();
 
+    try {
+       if (remainingPrompts is int) {
+      botCallsProvider.decrementDailyPrompts();
+    }
+    _checkRemainingPrompts();
 
+      final response = await _apiService
+          .getChatbotResponse(
+            message: message,
+            language: userLanguage,
+            scenario: scenario,
+          )
+          .timeout(const Duration(seconds: 30));
 
-Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async {
-  if (_isAudioMuted || base64Audio.isEmpty) return;
+      //context.read<CoinCubit>().useCoin(1);
 
-  // Validate base64 string
-  if (!RegExp(r'^[a-zA-Z0-9+/]+={0,2}$').hasMatch(base64Audio)) {
-    print('Invalid base64 string');
-    return;
+      String botMessage = response.response.isNotEmpty
+          ? response.response
+          : "I didn't get that. Could you try again?";
+      String? audioBase64 = '';
+      botMessage = botMessage
+          .replaceAll(RegExp(r'-{2,}'), '')
+          .replaceAll(
+              RegExp(
+                  r'[\u{1F600}-\u{1F64F}'
+                  r'\u{1F300}-\u{1F5FF}'
+                  r'\u{1F680}-\u{1F6FF}'
+                  r'\u{1F1E0}-\u{1F1FF}'
+                  r'\u{2600}-\u{26FF}'
+                  r'\u{2700}-\u{27BF}'
+                  r'\u{1F900}-\u{1F9FF}'
+                  r'\u{1FA70}-\u{1FAFF}'
+                  r'\u{200D}'
+                  r'\u{FE0F}'
+                  r'\u{1F018}-\u{1F270}'
+                  r'\u{238C}-\u{2454}'
+                  r']+',
+                  unicode: true),
+              '')
+          .trim();
+
+      setState(() {
+        _messages.add({
+          'message': botMessage,
+          'isMe': false,
+          'timestamp': _getCurrentTime(),
+          'audioBase64': '',
+          'translation': response.translations,
+        });
+        _isLoading = false;
+      });
+    } catch (e) {
+      // Show the error from `error` key
+      botCallsProvider.updateValues(dailyPrompts: remainingPrompts);
+      _checkRemainingPrompts();
+
+      setState(() {
+        _messages.add({
+          'message': e.toString().replaceFirst("Exception: ", ""),
+          'isMe': false,
+          'timestamp': _getCurrentTime(),
+          'audioBase64': '',
+          'translation': {},
+        });
+        _isLoading = false;
+      });
+    }
+    _scrollToBottom();
   }
 
-  for (int attempt = 0; attempt < retryCount; attempt++) {
-    File? tempFile;
-    try {
-      // Create temporary directory
-      final dir = await getTemporaryDirectory();
-      tempFile = File('${dir.path}/chat_audio_${DateTime.now().millisecondsSinceEpoch}.mp3');
-      
-      // Write file with error checking
-      final bytes = base64Decode(base64Audio);
-      if (bytes.isEmpty) {
-        print('Decoded bytes are empty');
-        continue;
-      }
-      
-      await tempFile.writeAsBytes(bytes);
-      
-      // Verify file exists and has content
-      if (!(await tempFile.exists())) {
-        print('File not created');
-        continue;
-      }
-      
-      final fileSize = await tempFile.length();
-      if (fileSize == 0) {
-        print('Empty file created');
-        continue;
-      }
+  void _showNoRemainingPromptsDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(
+            'No Chat Prompts Remaining',
+            style: TextStyle(
+              fontFamily: 'Poppins Regular',
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Text(
+            'You have used all your daily chatbot prompts. '
+            'Please upgrade your plan or wait until tomorrow for your prompts to reset.',
+            style: TextStyle(fontFamily: 'Poppins Regular'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'OK',
+                style: TextStyle(fontFamily: 'Poppins Regular'),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                // Navigate to premium screen
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => PremiumPlansScreen()),
+                );
+              },
+              child: Text(
+                'Upgrade Plan',
+                style: TextStyle(
+                  color: Color(0xFF49329A),
+                  fontFamily: 'Poppins Regular',
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
-      // Setup player
-      await _audioPlayer.stop(); // Stop any current playback
-      await _audioPlayer.setFilePath(tempFile.path);
-      
-      // Wait for player to be ready
-      await _audioPlayer.setVolume(1.0);
-      await _audioPlayer.play();
+  Future<void> _playAudioWithRetry(String base64Audio,
+      {int retryCount = 3}) async {
+    if (_isAudioMuted || base64Audio.isEmpty) return;
+>>>>>>> Stashed changes
 
-      // Cleanup after playback completes
-      _audioPlayer.playerStateStream.listen((state) async {
-        if (state.processingState == ProcessingState.completed && tempFile != null) {
-          try {
-            await tempFile!.delete();
-          } catch (e) {
-            print('Error deleting temp file: $e');
-          }
+    // Validate base64 string
+    if (!RegExp(r'^[a-zA-Z0-9+/]+={0,2}$').hasMatch(base64Audio)) {
+      print('Invalid base64 string');
+      return;
+    }
+
+    for (int attempt = 0; attempt < retryCount; attempt++) {
+      File? tempFile;
+      try {
+        // Create temporary directory
+        final dir = await getTemporaryDirectory();
+        tempFile = File(
+            '${dir.path}/chat_audio_${DateTime.now().millisecondsSinceEpoch}.mp3');
+
+        // Write file with error checking
+        final bytes = base64Decode(base64Audio);
+        if (bytes.isEmpty) {
+          print('Decoded bytes are empty');
+          continue;
         }
-      }, onError: (e) {
-        print('Player error: $e');
-        tempFile?.delete().catchError((_) {});
-      });
 
-      return; // Success - exit loop
-      
-    } catch (e) {
-      print('Attempt ${attempt + 1} failed: $e');
-      await tempFile?.delete().catchError((_) {});
-      
-      if (attempt == retryCount - 1) {
-        print('Failed after $retryCount attempts');
-      } else {
-        // Exponential backoff
-        await Future.delayed(Duration(milliseconds: 500 * (attempt + 1)));
+        await tempFile.writeAsBytes(bytes);
+
+        // Verify file exists and has content
+        if (!(await tempFile.exists())) {
+          print('File not created');
+          continue;
+        }
+
+        final fileSize = await tempFile.length();
+        if (fileSize == 0) {
+          print('Empty file created');
+          continue;
+        }
+
+        // Setup player
+        await _audioPlayer.stop(); // Stop any current playback
+        await _audioPlayer.setFilePath(tempFile.path);
+
+        // Wait for player to be ready
+        await _audioPlayer.setVolume(1.0);
+        await _audioPlayer.play();
+
+        // Cleanup after playback completes
+        _audioPlayer.playerStateStream.listen((state) async {
+          if (state.processingState == ProcessingState.completed &&
+              tempFile != null) {
+            try {
+              await tempFile!.delete();
+            } catch (e) {
+              print('Error deleting temp file: $e');
+            }
+          }
+        }, onError: (e) {
+          print('Player error: $e');
+          tempFile?.delete().catchError((_) {});
+        });
+
+        return; // Success - exit loop
+      } catch (e) {
+        print('Attempt ${attempt + 1} failed: $e');
+        await tempFile?.delete().catchError((_) {});
+
+        if (attempt == retryCount - 1) {
+          print('Failed after $retryCount attempts');
+        } else {
+          // Exponential backoff
+          await Future.delayed(Duration(milliseconds: 500 * (attempt + 1)));
+        }
       }
     }
   }
-}
+
   final FlutterTts flutterTts = FlutterTts();
 
   Future<void> speak(String text) async {
@@ -377,19 +574,18 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
       setState(() {
         _isAudioMuted = !_isAudioMuted;
       });
-
     });
-
   }
+
   Future<void> stopSpeaking() async {
     await flutterTts.stop(); // This stops any ongoing speech
   }
+
   void _toggleMute(String message) {
     setState(() {
-
-      if(_isAudioMuted==false){
+      if (_isAudioMuted == false) {
         speak(message);
-      }else{
+      } else {
         stopSpeaking();
       }
       _isAudioMuted = !_isAudioMuted;
@@ -408,7 +604,8 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
         (msg) => msg['message'] == message && msg['audioBase64'] != null,
         orElse: () => {},
       );
-      if (messageWithAudio.isNotEmpty && messageWithAudio['audioBase64'] != null) {
+      if (messageWithAudio.isNotEmpty &&
+          messageWithAudio['audioBase64'] != null) {
         _playAudio(messageWithAudio['audioBase64']);
       }
     }
@@ -425,6 +622,7 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
       }
     });
   }
+
   @override
   Widget build(BuildContext context) {
     final profileProvider = Provider.of<ProfileProvider>(context);
@@ -445,6 +643,7 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
           ),
           title: Padding(
             padding: const EdgeInsets.only(top: 10.0),
+<<<<<<< Updated upstream
             child: Row(
               children: [
                Image.asset('assets/ai_avatar.png',scale: 10,),
@@ -465,19 +664,119 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
                   ],
                 ),
               ],
+=======
+            child: Consumer<RemainingBotCallsProvider>(
+  builder: (context, botCalls, child) {
+    final remainingPrompts = botCalls.dailyRemainingPrompts;
+
+    // Handle both int and string "unlimited" cases
+    bool hasPrompts;
+    if (remainingPrompts is int) {
+      hasPrompts = remainingPrompts > 0;
+    } else if (remainingPrompts == "unlimited") {
+      hasPrompts = true;
+    } else {
+      hasPrompts = false; // Handle any other unexpected case
+    }
+
+    return Row(
+      children: [
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            Image.asset('assets/ai_avatar.png', scale: 10),
+            if (hasPrompts && remainingPrompts is int) // Only show badge for numeric prompts > 0
+              Positioned(
+                top: 0,
+                right: 0,
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  constraints: BoxConstraints(
+                    minWidth: 20,
+                    minHeight: 20,
+                  ),
+                  child: Text(
+                    '$remainingPrompts',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Poppins Regular',
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(width: 10),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Chat AI',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Poppins Regular',
+                fontSize: 18
+              ),
+>>>>>>> Stashed changes
             ),
+            if (hasPrompts)
+              Text(
+                remainingPrompts == "unlimited" 
+                  ? 'Unlimited prompts' 
+                  : '$remainingPrompts prompts left',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                  fontFamily: 'Poppins Regular',
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
+  },
+),
           ),
           actions: [
+<<<<<<< Updated upstream
             CoinBadge(),
             SizedBox(width: 25,)
+=======
+            //CoinBadge(),
+            SizedBox(width: 25),
+            IconButton(
+              icon: Icon(Icons.refresh, color: Colors.white),
+              onPressed: () {
+                context
+                    .read<RemainingBotCallsProvider>()
+                    .fetchRemainingBotCalls();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Refreshing prompts...'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+              },
+              tooltip: 'Refresh prompts',
+            ),
+>>>>>>> Stashed changes
           ],
           shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.only(
               bottomLeft: Radius.circular(20),
               bottomRight: Radius.circular(20),
+            ),
           ),
         ),
-      ),
       ),
       body: Container(
         decoration: const BoxDecoration(
@@ -501,8 +800,8 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
                   if (index < _messages.length) {
                     final message = _messages[index];
                     return Align(
-                      alignment: message['isMe'] 
-                          ? Alignment.centerRight 
+                      alignment: message['isMe']
+                          ? Alignment.centerRight
                           : Alignment.centerLeft,
                       child: ChatBotMessageLayout(
                         index: index,
@@ -511,7 +810,7 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
                         messageBody: message['message'],
                         timestamp: message['timestamp'],
                         isMuted: !message['isMe'] && _isAudioMuted,
-                        onMuteToggle: (String message){
+                        onMuteToggle: (String message) {
                           _toggleMute(message);
                         },
                       ),
@@ -521,8 +820,13 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
                       alignment: Alignment.centerLeft,
                       child: Padding(
                         padding: const EdgeInsets.all(12.0),
+<<<<<<< Updated upstream
                         child: ThreeDotLoading(
                           color: const Color(0xFF49329A),    
+=======
+                        child: ThinkingText(
+                          color: const Color(0xFF49329A),
+>>>>>>> Stashed changes
                         ),
                       ),
                     );
@@ -555,13 +859,15 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
                     borderRadius: BorderRadius.circular(30),
                     borderSide: BorderSide.none,
                   ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                   suffixIcon: Padding(
                     padding: const EdgeInsets.only(right: 5),
                     child: Material(
                       color: Colors.transparent,
                       borderRadius: BorderRadius.circular(30),
                       child: GestureDetector(
+<<<<<<< Updated upstream
                         onLongPressStart: _messageController.text.isEmpty
                             ? (_) {
                           setState(() {
@@ -620,6 +926,25 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
                               ),
                             );
                           },
+=======
+                        onTap: _messageController.text.isNotEmpty
+                            ? () async {
+                                _sendMessage(scenario: selectedScenario ?? "");
+                                context.read<CoinCubit>().useCoin(1);
+                              }
+                            : null,
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF49329A),
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          child: SvgPicture.string(
+                            Svgfiles.sendSvg,
+                            width: 24,
+                            height: 24,
+                          ),
+>>>>>>> Stashed changes
                         ),
                       ),
                     ),
@@ -634,7 +959,6 @@ Future<void> _playAudioWithRetry(String base64Audio, {int retryCount = 3}) async
     );
   }
 }
-
 
 class ChatBotQuickReplies extends StatelessWidget {
   final List<String> predefinedQuestions = [
@@ -664,9 +988,62 @@ class ChatBotQuickReplies extends StatelessWidget {
             ),
           ),
           onPressed: () => onSend(question),
-          child: Text(question,style: TextStyle(fontSize: 12),),
+          child: Text(
+            question,
+            style: TextStyle(fontSize: 12),
+          ),
         );
       }).toList(),
     );
   }
 }
+<<<<<<< Updated upstream
+=======
+
+class ThinkingText extends StatefulWidget {
+  final Color color;
+  const ThinkingText({super.key, this.color = Colors.black});
+
+  @override
+  _ThinkingTextState createState() => _ThinkingTextState();
+}
+
+class _ThinkingTextState extends State<ThinkingText>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<int> _dotAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller =
+        AnimationController(vsync: this, duration: const Duration(seconds: 1))
+          ..repeat();
+    _dotAnimation = StepTween(begin: 0, end: 3).animate(_controller);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _dotAnimation,
+      builder: (context, child) {
+        String dots = '.' * _dotAnimation.value;
+        return Text(
+          "Thinking$dots",
+          style: TextStyle(
+              color: widget.color,
+              fontSize: 16,
+              fontFamily: 'Poppins Medium',
+              fontWeight: FontWeight.bold),
+        );
+      },
+    );
+  }
+}
+>>>>>>> Stashed changes

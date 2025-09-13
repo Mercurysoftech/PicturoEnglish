@@ -493,6 +493,11 @@ class _MyAppState extends State<MyApp> {
         initialNotificationPayload = null;
       });
     }
+<<<<<<< Updated upstream
+=======
+    
+    _initializeApp();
+>>>>>>> Stashed changes
     checkAndNavigationCallingPage();
   }
 
@@ -630,6 +635,7 @@ class _MyAppState extends State<MyApp> {
 
     if (contextx != null) {
       if (currentCall != null) {
+<<<<<<< Updated upstream
         int userCurrentId = int.parse(_currentUuid ?? "0");
         int target = int.parse(currentCall["extra"]['userId'] ?? "0");
         context.read<CallSocketHandleCubit>().acceptCall(target);
@@ -643,6 +649,31 @@ class _MyAppState extends State<MyApp> {
                 isIncoming: false),
           ),
         );
+=======
+        Future.delayed(Duration.zero, () {
+          if (contextx.mounted) {
+            int target = int.parse(currentCall["extra"]['userId'] ?? "0");
+
+            Navigator.push(
+              contextx,
+              MaterialPageRoute(
+                builder: (context) => VoiceCallScreen(
+                    callerId: target,
+                    callerName: "${currentCall['nameCaller']}",
+                    callerImage: '',
+                    isIncoming: false),
+              ),
+            ).then((value){
+              Navigator.push(
+              contextx,
+              MaterialPageRoute(
+                builder: (context) => SplashScreen()
+              ),
+            );
+            });
+          }
+        });
+>>>>>>> Stashed changes
       }
     } else {
       if (currentCall != null) {

@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:picturo_app/cubits/call_cubit/call_socket_handle_cubit.dart';
 import 'package:picturo_app/screens/homepage.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../cubits/call_cubit/call_duration_handler/call_duration_handle_cubit.dart';
 
@@ -36,14 +37,28 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
 
   @override
   void initState() {
+<<<<<<< Updated upstream
+=======
+    super.initState();
+    WakelockPlus.enable();
+>>>>>>> Stashed changes
     context.read<CallSocketHandleCubit>().resetCubit();
     if(!context.read<CallSocketHandleCubit>().isLiveCallActive) {
       context.read<CallTimerCubit>().resetTimer();
     }
     context.read<CallTimerCubit>().startTimer();
+<<<<<<< Updated upstream
     super.initState();
 
+=======
+>>>>>>> Stashed changes
   }
+
+  @override
+void dispose() {
+  WakelockPlus.disable();  // let screen sleep after leaving call
+  super.dispose();
+}
 
 
 
@@ -93,7 +108,6 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
 
           return Stack(
             children: [
-              // Background
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(

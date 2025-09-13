@@ -22,7 +22,37 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
     context.read<PlanCubit>().fetchPlansAndCurrent();
   }
 
-  void onPurchase(PlanModel plan, int index) {
+  bool _hasActiveChatbotPlan(List<Data>? currentPlans) {
+  return currentPlans
+          ?.any((p) =>
+              p.planId == 5 &&
+              p.planName == "Bot(Month pack)" &&
+              p.status?.toLowerCase() == "active") ??
+      false;
+}
+
+
+  void onPurchase(PlanModel plan, int index, List<Data>? currentPlans) {
+  final hasBotPack = _hasActiveChatbotPlan(currentPlans);
+
+  if (plan.type == "chatbot" && plan.price == "15.00" && hasBotPack) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Already Purchased"),
+        content: const Text(
+            "You already have the Bot (Month pack) active. "
+            "Please wait until it expires before purchasing again."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("OK"),
+          )
+        ],
+      ),
+    );
+    return; 
+  }
     if (index != 0) {
       Navigator.push(
         context,
@@ -35,10 +65,21 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
+<<<<<<< Updated upstream
         const SnackBar(content: Text("Please select a valid plan")),
+=======
+        const SnackBar(
+            content: Text(
+          "Please select a valid plan",
+          style: TextStyle(
+            fontFamily: 'Poppins Regular',
+          ),
+        )),
+>>>>>>> Stashed changes
       );
     }
   }
+
   List<Color> cardColors = [
     Colors.orange.shade100,
     Colors.blue.shade100,
@@ -48,11 +89,19 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
     Colors.teal.shade100,
   ];
   final List<List<Color>> cardGradients = [
+<<<<<<< Updated upstream
     [Color(0xFF1F1C2C), Color(0xFF928DAB)], // dark purple to grey
     [Color(0xFF0F2027), Color(0xFF2C5364)], // dark teal to blue
     [Color(0xFF232526), Color(0xFF414345)], // dark grey to light grey
     [Color(0xFF141E30), Color(0xFF243B55)], // navy to steel blue
     [Color(0xFF3C1053), Color(0xFFAD5389)], // deep purple to pink
+=======
+    [Color(0xFF1F1C2C), Color(0xFF928DAB)],
+    [Color(0xFF0F2027), Color(0xFF2C5364)],
+    [Color(0xFF232526), Color(0xFF414345)],
+    [Color(0xFF141E30), Color(0xFF243B55)],
+    [Color(0xFF3C1053), Color(0xFFAD5389)],
+>>>>>>> Stashed changes
   ];
   @override
   Widget build(BuildContext context) {
@@ -88,6 +137,7 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+<<<<<<< Updated upstream
                   // Current Plan Header
                   _sectionHeader("Current Plan"),
                   const SizedBox(height: 12),
@@ -126,36 +176,99 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
                                   style: const TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.w700,
+=======
+                  // Current Plan Section
+                  _sectionHeader("Current Plan"),
+                  const SizedBox(height: 12),
+
+                  () {
+                    final activePlans = state.currentPlan?.data
+                        ?.where(
+                            (plan) => plan.status?.toLowerCase() == 'active')
+                        .toList();
+
+                    if (activePlans != null && activePlans.isNotEmpty) {
+                      return ListView.builder(
+                        physics: const NeverScrollableScrollPhysics(),
+                        shrinkWrap: true,
+                        itemCount: activePlans.length,
+                        itemBuilder: (context, index) =>
+                            _buildCurrentPlanCard(activePlans[index]),
+                      );
+                    } else {
+                      return Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(15),
+                          color: Colors.grey,
+                        ),
+                        margin: EdgeInsets.only(bottom: 10),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.workspace_premium,
+>>>>>>> Stashed changes
                                     color: Colors.white,
                                   ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              "${state.plans.first.price} ${(state.plans.first.validityDays?.isEmpty ?? false) ? "" : "(${state.plans.first.validityDays} Days)"}",
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black,
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    state.plans.first.name ?? '',
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-
-                            const Divider(height: 20, color: Colors.white24),
-                            _buildInfoRow("Call limit per day", state.plans.first.callLimitPerDay.toString(), Colors.white70),
-                            _buildInfoRow("Chatbot prompt limit", state.plans.first.chatbotPromptLimit ?? '0', Colors.white70),
-                            _buildInfoRow("Unlimited Call", state.plans.first.isUnlimitedCall == 1 ? "Yes" : "No",  Colors.white70),
-                            _buildInfoRow("Unlimited Chat", state.plans.first.isUnlimitedChat == 1 ? "Yes" : "No", Colors.white70),
-                            _buildInfoRow("Created at", state.plans.first.createdAt ?? '', Colors.white54),
-                          ],
+                              const SizedBox(height: 6),
+                              Text(
+                                "${state.plans.first.price} ${(state.plans.first.validityDays?.isEmpty ?? false) ? "" : "(${state.plans.first.validityDays} Days)"}",
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black,
+                                ),
+                              ),
+                              const Divider(height: 20, color: Colors.white24),
+                              _buildInfoRow(
+                                  "Call limit per day",
+                                  state.plans.first.callLimitPerDay.toString(),
+                                  Colors.white70),
+                              _buildInfoRow(
+                                  "Chatbot prompt limit",
+                                  state.plans.first.chatbotPromptLimit ?? '0',
+                                  Colors.white70),
+                              _buildInfoRow(
+                                  "Unlimited Call",
+                                  state.plans.first.isUnlimitedCall == 1
+                                      ? "Yes"
+                                      : "No",
+                                  Colors.white70),
+                              _buildInfoRow(
+                                  "Unlimited Chat",
+                                  state.plans.first.isUnlimitedChat == 1
+                                      ? "Yes"
+                                      : "No",
+                                  Colors.white70),
+                              _buildInfoRow(
+                                  "Created at",
+                                  state.plans.first.createdAt ?? '',
+                                  Colors.white54),
+                            ],
+                          ),
                         ),
-                      ),
-                    ),
+                      );
+                    }
+                  }(),
 
                   // Choose Plan Header
                   _sectionHeader("Choose Plan"),
                   const SizedBox(height: 12),
-
 
                   ListView.builder(
                     physics: const NeverScrollableScrollPhysics(),
@@ -164,17 +277,19 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
                     itemBuilder: (context, index) {
                       final plan = state.plans[index];
                       final isSelected = _selectedIndex == index;
-                      if (plan.name == "refferal_amount") return const SizedBox();
+                      if (plan.name == "refferal_amount")
+                        return const SizedBox();
 
                       // Pick gradient based on index
-                      final gradientColors = cardGradients[index % cardGradients.length];
+                      final gradientColors =
+                          cardGradients[index % cardGradients.length];
 
                       return GestureDetector(
                         onTap: () {
                           setState(() {
                             _selectedIndex = index;
                           });
-                          onPurchase(plan, index);
+                          onPurchase(plan, index,state.currentPlan?.data);
                         },
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
@@ -187,7 +302,9 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
                             ),
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(
-                              color: isSelected ? Colors.deepPurpleAccent : Colors.transparent,
+                              color: isSelected
+                                  ? Colors.deepPurpleAccent
+                                  : Colors.transparent,
                               width: isSelected ? 2 : 0,
                             ),
                             boxShadow: [
@@ -207,7 +324,9 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
                                   children: [
                                     Icon(
                                       Icons.workspace_premium,
-                                      color: isSelected ? Colors.amber : Colors.white,
+                                      color: isSelected
+                                          ? Colors.amber
+                                          : Colors.white,
                                     ),
                                     const SizedBox(width: 8),
                                     Text(
@@ -229,13 +348,26 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
                                     color: Colors.tealAccent,
                                   ),
                                 ),
-
-                                const Divider(height: 20, color: Colors.white24),
-                                _buildInfoRow("Call limit per day", plan.callLimitPerDay.toString(), Colors.white70),
-                                _buildInfoRow("Chatbot prompt limit", plan.chatbotPromptLimit ?? '', Colors.white70),
-                                _buildInfoRow("Unlimited Call", plan.isUnlimitedCall == 1 ? "Yes" : "No",  Colors.white70),
-                                _buildInfoRow("Unlimited Chat", plan.isUnlimitedChat == 1 ? "Yes" : "No", Colors.white70),
-                                _buildInfoRow("Created at", plan.createdAt ?? '', Colors.white54),
+                                const Divider(
+                                    height: 20, color: Colors.white24),
+                                _buildInfoRow(
+                                    "Call limit per day",
+                                    plan.callLimitPerDay.toString(),
+                                    Colors.white70),
+                                _buildInfoRow(
+                                    "Chatbot prompt limit",
+                                    plan.chatbotPromptLimit ?? '',
+                                    Colors.white70),
+                                _buildInfoRow(
+                                    "Unlimited Call",
+                                    plan.isUnlimitedCall == 1 ? "Yes" : "No",
+                                    Colors.white70),
+                                _buildInfoRow(
+                                    "Unlimited Chat",
+                                    plan.isUnlimitedChat == 1 ? "Yes" : "No",
+                                    Colors.white70),
+                                _buildInfoRow("Created at",
+                                    plan.createdAt ?? '', Colors.white54),
                               ],
                             ),
                           ),
@@ -247,7 +379,17 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
               ),
             );
           } else if (state is PlanError) {
+<<<<<<< Updated upstream
             return Center(child: Text(state.message));
+=======
+            return Center(
+                child: Text(
+              state.message,
+              style: TextStyle(
+                fontFamily: 'Poppins Medium',
+              ),
+            ));
+>>>>>>> Stashed changes
           }
           return const SizedBox();
         },
@@ -257,19 +399,27 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
 
   Widget _sectionHeader(String text) {
     return Container(
-      padding: EdgeInsets.symmetric(vertical: 6,horizontal: 18),
-decoration: BoxDecoration(
-  color: Colors.blue,
-  borderRadius: BorderRadius.only(topRight: Radius.circular(10),topLeft:Radius.circular(10) ),
-
-),
+      padding: EdgeInsets.symmetric(vertical: 6, horizontal: 18),
+      decoration: BoxDecoration(
+        color: Colors.blue,
+        borderRadius: BorderRadius.only(
+            topRight: Radius.circular(10), topLeft: Radius.circular(10)),
+      ),
       child: Row(
         children: [
           Expanded(
             child: Text(
               text,
               style: const TextStyle(
+<<<<<<< Updated upstream
                   fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+=======
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                fontFamily: 'Poppins Regular',
+              ),
+>>>>>>> Stashed changes
             ),
           ),
           Expanded(
@@ -283,7 +433,7 @@ decoration: BoxDecoration(
     );
   }
 
-  Widget _buildInfoRow(String title, String value,Color textColor) {
+  Widget _buildInfoRow(String title, String value, Color textColor) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3.0),
       child: Row(
@@ -293,7 +443,12 @@ decoration: BoxDecoration(
             flex: 2,
             child: Text(
               title,
+<<<<<<< Updated upstream
               style: const TextStyle(color: Colors.white),
+=======
+              style: const TextStyle(
+                  color: Colors.white, fontFamily: 'Poppins Regular'),
+>>>>>>> Stashed changes
               overflow: TextOverflow.ellipsis, // Avoids overflow
             ),
           ),
@@ -301,7 +456,14 @@ decoration: BoxDecoration(
             flex: 3,
             child: Text(
               value,
+<<<<<<< Updated upstream
               style: const TextStyle(fontWeight: FontWeight.w600,color: Colors.white),
+=======
+              style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                  fontFamily: 'Poppins Regular'),
+>>>>>>> Stashed changes
               overflow: TextOverflow.visible, // Allows wrapping
             ),
           ),
@@ -310,14 +472,13 @@ decoration: BoxDecoration(
     );
   }
 
-
   Widget _buildCurrentPlanCard(Data? plan) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Color(0xFFFF9800),width: 2),
+        border: Border.all(color: Color(0xFFFF9800), width: 2),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.08),
@@ -332,13 +493,15 @@ decoration: BoxDecoration(
           // Gradient header
           Container(
             decoration: BoxDecoration(
-             color: Color(0xFFFF9800),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+              color: Color(0xFFFF9800),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(8)),
             ),
             padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
             child: Row(
               children: [
-                const Icon(Icons.workspace_premium, color: Colors.white, size: 28),
+                const Icon(Icons.workspace_premium,
+                    color: Colors.white, size: 28),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -367,10 +530,14 @@ decoration: BoxDecoration(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               children: [
-                _buildFeatureRow("Validity Days", plan?.validityDays?.toString() ?? "-"),
-                _buildFeatureRow("Call Limit/Day", plan?.callLimitPerDay?.toString() ?? "-"),
-                _buildFeatureRow("Unlimited Call", plan?.isUnlimitedCall == true ? "Yes" : "No"),
-                _buildFeatureRow("Unlimited Chat", plan?.isUnlimitedChat == true ? "Yes" : "No"),
+                _buildFeatureRow(
+                    "Validity Days", plan?.validityDays?.toString() ?? "-"),
+                _buildFeatureRow(
+                    "Call Limit/Day", plan?.callLimitPerDay?.toString() ?? "-"),
+                _buildFeatureRow("Unlimited Call",
+                    plan?.isUnlimitedCall == true ? "Yes" : "No"),
+                _buildFeatureRow("Unlimited Chat",
+                    plan?.isUnlimitedChat == true ? "Yes" : "No"),
                 _buildFeatureRow("Start Date", plan?.startDate ?? "-"),
                 _buildFeatureRow("End Date", plan?.endDate ?? "-"),
               ],
@@ -393,12 +560,12 @@ decoration: BoxDecoration(
       child: const Center(
         child: Text(
           "No Current Plan Available",
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.red),
+          style: TextStyle(
+              fontSize: 16, fontWeight: FontWeight.w600, color: Colors.red),
         ),
       ),
     );
   }
-
 
   Widget _buildFeatureRow(String title, String value) {
     return Padding(
@@ -406,8 +573,21 @@ decoration: BoxDecoration(
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+<<<<<<< Updated upstream
           Text(title, style: const TextStyle(color: Colors.black54)),
           Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+=======
+          Text(title,
+              style: const TextStyle(
+                color: Colors.black54,
+                fontFamily: 'Poppins Regular',
+              )),
+          Text(value,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Poppins Regular',
+              )),
+>>>>>>> Stashed changes
         ],
       ),
     );

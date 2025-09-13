@@ -65,7 +65,7 @@ class ChatBotApiService {
         }),
       ).timeout(const Duration(seconds: _timeoutSeconds));
 
-      print("Response: ${response.data}");
+      print("Response bot : ${response.data}");
 
 
       if (response.statusCode != 200) {
