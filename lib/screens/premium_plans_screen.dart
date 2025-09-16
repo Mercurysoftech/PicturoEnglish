@@ -7,7 +7,8 @@ import 'premiumscreenpage.dart';
 
 class PremiumPlansScreen extends StatefulWidget {
   final String? userName;
-  const PremiumPlansScreen({super.key, this.userName});
+  final bool? isBot;
+  const PremiumPlansScreen({super.key, this.userName,this.isBot});
 
   @override
   _PremiumPlansScreenState createState() => _PremiumPlansScreenState();
@@ -15,6 +16,7 @@ class PremiumPlansScreen extends StatefulWidget {
 
 class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
   int? _selectedIndex;
+  bool _showAllPlans = false;
 
   @override
   void initState() {
@@ -23,6 +25,7 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
   }
 
   bool _hasActiveChatbotPlan(List<Data>? currentPlans) {
+<<<<<<< Updated upstream
   return currentPlans
           ?.any((p) =>
               p.planId == 5 &&
@@ -77,7 +80,48 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
         )),
 >>>>>>> Stashed changes
       );
+=======
+    return currentPlans?.any((p) =>
+            p.planId == 5 &&
+            p.planName == "Bot(Month pack)" &&
+            p.status?.toLowerCase() == "active") ??
+        false;
+  }
+
+  void onPurchase(PlanModel plan, int index, List<Data>? currentPlans) {
+    // 🟢 Check if user already has chatbot plan active
+    final hasBotPack = _hasActiveChatbotPlan(currentPlans);
+
+    if (plan.type == "chatbot" && plan.price == "15.00" && hasBotPack) {
+      // Show warning dialog
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text("Already Purchased"),
+          content: const Text("You already have the Bot (Month pack) active. "
+              "Please wait until it expires before purchasing again."),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text("OK"),
+            )
+          ],
+        ),
+      );
+      return; // ⛔ Don’t continue to purchase page
+>>>>>>> Stashed changes
     }
+
+    // Otherwise proceed
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PremiumScreen(
+          userName: widget.userName ?? '',
+          selectedPlan: plan,
+        ),
+      ),
+    );
   }
 
   List<Color> cardColors = [
@@ -90,17 +134,23 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
   ];
   final List<List<Color>> cardGradients = [
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     [Color(0xFF1F1C2C), Color(0xFF928DAB)], // dark purple to grey
     [Color(0xFF0F2027), Color(0xFF2C5364)], // dark teal to blue
     [Color(0xFF232526), Color(0xFF414345)], // dark grey to light grey
     [Color(0xFF141E30), Color(0xFF243B55)], // navy to steel blue
     [Color(0xFF3C1053), Color(0xFFAD5389)], // deep purple to pink
 =======
+=======
+>>>>>>> Stashed changes
     [Color(0xFF1F1C2C), Color(0xFF928DAB)],
     [Color(0xFF0F2027), Color(0xFF2C5364)],
     [Color(0xFF232526), Color(0xFF414345)],
     [Color(0xFF141E30), Color(0xFF243B55)],
     [Color(0xFF3C1053), Color(0xFFAD5389)],
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
   ];
   @override
@@ -128,6 +178,7 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
         ),
       ),
       body: BlocBuilder<PlanCubit, PlanState>(
+<<<<<<< Updated upstream
         builder: (context, state) {
           if (state is PlanLoading) {
             return const Center(child: CircularProgressIndicator());
@@ -162,17 +213,72 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: Column(
+=======
+  builder: (context, state) {
+    if (state is PlanLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (state is PlanLoaded) {
+      // Filter plans if needed
+      List<PlanModel> filteredPlans = state.plans;
+      if (widget.isBot == true && !_showAllPlans) {
+        filteredPlans = state.plans
+            .where((plan) => plan.type?.toLowerCase() == 'chatbot')
+            .toList();
+      }
+
+      return SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _sectionHeader("Current Plan"),
+            const SizedBox(height: 12),
+
+            // --- Current Plan Section ---
+            Builder(
+              builder: (_) {
+                final activePlans = state.currentPlan?.data
+                        ?.where((p) => p.status?.toLowerCase() == 'active')
+                        .toList() ??
+                    [];
+
+                if (activePlans.isNotEmpty) {
+                  return ListView.builder(
+                    physics: const NeverScrollableScrollPhysics(),
+                    shrinkWrap: true,
+                    itemCount: activePlans.length,
+                    itemBuilder: (context, index) =>
+                        _buildCurrentPlanCard(activePlans[index]),
+                  );
+                }
+
+                // No active plan
+                final firstPlan = state.plans.isNotEmpty ? state.plans.first : null;
+                return Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(15),
+                    color: Colors.grey,
+                  ),
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(16),
+                  child: firstPlan == null
+                      ? const Text(
+                          "No plans available",
+                          style: TextStyle(color: Colors.white),
+                        )
+                      : Column(
+>>>>>>> Stashed changes
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
                               children: [
-                                Icon(
-                                  Icons.workspace_premium,
-                                  color:  Colors.white,
-                                ),
+                                const Icon(Icons.workspace_premium,
+                                    color: Colors.white),
                                 const SizedBox(width: 8),
                                 Text(
-                                  state.plans.first.name ?? '',
+                                  firstPlan.name ?? '',
                                   style: const TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.w700,
@@ -214,6 +320,7 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
 >>>>>>> Stashed changes
                                     color: Colors.white,
                                   ),
+<<<<<<< Updated upstream
                                   const SizedBox(width: 8),
                                   Text(
                                     state.plans.first.name ?? '',
@@ -369,12 +476,145 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
                                 _buildInfoRow("Created at",
                                     plan.createdAt ?? '', Colors.white54),
                               ],
+=======
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              "${firstPlan.price} ${(firstPlan.validityDays?.isEmpty ?? true) ? "" : "(${firstPlan.validityDays} Days)"}",
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black,
+                              ),
+                            ),
+                            const Divider(height: 20, color: Colors.white24),
+                            _buildInfoRow(
+                                "Call limit per day",
+                                firstPlan.callLimitPerDay.toString(),
+                                Colors.white70),
+                            _buildInfoRow(
+                                "Chatbot prompt limit",
+                                firstPlan.chatbotPromptLimit ?? '0',
+                                Colors.white70),
+                            _buildInfoRow(
+                                "Unlimited Call",
+                                firstPlan.isUnlimitedCall == 1 ? "Yes" : "No",
+                                Colors.white70),
+                            _buildInfoRow(
+                                "Unlimited Chat",
+                                firstPlan.isUnlimitedChat == 1 ? "Yes" : "No",
+                                Colors.white70),
+                            _buildInfoRow("Created at",
+                                firstPlan.createdAt ?? '', Colors.white54),
+                          ],
+                        ),
+                );
+              },
+            ),
+
+            const SizedBox(height: 16),
+            _sectionHeader("Choose Plan"),
+            const SizedBox(height: 12),
+
+            // --- Plans List ---
+            ListView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              shrinkWrap: true,
+              itemCount: filteredPlans.length,
+              itemBuilder: (context, index) {
+                final plan = filteredPlans[index];
+                if (plan.name == "refferal_amount") {
+                  return const SizedBox.shrink();
+                }
+
+                final isSelected = _selectedIndex == index;
+                final gradientColors =
+                    cardGradients[index % cardGradients.length];
+
+                return GestureDetector(
+                  onTap: () {
+                    setState(() => _selectedIndex = index);
+                    onPurchase(plan, index, state.currentPlan?.data);
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: gradientColors,
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: isSelected
+                            ? Colors.deepPurpleAccent
+                            : Colors.transparent,
+                        width: isSelected ? 2 : 0,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.workspace_premium,
+                                  color:
+                                      isSelected ? Colors.amber : Colors.white),
+                              const SizedBox(width: 8),
+                              Text(
+                                plan.name ?? '',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  fontFamily: 'Poppins Regular',
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            "${plan.price} ${(plan.validityDays?.isEmpty ?? true) ? "" : "(${plan.validityDays} Days)"}",
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontFamily: 'Poppins Regular',
+                              fontWeight: FontWeight.w600,
+                              color: Colors.tealAccent,
+>>>>>>> Stashed changes
                             ),
                           ),
-                        ),
-                      );
-                    },
+                          const Divider(height: 20, color: Colors.white24),
+                          _buildInfoRow("Call limit per day",
+                              plan.callLimitPerDay.toString(), Colors.white70),
+                          _buildInfoRow("Chatbot prompt limit",
+                              plan.chatbotPromptLimit ?? '', Colors.white70),
+                          _buildInfoRow(
+                              "Unlimited Call",
+                              plan.isUnlimitedCall == 1 ? "Yes" : "No",
+                              Colors.white70),
+                          _buildInfoRow(
+                              "Unlimited Chat",
+                              plan.isUnlimitedChat == 1 ? "Yes" : "No",
+                              Colors.white70),
+                          _buildInfoRow("Created at", plan.createdAt ?? '',
+                              Colors.white54),
+                        ],
+                      ),
+                    ),
                   ),
+<<<<<<< Updated upstream
                 ],
               ),
             );
@@ -394,6 +634,29 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
           return const SizedBox();
         },
       ),
+=======
+                );
+              },
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (state is PlanError) {
+      return Center(
+        child: Text(
+          state.message,
+          style: const TextStyle(fontFamily: 'Poppins Medium'),
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
+  },
+),
+
+>>>>>>> Stashed changes
     );
   }
 
@@ -412,13 +675,19 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
               text,
               style: const TextStyle(
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
                   fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
 =======
+=======
+>>>>>>> Stashed changes
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
                 fontFamily: 'Poppins Regular',
               ),
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
             ),
           ),
@@ -444,7 +713,12 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
             child: Text(
               title,
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
               style: const TextStyle(color: Colors.white),
+=======
+              style: const TextStyle(
+                  color: Colors.white, fontFamily: 'Poppins Regular'),
+>>>>>>> Stashed changes
 =======
               style: const TextStyle(
                   color: Colors.white, fontFamily: 'Poppins Regular'),
@@ -457,12 +731,18 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
             child: Text(
               value,
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
               style: const TextStyle(fontWeight: FontWeight.w600,color: Colors.white),
 =======
+=======
+>>>>>>> Stashed changes
               style: const TextStyle(
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
                   fontFamily: 'Poppins Regular'),
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
               overflow: TextOverflow.visible, // Allows wrapping
             ),
@@ -574,9 +854,12 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
           Text(title, style: const TextStyle(color: Colors.black54)),
           Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
 =======
+=======
+>>>>>>> Stashed changes
           Text(title,
               style: const TextStyle(
                 color: Colors.black54,
@@ -587,6 +870,9 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
                 fontWeight: FontWeight.bold,
                 fontFamily: 'Poppins Regular',
               )),
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
         ],
       ),

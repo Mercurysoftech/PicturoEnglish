@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:lottie/lottie.dart';
 import 'package:picturo_app/screens/dragandlearntopics.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'dart:convert';
@@ -13,12 +14,18 @@ import '../models/dragand_learn_model.dart';
 import '../utils/common_file.dart';
 
 class DragAndLearnApp extends StatefulWidget {
-  const DragAndLearnApp({super.key, required this.level,required this.bookId,required this.topicId, required this.levelIndex,required this.preLevels});
+  const DragAndLearnApp(
+      {super.key,
+      required this.level,
+      required this.bookId,
+      required this.topicId,
+      required this.levelIndex,
+      required this.preLevels});
   final Levels? level;
   final int? bookId;
   final int? topicId;
   final int levelIndex;
-  final  List<Levels>? preLevels;
+  final List<Levels>? preLevels;
 
   @override
   _DragAndLearnAppState createState() => _DragAndLearnAppState();
@@ -39,7 +46,6 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
 
   @override
   void initState() {
-
     super.initState();
     context.read<CoinCubit>().useCoin(1);
     _bgPlayer = AudioPlayer();
@@ -59,14 +65,15 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
 
     _startCountdown();
   }
+
   Future<void> markQuestionAsRead({
     required int bookId,
     required int topicId,
     required int questionId,
     required bool isRead,
   }) async {
-
-    final url = Uri.parse('https://picturoenglish.com/api/dragandlearn_qusupdate.php');
+    final url =
+        Uri.parse('https://picturoenglish.com/api/dragandlearn_qusupdate.php');
     SharedPreferences pref = await SharedPreferences.getInstance();
     String? token = pref.getString("auth_token");
 
@@ -84,7 +91,6 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
     });
 
     try {
-
       final response = await http.post(url, headers: headers, body: body);
 
       if (response.statusCode == 200) {
@@ -97,12 +103,14 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
       print('🚨 Error sending request: $e');
     }
   }
+
   Future<void> markLevelAsCompleted({
     required int bookId,
     required int topicId,
     required int level,
   }) async {
-    final url = Uri.parse('https://picturoenglish.com/api/markleveldragandlearn.php');
+    final url =
+        Uri.parse('https://picturoenglish.com/api/markleveldragandlearn.php');
     SharedPreferences pref = await SharedPreferences.getInstance();
     String? token = pref.getString("auth_token");
     final headers = {
@@ -117,7 +125,6 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
       'level': level,
     });
 
-
     try {
       final response = await http.post(url, headers: headers, body: body);
 
@@ -131,6 +138,7 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
       print('🚨 Error sending request: $e');
     }
   }
+
   void _startCountdown() {
     Future.doWhile(() async {
       if (countdown > 1) {
@@ -151,7 +159,7 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
   }
 
   void _playBackgroundMusic() async {
-    if(!pauseMusic) {
+    if (!pauseMusic) {
       await _bgPlayer.setReleaseMode(ReleaseMode.loop);
       await _bgPlayer.play(AssetSource('audio/bg_music.mp3'));
     }
@@ -159,7 +167,8 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
 
   void _playEffect(String fileName) async {
     await _effectPlayer.play(AssetSource('audio/$fileName'));
-  }  
+  }
+
   void _playDropEffect(String fileName) async {
     await _effectDropPlayer.play(AssetSource('audio/$fileName'));
   }
@@ -175,8 +184,8 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
     _stopAllSounds();
     super.dispose();
   }
-  bool pauseMusic=false;
 
+<<<<<<< Updated upstream
   void _showCongratulationsPopup() {
     final hasEnoughQuestions = (widget.preLevels?[widget.levelIndex+1].questions?.length ?? 0) >= 5;
 
@@ -206,12 +215,178 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
               child: const Text("Next Level", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold,   fontFamily: AppConstants.commonFont,)),
             ),
           ],
+=======
+  bool pauseMusic = false;
+
+  void _showCongratulationsPopup() async{
+    final bool hasNextLevel =
+        widget.levelIndex + 1 < (widget.preLevels?.length ?? 0);
+
+    final bool nextLevelIsPlayable = hasNextLevel &&
+        (widget.preLevels?[widget.levelIndex + 1].questions?.length ?? 0) >= 4;
+
+    final List<Color> playableGradient = [
+      const Color(0xFF20c073),
+      const Color(0xFF20c073)
+    ];
+    final List<Color> lockedGradient = [
+      Color(0xFF8E44AD), // violet
+      Color(0xFF49329A), // base
+      Color(0xFFDDA0DD), // soft purple-pink
+    ];
+
+    if (await Vibration.hasVibrator() ?? false) {
+    Vibration.vibrate(duration: 400);
+  }
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black.withOpacity(0.7),
+      transitionDuration: const Duration(milliseconds: 400),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          body: SafeArea(
+            child: Stack(
+              children: [
+                // ---------- Gradient background ----------
+                Container(
+                  width: double.infinity,
+                  height: double.infinity,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: !nextLevelIsPlayable
+                          ? playableGradient
+                          : lockedGradient,
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                ),
+
+                // ---------- Confetti BG only when game completed ----------
+                if (!nextLevelIsPlayable)
+                  Lottie.asset(
+                    'assets/lottie/confetti on transparent background.json', // background celebration
+                    width: double.infinity,
+                    height: double.infinity,
+                    fit: BoxFit.cover,
+                    repeat: false,
+                  ),
+
+                // ---------- Foreground content ----------
+                Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Choose Winner or Trophy
+                      Lottie.asset(
+                        nextLevelIsPlayable
+                            ? 'assets/lottie/Winner.json'
+                            : 'assets/lottie/Trophy.json',
+                        width: MediaQuery.of(context).size.width * 0.7,
+                        height: MediaQuery.of(context).size.width * 0.7,
+                        fit: BoxFit.contain,
+                        repeat: false,
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        "Congratulations!",
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          fontFamily: 'Poppins Medium',
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        nextLevelIsPlayable
+                            ? "You matched all correctly. Ready for the next level?"
+                            : "You matched all correctly. 🎉\nGame Completed!",
+                        style: const TextStyle(
+                          fontSize: 18,
+                          color: Colors.white,
+                          fontFamily: 'Poppins Medium',
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 30),
+
+                      // Only show Next Level button if more levels
+                      if (nextLevelIsPlayable)
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 30, vertical: 12),
+                          ),
+                          onPressed: () {
+                            Navigator.pop(context);
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => DragAndLearnApp(
+                                  levelIndex: widget.levelIndex + 1,
+                                  topicId: widget.topicId,
+                                  bookId: widget.bookId,
+                                  level:
+                                      widget.preLevels?[widget.levelIndex + 1],
+                                  preLevels: widget.preLevels,
+                                ),
+                              ),
+                            );
+                          },
+                          child: const Text(
+                            "Next Level",
+                            style: TextStyle(
+                              color: Color(0xFF5E3FA0),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              fontFamily: 'Poppins Medium',
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+
+                // ---------- Close button ----------
+                Positioned(
+                  top: 20,
+                  right: 20,
+                  child: GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.3),
+                        shape: BoxShape.circle,
+                      ),
+                      padding: const EdgeInsets.all(8),
+                      child: const Icon(Icons.close,
+                          color: Colors.white, size: 28),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+>>>>>>> Stashed changes
         );
       },
     );
   }
 
+<<<<<<< Updated upstream
   bool isVolumeMute=true;
+=======
+  bool isVolumeMute = true;
+>>>>>>> Stashed changes
   Map<String?, bool> incorrectDrop = {};
 
   @override
@@ -222,8 +397,10 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
       canPop: false,
       onPopInvoked: (didPop) async {
         _stopAllSounds();
-        context.read<DragLearnCubit>().fetchDragLearnData(bookId: widget.bookId??0,isLoading: true);
-       Navigator.pop(context);
+        context
+            .read<DragLearnCubit>()
+            .fetchDragLearnData(bookId: widget.bookId ?? 0, isLoading: true);
+        Navigator.pop(context);
       },
       child: Scaffold(
         backgroundColor: const Color(0xFFF7F1E6),
@@ -236,7 +413,8 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
               child: IconButton(
                 icon: Icon(Icons.arrow_back_ios, color: Colors.white, size: 26),
                 onPressed: () {
-                  context.read<DragLearnCubit>().fetchDragLearnData(bookId: widget.bookId??0,isLoading: true);
+                  context.read<DragLearnCubit>().fetchDragLearnData(
+                      bookId: widget.bookId ?? 0, isLoading: true);
                   Navigator.pop(context);
                 },
               ),
@@ -245,26 +423,33 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20.0),
                 child: InkWell(
-                    onTap: (){
-                      if(pauseMusic==false){
+                    onTap: () {
+                      if (pauseMusic == false) {
                         _bgPlayer.pause();
-                      }else{
+                      } else {
                         _bgPlayer.play(AssetSource('audio/bg_music.mp3'));
-
                       }
                       setState(() {
-                        pauseMusic=!pauseMusic;
+                        pauseMusic = !pauseMusic;
                       });
-
                     },
-                    child: Icon((!pauseMusic)?Icons.volume_up_outlined:Icons.volume_off,color: Colors.white,)),
+                    child: Icon(
+                      (!pauseMusic)
+                          ? Icons.volume_up_outlined
+                          : Icons.volume_off,
+                      color: Colors.white,
+                    )),
               )
             ],
             title: Padding(
               padding: const EdgeInsets.only(top: 4.0),
               child: Text(
                 'Drag and Learn',
-                style: TextStyle(fontFamily: AppConstants.commonFont,color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                    fontFamily: AppConstants.commonFont,
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold),
               ),
             ), // shape: RoundedRectangleBorder(
             //
@@ -280,7 +465,11 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
                 children: [
                   const SizedBox(height: 10),
 
-                   Text("Level ${widget.levelIndex+1}", style: TextStyle(                   fontFamily: AppConstants.commonFont,fontSize: 24, fontWeight: FontWeight.bold)),
+                  Text("Level ${widget.levelIndex + 1}",
+                      style: TextStyle(
+                          fontFamily: AppConstants.commonFont,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold)),
                   const SizedBox(height: 20),
                   // SizedBox(
                   //   height: itemSize * 2 + 50,
@@ -380,13 +569,15 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
                           incorrectDrop[word] = false;
                         });
 
-                        if (placedImages.values.every((value) => value != null)) {
+                        if (placedImages.values
+                            .every((value) => value != null)) {
                           await markLevelAsCompleted(
                             bookId: widget.bookId ?? 0,
                             topicId: widget.topicId ?? 0,
                             level: widget.level?.level ?? 0,
                           );
-                          await Future.delayed(Duration(milliseconds: 300), _showCongratulationsPopup);
+                          await Future.delayed(Duration(milliseconds: 300),
+                              _showCongratulationsPopup);
                         }
                       } else {
                         setState(() {
@@ -396,7 +587,8 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
                         _playDropEffect('wrong.mp3');
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('Oops! That’s not the correct match.'),
+                            content:
+                                Text('Oops! That’s not the correct match.'),
                             backgroundColor: Colors.red,
                           ),
                         );
@@ -425,7 +617,11 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
                     child: Text(
                       "Drag and place the picture into the correct container",
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontFamily: AppConstants.commonFont,fontSize: 12, fontWeight: FontWeight.w500, color: Colors.white),
+                      style: TextStyle(
+                          fontFamily: AppConstants.commonFont,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white),
                     ),
                   ),
                   const SizedBox(height: 30),
@@ -450,7 +646,10 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
                             child: SizedBox(
                               width: itemSize,
                               height: itemSize,
-                              child: CachedNetworkImageWidget(imageUrl: "https://picturoenglish.com/admin/${availableImages[index] ?? ''}", fit: BoxFit.cover),
+                              child: CachedNetworkImageWidget(
+                                  imageUrl:
+                                      "https://picturoenglish.com/admin/${availableImages[index] ?? ''}",
+                                  fit: BoxFit.cover),
                             ),
                           ),
                           childWhenDragging: SizedBox(
@@ -465,7 +664,10 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(12),
-                              child: CachedNetworkImageWidget(imageUrl: "https://picturoenglish.com/admin/${availableImages[index] ?? ''}", fit: BoxFit.cover),
+                              child: CachedNetworkImageWidget(
+                                  imageUrl:
+                                      "https://picturoenglish.com/admin/${availableImages[index] ?? ''}",
+                                  fit: BoxFit.cover),
                             ),
                           ),
                         );
@@ -499,9 +701,6 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
     );
   }
 }
-
-
-
 
 class ImageWordMatchGrid extends StatelessWidget {
   final List<String?> words;
@@ -558,14 +757,15 @@ class ImageWordMatchGrid extends StatelessWidget {
                 alignment: Alignment.center,
                 child: placedImages[word] != null
                     ? ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: CachedNetworkImageWidget(
-                    imageUrl:
-                    "https://picturoenglish.com/admin/${placedImages[word]!}",
-                    fit: BoxFit.cover,
-                  ),
-                )
+                        borderRadius: BorderRadius.circular(12),
+                        child: CachedNetworkImageWidget(
+                          imageUrl:
+                              "https://picturoenglish.com/admin/${placedImages[word]!}",
+                          fit: BoxFit.cover,
+                        ),
+                      )
                     : Text(
+<<<<<<< Updated upstream
                   word ?? '',
                   textAlign: TextAlign.center,
                   style: TextStyle(
@@ -575,6 +775,17 @@ class ImageWordMatchGrid extends StatelessWidget {
                     color: Color(0xFF49329A),
                   ),
                 ),
+=======
+                        word ?? '',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF49329A),
+                        ),
+                      ),
+>>>>>>> Stashed changes
               );
             },
           );
@@ -583,4 +794,3 @@ class ImageWordMatchGrid extends StatelessWidget {
     );
   }
 }
-

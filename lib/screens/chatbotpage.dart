@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:lottie/lottie.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:picturo_app/classes/svgfiles.dart';
@@ -16,7 +17,12 @@ import 'package:picturo_app/screens/widgets/commons.dart';
 import 'package:picturo_app/services/chatbotapiservice.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+<<<<<<< Updated upstream
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+=======
+import 'package:vibration/vibration.dart';
+//import 'package:speech_to_text/speech_to_text.dart' as stt;
+>>>>>>> Stashed changes
 
 import '../cubits/get_coins_cubit/coins_cubit.dart';
 
@@ -44,6 +50,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
   bool _isRecording = false;
   bool _isAudioMuted = false;
   final AudioPlayer _audioPlayer = AudioPlayer();
+  
 
   String? selectedScenario;
 
@@ -82,8 +89,12 @@ class _ChatBotScreenState extends State<ChatBotScreen>
   }
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
   void _checkRemainingPrompts() {
+=======
+void _checkRemainingPrompts() {
+>>>>>>> Stashed changes
   final botCallsProvider = context.read<RemainingBotCallsProvider>();
   final prompts = botCallsProvider.dailyRemainingPrompts;
   setState(() {
@@ -96,6 +107,10 @@ class _ChatBotScreenState extends State<ChatBotScreen>
     }
   });
 }
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
 
 
 >>>>>>> Stashed changes
@@ -244,6 +259,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
   Future _sendMessage({required String scenario}) async {
 <<<<<<< Updated upstream
   final message = _messageController.text.trim();
+<<<<<<< Updated upstream
 
   SharedPreferences prefs = await SharedPreferences.getInstance();
  String userLanguage= prefs.getString('selectedLanguage')??"";
@@ -254,16 +270,44 @@ class _ChatBotScreenState extends State<ChatBotScreen>
   setState(() {
     _isRecording = false;
     _isListening = false;
+=======
+  final botCallsProvider = context.read<RemainingBotCallsProvider>();
+  final remainingPrompts = botCallsProvider.dailyRemainingPrompts;
+
+  // ---- Safe check for prompts ----
+  bool hasPrompts;
+  if (remainingPrompts == null) {
+    hasPrompts = false;
+  } else if (remainingPrompts == "unlimited") {
+    hasPrompts = true;
+  } else if (remainingPrompts is int) {
+    hasPrompts = remainingPrompts > 0;
+  } else {
+    hasPrompts = false;
+  }
+
+  if (!hasPrompts) {
+    _showNoRemainingPromptsDialog();
+    return;
+  }
+  // ---------------------------------
+
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  String userLanguage = prefs.getString('selectedLanguage') ?? "";
+
+  setState(() {
+>>>>>>> Stashed changes
     _messages.add({
       'message': message,
       'isMe': true,
       'timestamp': _getCurrentTime(),
     });
-
     _isLoading = true;
   });
+
   _scrollToBottom();
   _messageController.clear();
+<<<<<<< Updated upstream
   _scaleController.reverse();
   _colorController.reverse();
 
@@ -276,34 +320,54 @@ class _ChatBotScreenState extends State<ChatBotScreen>
     ).timeout(const Duration(seconds: 30));
 
     context.read<CoinCubit>().useCoin(1);
+=======
+
+  try {
+    // Only decrement if it's a number
+    if (remainingPrompts is int) {
+      botCallsProvider.decrementDailyPrompts();
+    }
+    _checkRemainingPrompts();
+
+    final response = await _apiService
+        .getChatbotResponse(
+          message: message,
+          language: userLanguage,
+          scenario: scenario,
+        )
+        .timeout(const Duration(seconds: 30));
+>>>>>>> Stashed changes
 
     String botMessage = response.response.isNotEmpty
         ? response.response
         : "I didn't get that. Could you try again?";
-    String? audioBase64 = '';
+
     botMessage = botMessage
         .replaceAll(RegExp(r'-{2,}'), '')
-        .replaceAll(RegExp(
-        r'[\u{1F600}-\u{1F64F}'
-        r'\u{1F300}-\u{1F5FF}'
-        r'\u{1F680}-\u{1F6FF}'
-        r'\u{1F1E0}-\u{1F1FF}'
-        r'\u{2600}-\u{26FF}'
-        r'\u{2700}-\u{27BF}'
-        r'\u{1F900}-\u{1F9FF}'
-        r'\u{1FA70}-\u{1FAFF}'
-        r'\u{200D}'
-        r'\u{FE0F}'
-        r'\u{1F018}-\u{1F270}'
-        r'\u{238C}-\u{2454}'
-        r']+',
-        unicode: true), '')
+        .replaceAll(
+            RegExp(
+                r'[\u{1F600}-\u{1F64F}'
+                r'\u{1F300}-\u{1F5FF}'
+                r'\u{1F680}-\u{1F6FF}'
+                r'\u{1F1E0}-\u{1F1FF}'
+                r'\u{2600}-\u{26FF}'
+                r'\u{2700}-\u{27BF}'
+                r'\u{1F900}-\u{1F9FF}'
+                r'\u{1FA70}-\u{1FAFF}'
+                r'\u{200D}'
+                r'\u{FE0F}'
+                r'\u{1F018}-\u{1F270}'
+                r'\u{238C}-\u{2454}'
+                r']+',
+                unicode: true),
+            '')
         .trim();
 =======
     final message = _messageController.text.trim();
     final botCallsProvider = context.read<RemainingBotCallsProvider>();
     final remainingPrompts = botCallsProvider.dailyRemainingPrompts;
 
+<<<<<<< Updated upstream
    // ---- Safe check for prompts ----
     bool hasPrompts;
   if (remainingPrompts == null) {
@@ -353,12 +417,39 @@ class _ChatBotScreenState extends State<ChatBotScreen>
   //     _isLoading = false;
   //   });
   // }
+=======
+    setState(() {
+      _messages.add({
+        'message': botMessage,
+        'isMe': false,
+        'timestamp': _getCurrentTime(),
+        'audioBase64': '',
+        'translation': response.translations,
+      });
+      _isLoading = false;
+    });
+  } catch (e) {
+    botCallsProvider.updateValues(dailyPrompts: remainingPrompts);
+    _checkRemainingPrompts();
+
+    setState(() {
+      _messages.add({
+        'message': e.toString().replaceFirst("Exception: ", ""),
+        'isMe': false,
+        'timestamp': _getCurrentTime(),
+        'audioBase64': '',
+        'translation': {},
+      });
+      _isLoading = false;
+    });
+  }
+
+>>>>>>> Stashed changes
   _scrollToBottom();
-
-
 }
 
 
+<<<<<<< Updated upstream
 =======
     _scrollToBottom();
     _messageController.clear();
@@ -458,31 +549,135 @@ class _ChatBotScreenState extends State<ChatBotScreen>
               child: Text(
                 'OK',
                 style: TextStyle(fontFamily: 'Poppins Regular'),
+=======
+
+void _showNoRemainingPromptsDialog() async {
+  // Vibrate shortly when showing the dialog
+  // if (await Vibration.hasVibrator() ?? false) {
+  //   Vibration.vibrate(duration: 300);
+  // }
+
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    barrierColor: Colors.black.withOpacity(0.4), // optional dim overlay
+    builder: (_) {
+      final size = MediaQuery.of(context).size;
+
+      return Dialog(
+        insetPadding: EdgeInsets.zero, // remove default dialog padding
+        backgroundColor: Colors.transparent,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            /// 🔹 FULL-SCREEN LOTTIE BACKGROUND
+            // Positioned.fill(
+            //   child: Lottie.asset(
+            //     'assets/lottie/NoPromptsBg.json', // your background animation
+            //     fit: BoxFit.cover, // fill height & width
+            //     repeat: true,
+            //   ),
+            // ),
+
+            /// 🔹 Foreground content card
+            Container(
+              width:double.infinity,
+              height: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(0),
+                // boxShadow: [
+                //   BoxShadow(
+                //     blurRadius: 20,
+                //     color: Colors.black.withOpacity(0.2),
+                //   )
+                // ],
+>>>>>>> Stashed changes
               ),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                // Navigate to premium screen
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => PremiumPlansScreen()),
-                );
-              },
-              child: Text(
-                'Upgrade Plan',
-                style: TextStyle(
-                  color: Color(0xFF49329A),
-                  fontFamily: 'Poppins Regular',
-                  fontWeight: FontWeight.bold,
-                ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Lottie.asset(
+                    'assets/lottie/nodata.json',
+                    width: size.width * 0.4,
+                    height: size.width * 0.4,
+                    fit: BoxFit.contain,
+                    repeat: false,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'No Chat Prompts Remaining',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Poppins Regular',
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                      color: Color(0xFF49329A),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'You have used all your daily chatbot prompts.\n'
+                    'Please upgrade your plan or wait until tomorrow.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Poppins Regular',
+                      fontSize: 14,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.grey[300],
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 12, horizontal: 20),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text('OK',style: TextStyle(fontFamily: 'Poppins Regular'),),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => PremiumPlansScreen(isBot: true,),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF49329A),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 12, horizontal: 20),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Upgrade Plan',
+                          style: TextStyle(color: Colors.white,fontFamily: 'Poppins Regular'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ],
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 
   Future<void> _playAudioWithRetry(String base64Audio,
       {int retryCount = 3}) async {
@@ -644,6 +839,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
           title: Padding(
             padding: const EdgeInsets.only(top: 10.0),
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
             child: Row(
               children: [
                Image.asset('assets/ai_avatar.png',scale: 10,),
@@ -665,6 +861,8 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                 ),
               ],
 =======
+=======
+>>>>>>> Stashed changes
             child: Consumer<RemainingBotCallsProvider>(
   builder: (context, botCalls, child) {
     final remainingPrompts = botCalls.dailyRemainingPrompts;
@@ -726,6 +924,9 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                 fontFamily: 'Poppins Regular',
                 fontSize: 18
               ),
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
             ),
             if (hasPrompts)
@@ -745,6 +946,10 @@ class _ChatBotScreenState extends State<ChatBotScreen>
     );
   },
 ),
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
           ),
           actions: [
 <<<<<<< Updated upstream

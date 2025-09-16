@@ -4,8 +4,10 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart' as http;
+import 'package:lottie/lottie.dart';
 import 'package:picturo_app/utils/cached_network_image.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:vibration/vibration.dart';
 
 import '../cubits/games_cubits/quest_game/quest_game_qtn_list_cubit.dart';
 import '../cubits/get_coins_cubit/coins_cubit.dart';
@@ -282,41 +284,158 @@ class _GrammarQuestScreenState extends State<GrammarQuestScreen> {
     );
   }
 
-  void _showCongratulationsPopup() {
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Congratulations!", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF5E3FA0)), textAlign: TextAlign.center),
-          content: const Text("You matched all correctly.", textAlign: TextAlign.center, style: TextStyle(fontSize: 16)),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text("OK", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                if((widget.questions.length==widget.level)){
-
-                }else{
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => GrammarQuestScreen(imageUrl: widget.questions[widget.index+1].image_path,questions: widget.questions,index: widget.index+1,level:widget.level+1,questId: widget.questId+1,title: widget.questions[widget.index+1].gameQus),
-                    ),
-                  );
-                }
-
-              },
-              child:(widget.questions.length==widget.level)? const Text("Finish", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)): const Text("Next Level", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            ),
-          ],
-        );
-      },
-    );
+  void _showCongratulationsPopup() async {
+  final bool isLastLevel = widget.questions.length == widget.level;
+    if (await Vibration.hasVibrator() ?? false) {
+    Vibration.vibrate(duration: 400);
   }
+
+  showGeneralDialog(
+    context: context,
+    barrierDismissible: false,
+    barrierColor: Colors.black.withOpacity(0.7),
+    transitionDuration: const Duration(milliseconds: 400),
+    pageBuilder: (context, animation, secondaryAnimation) {
+      final size = MediaQuery.of(context).size;
+      return Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
+          child: Stack(
+            children: [
+              // Gradient background
+              Container(
+                width: double.infinity,
+                height: double.infinity,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFF5E3FA0),
+                      Color(0xFF49329A),
+                      Color(0xFF9B59B6),
+                    ],
+                  ),
+                ),
+              ),
+
+              Lottie.asset(
+                    'assets/lottie/Confetti Effects Lottie Animation.json', // background celebration
+                    width: double.infinity,
+                    height: double.infinity,
+                    fit: BoxFit.cover,
+                    repeat: false,
+                  ),
+
+              // Centered content
+              Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Lottie animation
+                    Lottie.asset(
+                      'assets/lottie/trophy (1).json', // your single animation
+                      width: size.width * 0.7,
+                      height: size.width * 0.7,
+                      fit: BoxFit.contain,
+                      repeat: false,
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      "Congratulations!",
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontFamily: 'Poppins Medium',
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      isLastLevel
+                          ? "You matched all correctly. 🎉\nGame Completed!"
+                          : "You matched all correctly. Ready for the next level?",
+                      style: const TextStyle(
+                        fontSize: 18,
+                        color: Colors.white,
+                        fontFamily: 'Poppins Medium',
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 30),
+
+                    // Buttons
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 30, vertical: 12),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        if (!isLastLevel) {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => GrammarQuestScreen(
+                                imageUrl:
+                                    widget.questions[widget.index + 1].image_path,
+                                questions: widget.questions,
+                                index: widget.index + 1,
+                                level: widget.level + 1,
+                                questId: widget.questId + 1,
+                                title: widget.questions[widget.index + 1].gameQus,
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                      child: Text(
+                        isLastLevel ? "Finish" : "Next Level",
+                        style: const TextStyle(
+                          color: Color(0xFF5E3FA0),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          fontFamily: 'Poppins Medium',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Close icon
+              Positioned(
+                top: 20,
+                right: 20,
+                child: GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.3),
+                      shape: BoxShape.circle,
+                    ),
+                    padding: const EdgeInsets.all(8),
+                    child: const Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
   void checkValues() async {
     setState(() {
       loading=true;

@@ -64,7 +64,7 @@ dependencies:
   go_router: ^15.1.1
   audioplayers: ^6.4.0
   path_provider: ^2.1.5
-  just_audio: ^0.10.1
+  just_audio: ^0.10.5
   firebase_analytics: ^11.4.5
   firebase_core: ^3.13.1
   firebase_messaging: ^15.2.6
@@ -86,7 +86,13 @@ dependencies:
   translator: ^1.0.3+1
   device_info_plus: ^11.5.0
   get: ^4.7.2
+<<<<<<< Updated upstream
   wakelock_plus: ^1.4.0
+=======
+  flutter_background_service: ^5.1.0
+  audio_service: ^0.18.18
+  #wakelock_plus: any
+>>>>>>> Stashed changes
 
 flutter_icons:
   android: true
@@ -193,6 +199,15 @@ flutter:
      - assets/audio/drop.mp3
      - assets/audio/drag.mp3
      - assets/audio/quest_gm_bg.mp3
+<<<<<<< Updated upstream
+=======
+     - assets/audio/phone-ringing-382734.mp3
+     - assets/bwink_ppl_09_single_10.jpg
+     - assets/wallet.png
+     - assets/bg_coins.png
+     - assets/lottie/Confetti Effects Lottie Animation.json
+     - assets/lottie/
+>>>>>>> Stashed changes
 
      
 

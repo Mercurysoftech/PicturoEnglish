@@ -259,7 +259,7 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver {
     if (profileProvider != null) {
       await context
           .read<CallSocketHandleCubit>()
-          .initCallSocket();
+          .initCallSocket(context);
       Future.delayed(Duration(seconds: 2), () {
         context.read<CallSocketHandleCubit>().listenEvent("call-ended", (data) {
           CallTimerState state = context.read<CallTimerCubit>().state;
@@ -493,6 +493,7 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver {
                                   ),
                                 ),
                               ),
+<<<<<<< Updated upstream
                             )
                           : null,
                       floatingActionButtonLocation:
@@ -505,6 +506,122 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver {
           }
         },
       ),
+=======
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ) 
+              // : index == 1
+              //   ? Consumer<UnreadCountProvider>(
+              //       builder: (context, unreadCountProvider, _) {
+              //         int unread = unreadCountProvider.totalUnreadCount;
+              //         return Stack(
+              //           clipBehavior: Clip.none,
+              //           children: [
+              //             Image.asset(
+              //             bottomNavState.selectedIndex == index
+              //                 ? _navIconsSelected[index]
+              //                 : _navIcons[index],
+              //             width: 23,
+              //             height: 28,
+              //             color: bottomNavState.selectedIndex == index
+              //                 ? Color(0xFF49329A).withValues(alpha: .8)
+              //                 : Colors.grey.shade500,
+              //           ),
+              //             if (unread > 0)
+              //               Positioned(
+              //                 right: -6,
+              //                 top: -4,
+              //                 child: Container(
+              //                   padding: EdgeInsets.all(4),
+              //                   decoration: BoxDecoration(
+              //                     color: Colors.green,
+              //                     shape: BoxShape.circle,
+              //                   ),
+              //                   constraints:
+              //                       BoxConstraints(minWidth: 18, minHeight: 18),
+              //                   child: Center(
+              //                     child: Text(
+              //                       '$unread',
+              //                       style: TextStyle(
+              //                         color: Colors.white,
+              //                         fontSize: 10,
+              //                         fontWeight: FontWeight.bold,
+              //                       ),
+              //                     ),
+              //                   ),
+              //                 ),
+              //               ),
+              //           ],
+              //         );
+              //       },
+              //     ) 
+             : Image.asset(
+                          bottomNavState.selectedIndex == index
+                              ? _navIconsSelected[index]
+                              : _navIcons[index],
+                          width: 23,
+                          height: 28,
+                          color: bottomNavState.selectedIndex == index
+                              ? Color(0xFF49329A).withValues(alpha: .8)
+                              : Colors.grey.shade500,
+                        ),
+          label: _navLabels[index],
+        );
+                            }),
+                            selectedItemColor: Color(0xFF49329A),
+                            selectedLabelStyle:
+                                TextStyle(fontWeight: FontWeight.w800,fontFamily: 'Poppins Regular',),
+                            unselectedFontSize: 12,
+                            unselectedLabelStyle: TextStyle(
+                                color: Colors.black,
+                                fontSize: 12,
+                                fontFamily: 'Poppins Regular',
+                                fontWeight: FontWeight.w700),
+                            unselectedItemColor: Colors.grey,
+                          ),
+                         floatingActionButton: (bottomNavState.selectedIndex == 0 && isOnline)
+    ? ClipOval(
+        child: Material(
+          color: Color(0xFF49329A),
+          child: InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => ChatBotScreen()),
+              );
+            },
+            child: Container(
+              width: 45,
+              height: 45,
+              alignment: Alignment.center,
+              child: Image.asset(
+                'assets/fluent_bot-28-filled.png',
+                width: 28,
+                height: 28,
+              ),
+            ),
+          ),
+        ),
+      )
+    : null,
+floatingActionButtonLocation: isOnline
+    ? FloatingActionButtonLocation.endFloat
+    : null,
+
+                        ),
+                      );
+                    });
+              } else {
+                return Scaffold();
+              }
+            },
+          ),
+        );
+      }
+>>>>>>> Stashed changes
     );
   }
 }

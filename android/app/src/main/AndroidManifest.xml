@@ -73,6 +73,13 @@
 
     
 </receiver>
+
+<service
+    android:name=".services.CallService"
+    android:exported="false"
+    android:foregroundServiceType="microphone|mediaProjection|phoneCall"
+    android:stopWithTask="false" />
+
         <service
             android:name="com.dexterous.flutterlocalnotifications.ForegroundService"
             android:exported="false"

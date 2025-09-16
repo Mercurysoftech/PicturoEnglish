@@ -14,6 +14,11 @@ import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_navigation/src/root/get_material_app.dart';
 import 'package:picturo_app/classes/services/notification_service.dart';
+<<<<<<< Updated upstream
+=======
+import 'package:picturo_app/classes/services/typing_state_manager.dart';
+import 'package:picturo_app/cubits/call_controls/call_controls_cubit.dart';
+>>>>>>> Stashed changes
 import 'package:picturo_app/cubits/premium_cubit/premium_plans_cubit.dart';
 import 'package:picturo_app/cubits/referal_cubit/referal_cubit.dart';
 import 'package:picturo_app/providers/bankaccountprovider.dart';
@@ -359,7 +364,20 @@ void main() async {
         ChangeNotifierProvider(create: (_) => UserProvider()),
         ChangeNotifierProvider(create: (_) => SocketService()),
         ChangeNotifierProvider(create: (context) => ProfileProvider()),
+<<<<<<< Updated upstream
         BlocProvider(create: (context) => CallSocketHandleCubit()),
+=======
+        ChangeNotifierProvider(create: (_) => OnlineStatusProvider()),
+        ChangeNotifierProvider(create: (_) => TypingStateManager()),
+        ChangeNotifierProvider(create: (_) => ConnectivityService()),
+        ChangeNotifierProvider(create: (_) => RemainingBotCallsProvider()),
+        ChangeNotifierProvider(
+            create: (_) => RequestsProvider()..fetchRequestsCount()),
+        ChangeNotifierProvider(
+            create: (_) => UnreadCountProvider()..totalUnreadCount),
+        BlocProvider(
+            create: (context) => CallSocketHandleCubit()..initCallSocket(context)),
+>>>>>>> Stashed changes
         BlocProvider(create: (context) => DragLearnCubit()),
         BlocProvider(create: (context) => SubtopicCubit()),
         BlocProvider(create: (context) => AvatarCubit()),
@@ -378,6 +396,11 @@ void main() async {
         BlocProvider(create: (context) => GetFriendsListCubit()),
         BlocProvider(create: (context) => PlanCubit()),
         BlocProvider(create: (context) => ReferralCubit()),
+<<<<<<< Updated upstream
+=======
+        BlocProvider(create: (_) => CallControlsCubit()),
+        BlocProvider(create: (_) => UserStatusCubit())
+>>>>>>> Stashed changes
       ],
       child: MyApp(),
     ),
@@ -494,8 +517,12 @@ class _MyAppState extends State<MyApp> {
       });
     }
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
     
+=======
+     //WakelockPlus.enable();
+>>>>>>> Stashed changes
     _initializeApp();
 >>>>>>> Stashed changes
     checkAndNavigationCallingPage();
@@ -504,7 +531,7 @@ class _MyAppState extends State<MyApp> {
   void _handleNotificationNavigation(String payload) async {
     log("🔄 Handling notification navigation with payload: $payload");
 
-    await context.read<CallSocketHandleCubit>().initCallSocket();
+    await context.read<CallSocketHandleCubit>().initCallSocket(context);
 
     try {
       final data = jsonDecode(payload);

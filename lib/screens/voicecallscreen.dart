@@ -3,12 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:picturo_app/cubits/call_controls/call_controls_cubit.dart';
 import 'package:picturo_app/cubits/call_cubit/call_socket_handle_cubit.dart';
 import 'package:picturo_app/screens/homepage.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../cubits/call_cubit/call_duration_handler/call_duration_handle_cubit.dart';
-
 
 class VoiceCallScreen extends StatefulWidget {
   final int callerId;
@@ -28,25 +28,29 @@ class VoiceCallScreen extends StatefulWidget {
   _VoiceCallScreenState createState() => _VoiceCallScreenState();
 }
 
-class _VoiceCallScreenState extends State<VoiceCallScreen> {
+class _VoiceCallScreenState extends State<VoiceCallScreen> with WidgetsBindingObserver{
   bool isMuted = false;
   bool isSpeakerOn = false;
   bool isKeypadVisible = false;
   bool showCallControls = true;
-
 
   @override
   void initState() {
 <<<<<<< Updated upstream
 =======
     super.initState();
+<<<<<<< Updated upstream
     WakelockPlus.enable();
+>>>>>>> Stashed changes
+=======
+     WidgetsBinding.instance.addObserver(this);
 >>>>>>> Stashed changes
     context.read<CallSocketHandleCubit>().resetCubit();
     if(!context.read<CallSocketHandleCubit>().isLiveCallActive) {
       context.read<CallTimerCubit>().resetTimer();
     }
     context.read<CallTimerCubit>().startTimer();
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
     super.initState();
 
@@ -62,6 +66,10 @@ void dispose() {
 
 
 
+=======
+  }
+
+>>>>>>> Stashed changes
   String formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
     final hours = twoDigits(duration.inHours);
@@ -72,7 +80,7 @@ void dispose() {
 
   void _toggleMute() {
     setState(() {
-      isMuted = ! isMuted;
+      isMuted = !isMuted;
     });
     context.read<CallSocketHandleCubit>().muteACall(isMuted);
   }
@@ -83,29 +91,64 @@ void dispose() {
       isSpeakerOn = !isSpeakerOn;
     });
   }
+
+late final Future<bool> Function() _willPopCallback;
+
+@override
+void didChangeDependencies() {
+  super.didChangeDependencies();
+  // Prevent route from being popped and recreated
+  _willPopCallback = () async {
+    return false; // Prevent going back
+  };
+  ModalRoute.of(context)?.addScopedWillPopCallback(_willPopCallback);
+}
+
+@override
+void dispose() {
+  super.dispose();
+  WidgetsBinding.instance.removeObserver(this);
+  ModalRoute.of(context)?.removeScopedWillPopCallback(_willPopCallback);
+  
+}
+
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
       body: BlocBuilder<CallSocketHandleCubit, CallSocketHandleState>(
         builder: (context, state) {
-
-          if(state is CallRejected){
+          if (state is CallRejected) {
             context.read<CallTimerCubit>().stopTimer(
-              receiverId: widget.callerId.toString(),
-              callType: "audio",
-              status: "completed",
-            );
-            Future.delayed(Duration.zero,(){
-                Navigator.pop(context);
+                  receiverId: widget.callerId.toString(),
+                  callType: "audio",
+                  status: "completed",
+                );
+            Future.delayed(Duration.zero, () {
+              Navigator.pop(context);
               context.read<CallSocketHandleCubit>().resetCubit();
             });
-          }else if(state is CallOnHold){
+          } else if (state is CallOnHold) {
             context.read<CallTimerCubit>().pauseTimer();
-          }else if(state is CallResumed){
+          } else if (state is CallResumed) {
             context.read<CallTimerCubit>().resumeTimer();
+          } else if (state is CallErrorState) {
+            showDialog(
+              context: context,
+              builder: (_) => AlertDialog(
+                title: const Text('Call Error'),
+                content: Text("state.message"),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
+            );
           }
-
           return Stack(
             children: [
               Container(
@@ -131,7 +174,7 @@ void dispose() {
                     children: [
                       CircleAvatar(
                         radius: 60,
-                        backgroundImage:AssetImage('assets/avatar_1.png'),
+                        backgroundImage: AssetImage('assets/avatar_1.png'),
                       ),
                       SizedBox(height: 20),
                       Text(
@@ -147,7 +190,9 @@ void dispose() {
                       BlocBuilder<CallTimerCubit, CallTimerState>(
                         builder: (context, timerState) {
                           return Text(
-                              (state is CallOnHold)?"Call on Hold":formatDuration(timerState.duration),
+                            (state is CallOnHold)
+                                ? "Call on Hold"
+                                : formatDuration(timerState.duration),
                             style: TextStyle(fontSize: 16, color: Colors.white),
                           );
                         },
@@ -172,10 +217,9 @@ void dispose() {
                 child: IconButton(
                   icon: Icon(Icons.arrow_back, color: Colors.white),
                   onPressed: () => Navigator.pushReplacement(
-  context,
-  MaterialPageRoute(builder: (context) => const Homepage()),
-)
-,
+                    context,
+                    MaterialPageRoute(builder: (context) => const Homepage()),
+                  ),
                 ),
               ),
             ],
@@ -190,32 +234,39 @@ void dispose() {
       padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 40),
       child: Column(
         children: [
-          // First row of controls
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildControlButton(
-                icon: isMuted ? Icons.mic_off : Icons.mic,
-                label: "Mute",
-                isActive: isMuted,
-                onPressed: (){
-                  _toggleMute();
-                },
-              ),
-              // _buildControlButton(
-              //   icon: Icons.dialpad,
-              //   label: "Keypad",
-              //   onPressed: () => setState(() => isKeypadVisible = true),
-              // ),
-              _buildControlButton(
-                icon: isSpeakerOn ? Icons.volume_up : Icons.volume_off,
-                label: "Speaker",
-                isActive: isSpeakerOn,
-                onPressed: () {
-                  _toggleSpeaker();
-                },
-              ),
-            ],
+          BlocBuilder<CallControlsCubit, CallControlsState>(
+            builder: (context, state) {
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildControlButton(
+                    icon: isMuted ? Icons.mic_off : Icons.mic,
+                    label: "Mute",
+                    isActive: state.isMuted,
+                    onPressed: () {
+                      context.read<CallControlsCubit>().toggleMute();
+            context
+                .read<CallSocketHandleCubit>()
+                .muteACall(state.isMuted); 
+                    },
+                  ),
+                  // _buildControlButton(
+                  //   icon: Icons.dialpad,
+                  //   label: "Keypad",
+                  //   onPressed: () => setState(() => isKeypadVisible = true),
+                  // ),
+                  _buildControlButton(
+                    icon: isSpeakerOn ? Icons.volume_up : Icons.volume_off,
+                    label: "Speaker",
+                    isActive: state.isSpeakerOn,
+                    onPressed: () {
+                       context.read<CallControlsCubit>().toggleSpeaker();
+            Helper.setSpeakerphoneOn(!state.isSpeakerOn);
+                    },
+                  ),
+                ],
+              );
+            },
           ),
           SizedBox(height: 40),
           // Second row of controls
@@ -242,7 +293,7 @@ void dispose() {
           SizedBox(height: 60),
           // End call button
           GestureDetector(
-            onTap: (){
+            onTap: () {
               context.read<CallSocketHandleCubit>().endCall();
               context.read<CallTimerCubit>().resetTimer();
             },

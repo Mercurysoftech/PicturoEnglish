@@ -6,6 +6,7 @@ import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_callkit_incoming/entities/android_params.dart';
 import 'package:flutter_callkit_incoming/entities/call_kit_params.dart';
 import 'package:flutter_callkit_incoming/entities/ios_params.dart';
@@ -64,7 +65,7 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
     callSocket.dispose();
   }
 
-  Future<void> initCallSocket() async {
+  Future<void> initCallSocket(BuildContext context) async {
     FirebaseMessaging messaging = FirebaseMessaging.instance;
     String? token = await messaging.getToken();
 
@@ -129,6 +130,12 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
       endCall();
     });
 
+<<<<<<< Updated upstream
+=======
+     callSocket.on('call-error', (data) {
+  emit(CallErrorState(data['message'] ?? 'Unknown error'));
+});
+>>>>>>> Stashed changes
 
 
     callSocket.on('signal', (data) async {
