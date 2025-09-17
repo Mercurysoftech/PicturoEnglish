@@ -18,6 +18,10 @@ class _ChatFriendsTabState extends State<ChatFriendsTab> {
   Future<void> _fetchAllUsers()async{
     context.read<GetFriendsListCubit>().fetchAllFriends();
   }
+  Map<int, String> _avatarCache = {};
+
+
+  
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<GetFriendsListCubit, GetFriendsListState>(
@@ -38,15 +42,14 @@ class _ChatFriendsTabState extends State<ChatFriendsTab> {
         ),
       );
     }else{
-      return SizedBox(
-        height: 20,
-        width: 20,
-        child: SizedBox(
-          height: 20,
-          width: 20,
-          child: CircularProgressIndicator(),
-        ),
-      );
+      return const Center(
+  child: SizedBox(
+    height: 24,
+    width: 24,
+    child: CircularProgressIndicator(strokeWidth: 2),
+  ),
+);
+
     }
 
   },
@@ -61,18 +64,22 @@ class _ChatFriendsTabState extends State<ChatFriendsTab> {
         List<String>? countViewedIndex=preferences.getStringList("Count_Viewed_Index");
         countViewedIndex?.add("${index}");
         preferences.setStringList("Count_Viewed_Index",countViewedIndex??[]);
+        
+final shouldRefresh = await Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => ChatScreen(
+        avatarWidget: _buildUserAvatar(user.friendProfilePic ?? 0),
+        userName: user.friendName ?? '',
+        userId: user.friendId ?? 0,
+        profilePicId: user.friendProfilePic ?? 0,
+      ),
+    ),
+  );
 
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ChatScreen(
-              avatarWidget: _buildUserAvatar(user.friendProfilePic??0),
-              userName: user.friendName??'',
-              userId: user.friendId??0,
-              profilePicId: user.friendProfilePic??0,
-            ),
-          ),
-        );
+  if (shouldRefresh == true) {
+    context.read<GetFriendsListCubit>().fetchAllFriends();
+  }
       },
       child:
       Container(
@@ -140,63 +147,76 @@ class _ChatFriendsTabState extends State<ChatFriendsTab> {
 
   String formatTo12Hour(String dateTimeStr) {
     final dateTime = DateTime.parse(dateTimeStr); // parses ISO string
-    final formatter = DateFormat('h:mm a'); // 12-hour format
+    final formatter = DateFormat('h:mm a'); 
     return formatter.format(dateTime);
   }
 
-  Widget _buildUserAvatar(int avatarId) {
-    // If avatarId is 0 or null, use default panda image
-    if (avatarId == null || avatarId == 0) {
-      return CircleAvatar(
-        radius: 25,
-        backgroundColor: Color(0xFF49329A),
-        backgroundImage: AssetImage('assets/avatar2.png'),
-      );
-    }
-
-    // Otherwise, use network image with the avatar URL
-    return FutureBuilder<String>(
-      future: _getAvatarUrl(avatarId),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return CircleAvatar(
-            radius: 25,
-            backgroundColor: Color(0xFF49329A),
-            child: CircularProgressIndicator(
-              color: Colors.white,
-              strokeWidth: 2,
-            ),
-          );
-        } else if (snapshot.hasError || !snapshot.hasData) {
-          return CircleAvatar(
-            radius: 25,
-            backgroundColor: Color(0xFF49329A),
-            backgroundImage: AssetImage('assets/avatar2.png'),
-          );
-        } else {
-          return CircleAvatar(
-            radius: 25,
-            backgroundImage: NetworkImage(snapshot.data!),
-          );
-        }
-      },
+Widget _buildUserAvatar(int avatarId) {
+  if (avatarId == 0) {
+    return CircleAvatar(
+      radius: 25,
+      backgroundImage: AssetImage('assets/avatar2.png'),
     );
   }
 
-  Future<String> _getAvatarUrl(int avatarId) async {
-    try {
-      final apiService = await ApiService.create();
-      final avatarResponse = await apiService.fetchAvatars();
-
-      final avatar = avatarResponse.data.firstWhere(
-            (a) => a.id == avatarId,
-        orElse: () => throw Exception('Avatar not found'),
-      );
-
-      return 'http://picturoenglish.com/admin/${avatar.avatarUrl}';
-    } catch (e) {
-      print('Error fetching avatar URL: $e');
-      throw e; // This will trigger the error state in FutureBuilder
-    }
+  if (_avatarCache.containsKey(avatarId)) {
+    // ✅ Instant load if cached
+    return CircleAvatar(
+      radius: 25,
+      backgroundImage: NetworkImage(_avatarCache[avatarId]!),
+    );
   }
+
+  // Fetch once if not cached
+  return FutureBuilder<String>(
+    future: _getAvatarUrl(avatarId),
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return CircleAvatar(
+          radius: 25,
+          backgroundColor: Color(0xFF49329A),
+          child: CircularProgressIndicator(
+            color: Colors.white,
+            strokeWidth: 2,
+          ),
+        );
+      } else if (snapshot.hasError || !snapshot.hasData) {
+        return CircleAvatar(
+          radius: 25,
+          backgroundImage: AssetImage('assets/avatar2.png'),
+        );
+      } else {
+        return CircleAvatar(
+          radius: 25,
+          backgroundImage: NetworkImage(snapshot.data!),
+        );
+      }
+    },
+  );
+}
+
+
+  Future<String> _getAvatarUrl(int avatarId) async {
+  if (_avatarCache.containsKey(avatarId)) {
+    return _avatarCache[avatarId]!;
+  }
+
+  try {
+    final apiService = await ApiService.create();
+    final avatarResponse = await apiService.fetchAvatars();
+
+    final avatar = avatarResponse.data.firstWhere(
+      (a) => a.id == avatarId,
+      orElse: () => throw Exception('Avatar not found'),
+    );
+
+    final url = 'http://picturoenglish.com/admin/${avatar.avatarUrl}';
+    _avatarCache[avatarId] = url; // ✅ Save in cache
+    return url;
+  } catch (e) {
+    print('Error fetching avatar URL: $e');
+    throw e;
+  }
+}
+
 }

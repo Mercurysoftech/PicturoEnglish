@@ -52,7 +52,7 @@ class _LearnWordsPageState extends State<LearnWordsPage> {
 
       setState(() {
         userResponse=response;
-        userLanguage=userResponse?.speakingLanguage??'';
+        userLanguage=userResponse?.user.speakingLanguage??'';
       });
     } catch (e) {
       setState(() {

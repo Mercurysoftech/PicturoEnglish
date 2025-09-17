@@ -13,21 +13,36 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_navigation/src/root/get_material_app.dart';
+import 'package:picturo_app/classes/helper/bot_calls_refresh.dart';
+import 'package:picturo_app/classes/services/connectivity_service.dart';
 import 'package:picturo_app/classes/services/notification_service.dart';
+import 'package:picturo_app/classes/services/typing_state_manager.dart';
 import 'package:picturo_app/cubits/premium_cubit/premium_plans_cubit.dart';
 import 'package:picturo_app/cubits/referal_cubit/referal_cubit.dart';
+import 'package:picturo_app/cubits/user_status/user_status_cubit.dart';
 import 'package:picturo_app/providers/bankaccountprovider.dart';
+import 'package:picturo_app/providers/online_status_provider.dart';
 import 'package:picturo_app/providers/profileprovider.dart';
+import 'package:picturo_app/providers/remaining_bot_calls_provider';
+import 'package:picturo_app/providers/requests_provider.dart';
+import 'package:picturo_app/providers/unread_count_provider.dart';
 import 'package:picturo_app/providers/userprovider.dart';
 import 'package:picturo_app/screens/chatscreenpage.dart';
+import 'package:picturo_app/screens/earnings_ref/referral_details.dart';
+import 'package:picturo_app/screens/homepage.dart';
+import 'package:picturo_app/screens/premiumscreenpage.dart';
 import 'package:picturo_app/screens/splashscreenpage.dart';
 import 'package:picturo_app/screens/voicecallscreen.dart';
 import 'package:picturo_app/services/api_service.dart';
+import 'package:picturo_app/services/app_lifecycle_manager.dart';
+import 'package:picturo_app/services/chat_socket_service.dart';
 import 'package:picturo_app/services/global_service.dart';
 import 'package:picturo_app/services/navigation_service.dart';
 import 'package:picturo_app/services/push_notification_service.dart';
+import 'package:picturo_app/services/socket_notifications_service.dart';
 import 'package:picturo_app/socket/socketservice.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'cubits/bottom_navigator_index_cubit.dart';
 import 'cubits/call_cubit/call_duration_handler/call_duration_handle_cubit.dart';
@@ -62,22 +77,73 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
           int.tryParse(message.data['caller_id']?.toString() ?? "0") ?? 0;
       final callerName =
           message.data['caller_username']?.toString() ?? "Unknown";
+      final receiverId =
+          int.tryParse(message.data['receiver_id']?.toString() ?? "0") ?? 0;
+
+      // Set up CallKit event listener for background call handling
+      FlutterCallkitIncoming.onEvent.listen((event) async {
+        log("📞 Background CallKit event: ${event?.event}");
+
+        if (event?.event == Event.actionCallDecline) {
+          log("❌ Background call declined via CallKit");
+
+          // Make API call to reject the call
+          try {
+            final apiService = await ApiService.create();
+            final result = await apiService.rejectCall(callerId, receiverId);
+
+            if (result['status'] == true) {
+              log("✅ Background call rejection API successful: ${result['message']}");
+            } else {
+              log("⚠️ Background call rejection API failed: ${result['message']}");
+            }
+          } catch (e) {
+            log("❌ Error making background reject call API: $e");
+          }
+
+          // End the call
+          await FlutterCallkitIncoming.endAllCalls();
+        }
+      });
 
       showFlutterCallNotification(
-          callSessionId: 'sdkjcslkcmslkcmsdc',
-          userId: callerId.toString(),
-          callerName: callerName,
-        );
+        callSessionId: 'sdkjcslkcmslkcmsdc',
+        userId: callerId.toString(),
+        callerName: callerName,
+        callerId: callerId,
+        receiverId: receiverId,
+      );
+    } else if (message.data['type'] == 'end_call' ||
+        message.data['type'] == 'missed_call' ||
+        message.data['type'] == 'Missed Call') {
+      log("📞 Background outgoing call notification received");
+      FlutterCallkitIncoming.endCall("sdkjcslkcmslkcmsdc");
+    } else if (message.data['type'] == 'refer') {
+      log("📞 Background referral notification received");
+
+      // Show a local notification with payload so we can catch it later
+      await flutterLocalNotificationsPlugin.show(
+        0,
+        "Referral Bonus 🎁",
+        "Tap to view your premium plans!",
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'refer_channel', // channel id
+            'Referral Notifications', // channel name
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
+        ),
+        payload: jsonEncode({"type": "refer"}),
+      );
     } else {
       log("💬 Background chat notification received");
-      PushNotificationService.showNotification(message);
+      //PushNotificationService.showNotification(message);
     }
   } catch (e) {
     log("⚠️ Error in background handler: $e");
   }
 }
-
-
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
@@ -105,6 +171,8 @@ String? initialNotificationPayload;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  //await AppLifecycleManager().initialize();
+
   await setupFlutterNotifications();
 
   await Firebase.initializeApp(
@@ -112,20 +180,22 @@ void main() async {
   );
   await NotificationService().requestPermissions();
   PushNotificationService.initialize();
-  // await globalSocketService.initialize();
-  // WidgetsBinding.instance.addObserver(AppLifecycleObserver());
+  await SocketNotificationsService.initialize();
+  //await globalSocketService.initialize();
+  //WidgetsBinding.instance.addObserver(AppLifecycleObserver());
 
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
   // Register plugins in background isolate
-  FlutterCallkitIncoming.onEvent.listen((event) {
+  FlutterCallkitIncoming.onEvent.listen((event) async {
     log("📞 CallKit event received: ${event?.event}");
 
     if (event?.event == Event.actionCallAccept) {
       log("✅ Call accepted via CallKit");
       final data = event?.body ?? {};
       final target = int.parse(data["extra"]['userId'] ?? "0");
-      final cubit = NavigationService.instance.navigationKey.currentContext?.read<CallSocketHandleCubit>();
+      final cubit = NavigationService.instance.navigationKey.currentContext
+          ?.read<CallSocketHandleCubit>();
 
       if (cubit == null) {
         log("⚠️ Call cubit not available");
@@ -136,6 +206,7 @@ void main() async {
         log("⚠️ Call already active - ignoring duplicate");
         return;
       }
+
       Navigator.push(
         NavigationService.instance.navigationKey.currentContext!,
         MaterialPageRoute(
@@ -149,16 +220,45 @@ void main() async {
       );
     } else if (event?.event == Event.actionCallDecline) {
       log("❌ Call declined via CallKit");
-      NavigationService.instance.navigationKey.currentContext?.read<CallSocketHandleCubit>().endCall();
+      // Extract caller and receiver IDs from the call data
+      // final data = event?.body ?? {};
+      // final callerId =
+      //     int.tryParse(data['caller_id']?.toString() ?? "0") ?? 0;
+      // final receiverId =
+      //     int.tryParse(data["extra"]['receiverId']?.toString() ?? "0") ?? 0;
+
+      // // Make API call to reject the call
+      // try {
+      //   final apiService = await ApiService.create();
+      //   final result = await apiService.rejectCall(callerId);
+
+      //   if (result['status'] == true) {
+      //     log("✅ Call rejection API call successful: ${result['message']}");
+      //   } else {
+      //     log("⚠️ Call rejection API call failed: ${result['message']}");
+      //   }
+      // } catch (e) {
+      //   log("❌ Error making reject call API: $e");
+      // }
+
+      // End the call locally
+      NavigationService.instance.navigationKey.currentContext
+          ?.read<CallSocketHandleCubit>()
+          .endCall();
     }
   });
 
+  //await AppLifecycleService().initialize();
+
+  // Get the launch details (if app opened from terminated state)
   final NotificationAppLaunchDetails? launchDetails =
       await flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
 
   if (launchDetails?.didNotificationLaunchApp ?? false) {
     initialNotificationPayload = launchDetails!.notificationResponse?.payload;
   }
+
+  // Initialize notifications
 
   HttpOverrides.global = MyHttpOverrides();
   runApp(
@@ -168,7 +268,16 @@ void main() async {
         ChangeNotifierProvider(create: (_) => UserProvider()),
         ChangeNotifierProvider(create: (_) => SocketService()),
         ChangeNotifierProvider(create: (context) => ProfileProvider()),
-        BlocProvider(create: (context) => CallSocketHandleCubit()..initCallSocket()),
+        ChangeNotifierProvider(create: (_) => OnlineStatusProvider()),
+        ChangeNotifierProvider(create: (_) => TypingStateManager()),
+        ChangeNotifierProvider(create: (_) => ConnectivityService()),
+        ChangeNotifierProvider(create: (_) => RemainingBotCallsProvider()),
+        ChangeNotifierProvider(
+            create: (_) => RequestsProvider()..fetchRequestsCount()),
+        ChangeNotifierProvider(
+            create: (_) => UnreadCountProvider()..totalUnreadCount),
+        BlocProvider(
+            create: (context) => CallSocketHandleCubit()..initCallSocket()),
         BlocProvider(create: (context) => DragLearnCubit()),
         BlocProvider(create: (context) => SubtopicCubit()),
         BlocProvider(create: (context) => AvatarCubit()),
@@ -187,12 +296,22 @@ void main() async {
         BlocProvider(create: (context) => GetFriendsListCubit()),
         BlocProvider(create: (context) => PlanCubit()),
         BlocProvider(create: (context) => ReferralCubit()),
+        BlocProvider(create: (_) => UserStatusCubit())
       ],
-      child: MyApp(),
+      child:Builder(
+      builder: (context) {
+        // 👇 inject the cubit into ChatSocket
+        ChatSocket.init(context.read<UserStatusCubit>());
+         WidgetsBinding.instance.addPostFrameCallback((_) {
+        context.read<RemainingBotCallsProvider>().fetchRemainingBotCalls();
+      });
+      
+        return const MyApp();
+      },
+    ),
     ),
   );
 }
-
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
@@ -216,7 +335,31 @@ class _MyAppState extends State<MyApp> {
         initialNotificationPayload = null;
       });
     }
+    _initializeApp();
     checkAndNavigationCallingPage();
+  }
+
+  @override
+  void dispose() {
+    //AppLifecycleService().dispose();
+    super.dispose();
+  }
+
+  Future<void> _initializeApp() async {
+    // Initialize SharedPreferences first
+    final prefs = await SharedPreferences.getInstance();
+
+    // Check if user is logged in (has auth token)
+    final authToken = prefs.getString('auth_token');
+
+    if (authToken != null && authToken.isNotEmpty) {
+      // Initialize ProfileProvider if user is logged in
+      final profileProvider = Provider.of<ProfileProvider>(
+          NavigationService.instance.navigationKey.currentContext!,
+          listen: false);
+
+      await profileProvider.initialize();
+    }
   }
 
   void _handleNotificationNavigation(String payload) async {
@@ -228,7 +371,21 @@ class _MyAppState extends State<MyApp> {
       final data = jsonDecode(payload);
 
       if (data['type'] == 'incoming_call') {
-
+      } else if (data['type'] == 'refer') {
+        log("🎁 Navigating to Premium Page");
+        Navigator.of(NavigationService.instance.navigationKey.currentContext!)
+            .push(MaterialPageRoute(
+          builder: (context) => ReferralPage(),
+        ));
+      } else if (data['type'] == 'end_call' ||
+          data['type'] == 'missed_call' ||
+          data['type'] == 'Missed Call') {
+        log("🏠 Navigating to Home after call end/missed");
+        Navigator.of(NavigationService.instance.navigationKey.currentContext!)
+            .pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const Homepage()),
+          (route) => false,
+        );
       } else {
         log("💬 Handling chat notification navigation");
         final senderName = data['username']?.toString() ?? "Unknown";
@@ -236,7 +393,8 @@ class _MyAppState extends State<MyApp> {
             int.tryParse(data['avatar_id']?.toString() ?? "0") ?? 0;
         final userId = int.tryParse(data['sender_id']?.toString() ?? "0") ?? 0;
 
-        Navigator.of(NavigationService.instance.navigationKey.currentContext!).pushAndRemoveUntil(
+        Navigator.of(NavigationService.instance.navigationKey.currentContext!)
+            .pushAndRemoveUntil(
           MaterialPageRoute(
             builder: (context) => ChatScreen(
               avatarWidget:
@@ -307,9 +465,10 @@ class _MyAppState extends State<MyApp> {
       throw e;
     }
   }
+
   String? callerName;
   int? targetId;
-  Future<Map<String,dynamic>?> getCurrentCall() async {
+  Future<Map<String, dynamic>?> getCurrentCall() async {
     var calls = await FlutterCallkitIncoming.activeCalls();
     if (calls is List) {
       if (calls.isNotEmpty) {
@@ -317,15 +476,14 @@ class _MyAppState extends State<MyApp> {
 
         if (accepted) {
           setState(() {
-            callConnectd=true;
-            callerName=calls[0]['nameCaller'];
-             targetId = int.parse(calls[0]["extra"]['userId'] ?? "0");
+            callConnectd = true;
+            callerName = calls[0]['nameCaller'];
+            targetId = int.parse(calls[0]["extra"]['userId'] ?? "0");
             _currentUuid = calls[0]['id'];
           });
           FlutterCallkitIncoming.endCall("sdkjcslkcmslkcmsdc");
-        }else{
+        } else {
           FlutterCallkitIncoming.endCall("sdkjcslkcmslkcmsdc");
-          NavigationService.instance.navigationKey.currentContext?.read<CallSocketHandleCubit>().endCall();
         }
 
         return calls[0];
@@ -336,59 +494,51 @@ class _MyAppState extends State<MyApp> {
     }
     return null;
   }
-  bool callConnectd=false;
+
+  bool callConnectd = false;
   Future<void> checkAndNavigationCallingPage() async {
+    Map<String, dynamic>? currentCall = await getCurrentCall();
 
-    Map<String,dynamic>? currentCall = await getCurrentCall();
-
-    BuildContext? contextx=NavigationService.instance.navigationKey.currentContext;
-    if(contextx!=null){
-      if(currentCall!=null){
-
-     Future.delayed(Duration.zero,(){
-       if(contextx.mounted){
-         int target = int.parse(currentCall["extra"]['userId'] ?? "0");
-
-         Navigator.push(
-           contextx,
-           MaterialPageRoute(
-             builder: (context) => VoiceCallScreen(
-                 callerId: target,
-                 callerName: "${currentCall['nameCaller']}",
-                 callerImage: '',
-                 isIncoming: false),
-           ),
-         );
-       }
-
-     });
-      }
-    }else{
+    BuildContext? contextx =
+        NavigationService.instance.navigationKey.currentContext;
+    if (contextx != null) {
       if (currentCall != null) {
-        bool accepted=currentCall['accepted'];
+        Future.delayed(Duration.zero, () {
+          if (contextx.mounted) {
+            int target = int.parse(currentCall["extra"]['userId'] ?? "0");
+            callerName="${currentCall['nameCaller']}";
+            Navigator.push(
+              contextx,
+              MaterialPageRoute(
+                builder: (context) => VoiceCallScreen(
+                    callerId: target,
+                    callerName: "${currentCall['nameCaller']}",
+                    callerImage: '',
+                    isIncoming: false),
+              ),
+            ).then((val){
 
-        if(accepted){
-
-
-            setState(() {
-              callConnectd=true;
             });
+          }
+        });
+      }
+    } else {
+      if (currentCall != null) {
+        bool accepted = currentCall['accepted'];
 
-
-          Future.delayed(const Duration(seconds: 2),()async{
-
-            callConnectd=false;
-            _currentUuid='';
-            setState(() {
-
-            });
+        if (accepted) {
+          setState(() {
+            callConnectd = true;
           });
 
+          Future.delayed(const Duration(seconds: 2), () async {
+            callConnectd = false;
+            _currentUuid = '';
+            setState(() {});
+          });
         }
-
       }
     }
-
   }
 
   @override
@@ -396,27 +546,33 @@ class _MyAppState extends State<MyApp> {
     // Important!
     String initialRoute = '/';
 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+        BotCallsRefreshService.startPeriodicRefresh(context);
+      });
+
     // If app opened from terminated state via notification
     if (initialNotificationPayload != null) {
       initialRoute = initialNotificationPayload!; // e.g., "/chat/123"
     }
 
     return BlocProvider(
-      create: (context) => TopicCubit(),
-      child: GetMaterialApp(
-        navigatorKey:NavigationService.instance.navigationKey,
-        debugShowCheckedModeBanner: false,
-          home: (_currentUuid!=null&&_currentUuid!='')?(callConnectd)?
-          VoiceCallScreen(
-              callerId: targetId??0,
-              callerName: "${callerName}",
-              callerImage: '',
-              isIncoming: false)
-              :const LoadedrSatste():
-          const SplashScreen())
-    );
+        create: (context) => TopicCubit(),
+        child: GetMaterialApp(
+            navigatorKey: NavigationService.instance.navigationKey,
+            debugShowCheckedModeBanner: false,
+            home:
+            (_currentUuid != null && _currentUuid != '')
+                ? (callConnectd)
+                    ? VoiceCallScreen(
+                        callerId: targetId ?? 0,
+                        callerName: "${callerName}",
+                        callerImage: '',
+                        isIncoming: false)
+                    : const SplashScreen()
+                : const SplashScreen()));
   }
 }
+
 class LoadedrSatste extends StatefulWidget {
   const LoadedrSatste({super.key});
 
@@ -425,12 +581,11 @@ class LoadedrSatste extends StatefulWidget {
 }
 
 class _LoadedrSatsteState extends State<LoadedrSatste> {
-
   @override
   void initState() {
-
     super.initState();
   }
+
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
@@ -440,7 +595,6 @@ class _LoadedrSatsteState extends State<LoadedrSatste> {
     );
   }
 }
-
 
 String capitalizeFirstLetter(String input) {
   if (input.isEmpty) return input;
@@ -467,23 +621,110 @@ class _UserPageState extends State<UserPage> {
   }
 }
 
-class AppLifecycleObserver extends WidgetsBindingObserver {
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    switch (state) {
-      case AppLifecycleState.resumed:
-        globalSocketService.setAppState(true);
-        log('📱 App in foreground');
-        break;
-      case AppLifecycleState.inactive:
-      case AppLifecycleState.paused:
-      case AppLifecycleState.detached:
-        globalSocketService.setAppState(false);
-        log('📱 App in background');
-        break;
-      case AppLifecycleState.hidden:
-      log('📱 App is hidden');
-        break;
-    }
+class ChatScreenTracker {
+  static String? activeChatUserId;
+
+  static bool isInChatWithUser(String userId) {
+    return activeChatUserId == userId;
   }
 }
+
+// class AppLifecycleService with WidgetsBindingObserver {
+//   static final AppLifecycleService _instance = AppLifecycleService._internal();
+  
+//   factory AppLifecycleService() => _instance;
+  
+//   AppLifecycleService._internal();
+  
+//   bool _isInitialized = false;
+  
+//   Future<void> initialize() async {
+//     if (_isInitialized) return;
+    
+//     WidgetsBinding.instance.addObserver(this);
+//     _isInitialized = true;
+    
+//     // Emit online status when app starts
+//     _emitOnlineStatus();
+//   }
+  
+//   Future<void> dispose() async {
+//     WidgetsBinding.instance.removeObserver(this);
+//     _isInitialized = false;
+//   }
+
+//   @override
+//   void didChangeAppLifecycleState(AppLifecycleState state) async {
+//     final prefs = await SharedPreferences.getInstance();
+//     final userId = prefs.getString('user_id');
+
+//     switch (state) {
+//       case AppLifecycleState.resumed:
+//         // App is in foreground - mark online
+//         _emitOnlineStatus();
+//         break;
+
+//       case AppLifecycleState.inactive:
+//       case AppLifecycleState.paused:
+//       case AppLifecycleState.detached:
+//         // App is in background/closed - mark offline
+//         _emitOfflineStatus();
+//         break;
+
+//       case AppLifecycleState.hidden:
+//         // (only on web, usually safe to ignore for mobile)
+//         break;
+//     }
+//   }
+
+//   Future<void> _emitOnlineStatus() async {
+//     try {
+//       final prefs = await SharedPreferences.getInstance();
+//       final userId = prefs.getString('user_id');
+
+//       if (userId != null && ChatSocket.socket?.connected == true) {
+//         print('🟢 Emitting online status for user: $userId');
+//         ChatSocket.socket?.emit('userOnline', {
+//           'user_id': userId,
+//           'is_online': true,
+//         });
+//          _updateLocalStatus(userId, true);
+//       }
+//     } catch (e) {
+//       print('Error emitting online status: $e');
+//     }
+//   }
+
+//   Future<void> _emitOfflineStatus() async {
+//     try {
+//       final prefs = await SharedPreferences.getInstance();
+//       final userId = prefs.getString('user_id');
+
+//       if (userId != null && ChatSocket.socket?.connected == true) {
+//         print('🔴 Emitting offline status for user: $userId');
+//         ChatSocket.socket?.emit('userOffline', {
+//           'user_id': userId,
+//           'is_online': false,
+//         });
+//          _updateLocalStatus(userId, true);
+//       }
+//     } catch (e) {
+//       print('Error emitting offline status: $e');
+//     }
+//   }
+
+//   void _updateLocalStatus(String userId, bool isOnline) {
+//     // Use Provider to update status locally
+//     final provider = NavigationService.instance.navigationKey.currentContext
+//         ?.read<OnlineStatusProvider>();
+    
+//     if (provider != null) {
+//       provider.updateUserStatus(userId, isOnline);
+//     }
+//   }
+
+//   // Call this when user explicitly logs out
+//   Future<void> onUserLogout() async {
+//     await _emitOfflineStatus();
+//   }
+// }

@@ -226,6 +226,7 @@ class _HelperBotScreenState extends State<HelperBotScreen> {
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 16,
+                                  fontFamily: 'Poppins Medium',
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -233,16 +234,20 @@ class _HelperBotScreenState extends State<HelperBotScreen> {
                           ),
                         ],
                       ):Card(
+                        color: Colors.white,
+                        elevation: 0,
                         margin: EdgeInsets.symmetric(vertical: 6),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: ExpansionTile(
+                          backgroundColor: Colors.white,
                           tilePadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           title: Text(
                             faq.question,
                             style: TextStyle(
-                              fontSize: 16,
+                              fontSize: 15,
+                              fontFamily: 'Poppins Regular',
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -252,7 +257,7 @@ class _HelperBotScreenState extends State<HelperBotScreen> {
                               padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                               child: Text(
                                 faq.answer,
-                                style: TextStyle(fontSize: 15),
+                                style: TextStyle(fontSize: 15,fontFamily: 'Poppins Regular'),
                               ),
                             ),
                             // Align(

@@ -31,7 +31,7 @@ dependencies:
   flutter:
     sdk: flutter
 
-  lottie: ^2.0.0 # Add the latest version of the lottie package
+  lottie: ^3.3.1 # Add the latest version of the lottie package
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -48,7 +48,7 @@ dependencies:
   shared_preferences: ^2.5.3
   http: ^1.3.0
   dio: ^5.8.0+1
-  connectivity_plus: ^6.1.3
+  connectivity_plus: ^6.1.5
   provider: ^6.1.2
   fluttertoast: ^8.2.12
   flutter_launcher_icons: ^0.14.3
@@ -62,7 +62,7 @@ dependencies:
   flutter_tts: ^4.2.3
   cached_network_image: ^3.4.1
   go_router: ^15.1.1
-  audioplayers: ^6.4.0
+  audioplayers: ^6.5.1
   path_provider: ^2.1.5
   just_audio: ^0.10.1
   firebase_analytics: ^11.4.5
@@ -125,6 +125,7 @@ flutter:
      - assets/Illustration.png
      - assets/iconamoon_profile-thin.png
      - assets/lottie/Lottie Successful.json
+     - assets/lottie/no_internet.json
      - assets/gender_age.png
      - assets/location page.png
      - assets/chat_filled.png
@@ -192,6 +193,10 @@ flutter:
      - assets/audio/drop.mp3
      - assets/audio/drag.mp3
      - assets/audio/quest_gm_bg.mp3
+     - assets/audio/phone-ringing-382734.mp3
+     - assets/bwink_ppl_09_single_10.jpg
+     - assets/wallet.png
+     - assets/bg_coins.png
 
      
 

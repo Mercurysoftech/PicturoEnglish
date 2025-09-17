@@ -44,27 +44,27 @@ class _PictureGrammarQuestScreenState extends State<PictureGrammarQuestScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        height: 12,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: LinearProgressIndicator(
-                            value: progress,
-                            backgroundColor: Colors.grey[300],
-                            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF49329A)),
-                            minHeight: 12,
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: 8),
-                      Text(
-                        '${(progress * 100).toInt()}%',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF5A2D91)),
-                      ),
+                      // Container(
+                      //   height: 12,
+                      //   decoration: BoxDecoration(
+                      //     color: Colors.grey[300],
+                      //     borderRadius: BorderRadius.circular(8),
+                      //   ),
+                      //   child: ClipRRect(
+                      //     borderRadius: BorderRadius.circular(8),
+                      //     child: LinearProgressIndicator(
+                      //       value: progress,
+                      //       backgroundColor: Colors.grey[300],
+                      //       valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF49329A)),
+                      //       minHeight: 12,
+                      //     ),
+                      //   ),
+                      // ),
+                      // SizedBox(height: 8),
+                      // Text(
+                      //   '${(progress * 100).toInt()}%',
+                      //   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF5A2D91)),
+                      // ),
                       SizedBox(height: 20),
                     ],
                   ),

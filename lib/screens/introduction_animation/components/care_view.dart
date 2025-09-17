@@ -98,15 +98,16 @@ class CareView extends StatelessWidget {
                   child: Text(
                     "Chat Bot",
                     style:
-                        TextStyle(fontSize: 26.0, fontWeight: FontWeight.bold),
+                        TextStyle(fontSize: 25.0, fontWeight: FontWeight.bold,fontFamily: 'Poppins Medium'),
                   ),
                 ),
               ),
               Padding(
                 padding:
-                    EdgeInsets.only(left: 64, right: 64, bottom: 16, top: 16),
+                    EdgeInsets.only(left: 54, right: 54, bottom: 16, top: 16),
                 child: Text(
                   "Get instant answers, smart suggestions, and personalized support from your AI companion, available 24/7 to assist you with learning, problem-solving, and everyday tasks.",
+                  style: TextStyle(fontFamily: 'Poppins Regular'),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -137,6 +138,7 @@ class CareView extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 18,
                             color: Colors.black,
+                            fontFamily: 'Poppins Medium'
                           ),
                         ),
                       ),

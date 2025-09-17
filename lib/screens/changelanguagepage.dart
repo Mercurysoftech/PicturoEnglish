@@ -39,7 +39,7 @@ class _ChangeLanguagePageState extends State<ChangeLanguagePage> {
 
       setState(() {
         userResponse=response;
-        selectedLanguage=userResponse?.speakingLanguage??'';
+        selectedLanguage=userResponse?.user.speakingLanguage??'';
       });
     } catch (e) {
       setState(() {

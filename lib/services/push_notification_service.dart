@@ -121,7 +121,7 @@ class PushNotificationService {
               avatarWidget: buildUserAvatar(data['sender_profile'] == "null"
                   ? 0
                   : int.parse(data['sender_profile'] ?? '0')),
-              userName: data['username'] ?? 'N/A',
+              userName: data['username'] ?? (data['sender_username'] ?? 'N/A'),
               userId: int.parse(data['sender_id'] ?? '0'),
               profilePicId: data['sender_profile'] == "null"
                   ? 0
@@ -142,10 +142,10 @@ class PushNotificationService {
       sound: true,
     );
 
-   FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
-  print("📲 Foreground Data: ${message.data}");
-  showNotification(message);
-});
+//    FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
+//   print("📲 Foreground Data: ${message.data}");
+//   showNotification(message);
+// });
 
 
 
@@ -157,11 +157,11 @@ class PushNotificationService {
       }
     });
 
-    FirebaseMessaging.onMessageOpenedApp.listen((message) {
-      log("📱 App opened from background with notification");
-      _logFullPayload(message.data, "Background");
-      _handleMessage(message);
-    });
+    // FirebaseMessaging.onMessageOpenedApp.listen((message) {
+    //   log("📱 App opened from background with notification");
+    //   _logFullPayload(message.data, "Background");
+    //   _handleMessage(message);
+    // });
   }
 
   static void _logFullPayload(Map<String, dynamic> payload, String source) {

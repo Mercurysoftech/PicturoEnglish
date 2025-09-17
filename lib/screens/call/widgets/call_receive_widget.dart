@@ -45,7 +45,6 @@ class _CallAcceptScreenState extends State<CallAcceptScreen> {
         listener: (context, state) {
           print('Sate: $state and isNaviagtion: $_isNavigating');
           if (_isNavigating) return;
-
           if (state is CallRejected) {
             Future.delayed(Duration.zero, () {
               _isNavigating = true;

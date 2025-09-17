@@ -15,6 +15,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:http/http.dart' as http;
+import 'package:vibration/vibration.dart';
 import '../../responses/allusers_response.dart';
 import '../../responses/friends_response.dart';
 import '../../services/api_service.dart';
@@ -27,7 +28,7 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
   late IO.Socket callSocket;
   RTCPeerConnection? _peerConnection;
   MediaStream? _localStream;
-  bool isLiveCallActive=false;
+  bool isLiveCallActive = false;
 
   List<Friends> friends = [];
   final RTCVideoRenderer localRenderer = RTCVideoRenderer();
@@ -35,20 +36,45 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
   final Map<String, RTCPeerConnection> peerConnections = {};
   final Map<String, RTCVideoRenderer> remoteRenderers = {};
   int? targetUserId;
-  String?  callerName;
-
+  String? callerName;
 
   final _config = {
     'iceServers': [
-      {'urls': 'stun:stun.l.google.com:19302'}
-    ]
+      {'urls': 'stun:stun.l.google.com:19302'},
+      {'urls': 
+      ['turn:server.srivelavantraders.com:3478?transport=udp',
+            'turn:server.srivelavantraders.com:3478?transport=tcp',
+            'turns:server.srivelavantraders.com:5349?transport=tcp'
+            ],
+        'username': 'demo',
+        'credential': 'password@123'
+      }
+    ],
+     'sdpSemantics': 'unified-plan',
+    // 'iceTransportPolicy': 'all', // or 'relay' to force TURN for testing
   };
-   void userOpenCalling(){
-     // userOpenCallingPage=true;
-   }
-   void userCloseCalling(){
-     // userOpenCallingPage=false;
-   }
+
+  // Future<void> rejectCallWithApi(int callerId) async {
+  //   try {
+  //     final apiService = await ApiService.create();
+  //     final result = await apiService.rejectCall(callerId);
+
+  //     if (result['status'] == true) {
+  //       log("✅ Call rejection API call successful: ${result['message']}");
+  //     } else {
+  //       log("⚠️ Call rejection API call failed: ${result['message']}");
+  //     }
+  //   } catch (e) {
+  //     log("❌ Error making reject call API: $e");
+  //   }
+  // }
+
+  void userOpenCalling() {
+    // userOpenCallingPage=true;
+  }
+  void userCloseCalling() {
+    // userOpenCallingPage=false;
+  }
   Future<void> fetchAllUsers() async {
     final apiService = await ApiService.create();
     final FriendsResponse friendsResponse = await apiService.fetchFriends();
@@ -60,7 +86,8 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
     friends = friendsList;
     emit(state);
   }
-  void disposeScoket(){
+
+  void disposeScoket() {
     callSocket.dispose();
   }
 
@@ -72,76 +99,87 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
     String? userId = prefs.getString("user_id");
 
     callSocket = IO.io(
-        'https://picturoenglish.com:2027',
-        IO.OptionBuilder()
-            .setTransports(['websocket']) // for Flutter or Dart VM
-            .disableAutoConnect()
-            .setQuery({
-          'userId': userId,
-          'fcmToken': token,
-        })
-            .build(),);
+      'https://picturoenglish.com:2027',
+      IO.OptionBuilder()
+          .setTransports(['websocket']) // for Flutter or Dart VM
+          .disableAutoConnect()
+          .setQuery({
+            'userId': userId,
+            'fcmToken': token,
+          })
+          .build(),
+    );
 
     callSocket.connect();
     localRenderer.initialize();
     _remoteRenderer.initialize();
 
     callSocket.onConnect((_) {
-      callSocket.emit('register', {
-        "userId": userId,
-        "fcmToken": token
-      });
+      callSocket.emit('register', {"userId": userId, "fcmToken": token});
     });
-
-
 
     callSocket.on('incoming-call', (data) async {
       final from = data['from'];
       final userName = data['userName'];
 
-
-      int? findedIndex = friends.indexWhere((ele) => ele.friendId.toString() == from.toString());
+      int? findedIndex = friends
+          .indexWhere((ele) => ele.friendId.toString() == from.toString());
       if (findedIndex != -1) {
         Future.delayed(Duration(seconds: 30), () {
           FlutterCallkitIncoming.endCall("sdkjcslkcmslkcmsdc");
           FlutterCallkitIncoming.endAllCalls();
         });
-        callerName=friends[findedIndex].friendName;
+        callerName = friends[findedIndex].friendName;
 
         showFlutterCallNotification(
-          callSessionId: 'sdkjcslkcmslkcmsdc',
-          userId: '$from',
-          callerName: '${friends[findedIndex].friendName}',
-        );
+            callSessionId: 'sdkjcslkcmslkcmsdc',
+            userId: '$from',
+            callerName: '${friends[findedIndex].friendName}',
+          callerId: int.parse(from ?? "0"), // Pass the actual caller ID
+          receiverId: int.parse(userId ?? "0"), 
+            );
 
-        targetUserId = int.parse(from??"0");
+        targetUserId = int.parse(from ?? "0");
       }
     });
-    callSocket.on('call-accepted', (data) {
+    callSocket.on('call-accepted', (data) async {
       emit(CallAccepted());
-      isLiveCallActive=true;
+      isLiveCallActive = true;
       FlutterCallkitIncoming.setCallConnected("sdkjcslkcmslkcmsdc");
+
+      if (await Vibration.hasVibrator() ?? false) {
+        Vibration.vibrate(duration: 500); 
+      }
+
     });
 
-    callSocket.on('call-rejected', (_) {
-
-
+    callSocket.on('call-rejected', (data) async {
+      // Extract caller ID from the rejection data if available
+      // final callerId = data['caller_id'] ?? targetUserId;
+      // if (callerId != null) {
+      //   await rejectCallWithApi(callerId);
+      // }
       endCall();
     });
-
-
 
     callSocket.on('signal', (data) async {
       final from = data['from'];
       final description = data['description'];
       final candidate = data['candidate'];
 
-      if (description != null) {
-        final rtcDesc = RTCSessionDescription(description['sdp'], description['type']);
+      // ✅ FIX: prevent null SDP bug
+      if (description == null) {
+        log("⚠️ Received null description from $from");
+      } else {
+        final rtcDesc =
+            RTCSessionDescription(description['sdp'], description['type']);
 
         if (rtcDesc.type == 'offer') {
           await connectNewUser(from, int.parse(userId ?? '0'));
           await peerConnections[from.toString()]?.setRemoteDescription(rtcDesc);
+
+          // ✅ Ensure local media is initialized
+          _localStream ??= await navigator.mediaDevices.getUserMedia({'audio': true});
 
           final answer = await peerConnections[from.toString()]!.createAnswer();
           await peerConnections[from.toString()]!.setLocalDescription(answer);
@@ -166,27 +204,28 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
       }
     });
 
-    callSocket.on('call-ended', (data)async {
-      isLiveCallActive=false;
-      // if(userOpenCallingPage){
-        emit(CallRejected());
-      // }
+    callSocket.on('call-ended', (data) async {
+      isLiveCallActive = false;
+      
       FlutterCallkitIncoming.endCall("sdkjcslkcmslkcmsdc");
 
       await hangup();
       await FlutterCallkitIncoming.endAllCalls();
+      emit(CallRejected());
     });
 
-    callSocket.on("call-hold",(_){
+    callSocket.on("call-hold", (_) {
       _muteLocalAudio(true);
       emit(CallOnHold());
     });
 
-    callSocket.on("call-resume",(_){
+    callSocket.on("call-resume", (_) {
       _muteLocalAudio(false);
       emit(CallResumed());
     });
+
     callSocket.onError((err) {
+      log("❌ Socket error: $err");
     });
   }
 
@@ -197,7 +236,7 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
     required int duration,
   }) async {
     final url = Uri.parse('https://picturoenglish.com/api/call_log_add.php');
-    SharedPreferences pref =await SharedPreferences.getInstance();
+    SharedPreferences pref = await SharedPreferences.getInstance();
     String? token = pref.getString("auth_token");
     final body = {
       'receiver_id': receiverId,
@@ -217,7 +256,6 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
       );
       print('Call log added successfully: ${response.body} __ ${body}');
       if (response.statusCode == 200) {
-
       } else {
         print('Failed to add call log. Status code: ${response.statusCode}');
         print('Response body: ${response.body}');
@@ -226,31 +264,60 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
       print('Error posting call log: $e');
     }
   }
+
+  Future<void> sendCallEndNotification(int userId) async {
+  final url = Uri.parse('https://picturoenglish.com/api/callend-fcm-push-notifications.php')
+      .replace(queryParameters: {
+    'user_id': userId.toString(),
+    'type': "end_call",
+  });
+
+  SharedPreferences pref = await SharedPreferences.getInstance();
+  String? token = pref.getString("auth_token");
+
+  try {
+    final response = await http.post(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+    );
+
+    if (response.statusCode == 200) {
+      log("✅ Call end FCM push notification sent: ${response.body}");
+    } else {
+      log("⚠️ Failed to send call end notification. Code: ${response.statusCode}, Body: ${response.body}");
+    }
+  } catch (e) {
+    log("❌ Error sending call end notification: $e");
+  }
+}
+
+
+
   void listenEvent(String event, Function(dynamic) callback) {
     callSocket.on(event, callback);
   }
-  bool isCallSocketConnected() {
 
-   return callSocket.active;
+  bool isCallSocketConnected() {
+    return callSocket.active;
   }
 
   void onNativeCallStart() {
-
-    if(state is! CallOnHold){
+    if (state is! CallOnHold) {
       callSocket.emit("call-hold", {"to": targetUserId});
       _muteLocalAudio(true);
       emit(CallOnHold());
     }
-
   }
 
   void onNativeCallEnd() {
-    if(state is CallOnHold&&state is! CallResumed){
+    if (state is CallOnHold && state is! CallResumed) {
       callSocket.emit("call-resume", {"to": targetUserId});
       _muteLocalAudio(false);
       emit(CallResumed());
     }
-
   }
 
   void _muteLocalAudio(bool isMuted) {
@@ -269,15 +336,19 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
       }
     });
   }
+
   void acceptCall(int targetUser) async {
     final prefs = await SharedPreferences.getInstance();
-    String? userId= prefs.getString("user_id");
-    int currentUserId =int.parse(userId??"0");
+    String? userId = prefs.getString("user_id");
+    int currentUserId = int.parse(userId ?? "0");
     await connectNewUser(targetUser, currentUserId);
-    initiateWebRTCCall(targetId: targetUser, currentUserId: currentUserId,);
+    initiateWebRTCCall(
+      targetId: targetUser,
+      currentUserId: currentUserId,
+    );
 
     callSocket.emit("call-accepted", {"to": targetUser});
-    isLiveCallActive=true;
+    isLiveCallActive = true;
     emit(CallAccepted());
   }
 
@@ -285,13 +356,13 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
     required int currentUserId,
     required int targetId,
     required String targettedUserName,
-  }){
-    callerName=targettedUserName;
-    targetUserId=targetId;
+  }) {
+    callerName = targettedUserName;
+    targetUserId = targetId;
 
-      log("📞 Initiating call to $targettedUserName (ID: $targetId)");
+    log("📞 Initiating call to $targettedUserName (ID: $targetId)");
 
-    print("ldkjmclksdmclkdsc _ ${ {
+    print("ldkjmclksdmclkdsc _ ${{
       'from': currentUserId,
       'to': targetId,
       "userName": targettedUserName
@@ -299,21 +370,15 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
     callSocket.emit('call-user', {
       'from': currentUserId,
       'to': targetId,
-    "type": "incoming_call",
-    "caller_id": currentUserId,          
-    "receiver_id": targetId,
-    "deep_link": "/call/${currentUserId}"
+      "type": "incoming_call",
+      "caller_id": currentUserId, // ✅ safe replacement
+      "receiver_id": targetId,
+      "deep_link": "/call/${currentUserId}"
     });
 
-    callSocket.emit('incoming-call', {
-      'from': currentUserId,
-      'to': targetId,
-      "userName": targettedUserName
-    });
+    callSocket.emit('incoming-call',
+        {'from': currentUserId, 'to': targetId, "userName": targettedUserName});
   }
-
-
-
 
   Future<void> initiateWebRTCCall({
     required int currentUserId,
@@ -333,38 +398,43 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
   }
 
   Future<void> connectNewUser(int userId, int currentUserId) async {
-    await Helper.setSpeakerphoneOn(false);
-    final pc = await createPeerConnection(_config);
-    final localStream = await navigator.mediaDevices.getUserMedia({'audio': true});
+  await Helper.setSpeakerphoneOn(false);
 
-    localStream.getTracks().forEach((track) => pc.addTrack(track, localStream));
+  final pc = await createPeerConnection(_config);
 
-    pc.onIceCandidate = (RTCIceCandidate candidate) {
-      if (candidate.candidate != null) {
-        callSocket.emit('signal', {
-          'to': userId,
-          'from': currentUserId,
-          'candidate': {
-            'candidate': candidate.candidate,
-            'sdpMid': candidate.sdpMid,
-            'sdpMLineIndex': candidate.sdpMLineIndex,
-          }
-        });
-      }
-    };
+  // request mic
+  _localStream = await navigator.mediaDevices.getUserMedia({'audio': true});
 
-    pc.onTrack = (event) async {
-      final stream = event.streams.first;
-      if (!remoteRenderers.containsKey(userId.toString())) {
-        final renderer = RTCVideoRenderer();
-        await renderer.initialize();
-        remoteRenderers[userId.toString()] = renderer;
-      }
-      remoteRenderers[userId.toString()]?.srcObject = stream;
-    };
+  _localStream!.getTracks().forEach((track) => pc.addTrack(track, _localStream!));
 
-    peerConnections[userId.toString()] = pc;
-  }
+  pc.onIceCandidate = (RTCIceCandidate candidate) {
+    if (candidate.candidate != null) {
+      callSocket.emit('signal', {
+        'to': userId,
+        'from': currentUserId,
+        'candidate': {
+          'candidate': candidate.candidate,
+          'sdpMid': candidate.sdpMid,
+          'sdpMLineIndex': candidate.sdpMLineIndex,
+        }
+      });
+    }
+  };
+
+  pc.onTrack = (event) async {
+    final stream = event.streams.first;
+    if (!remoteRenderers.containsKey(userId.toString())) {
+      final renderer = RTCVideoRenderer();
+      await renderer.initialize();
+      remoteRenderers[userId.toString()] = renderer;
+    }
+    remoteRenderers[userId.toString()]?.srcObject = stream;
+  };
+
+  peerConnections[userId.toString()] = pc;
+}
+
+
   Future<void> muteACall(bool isMuted) async {
     // Mute/unmute local stream
     if (_localStream != null) {
@@ -387,14 +457,18 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
     }
   }
 
-
   Future<void> releaseAudioFocus() async {
     final session = await AudioSession.instance;
     await session.setActive(false);
   }
+
   Future<void> hangup() async {
-    isLiveCallActive=false;
+    isLiveCallActive = false;
     emit(state);
+    
+    if (await Vibration.hasVibrator() ?? false) {
+    Vibration.vibrate(duration: 500); // 0.5 second vibration
+  }
 
     await releaseAudioFocus();
     // Stop and dispose local stream
@@ -403,7 +477,7 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
       for (var track in _localStream!.getTracks()) {
         track.stop(); // Stops mic & camera
       }
-       _localStream!.dispose();
+      _localStream!.dispose();
       _localStream = null;
     }
 
@@ -428,8 +502,6 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
 
     // Dispose all remote video renderers
     await disposeRemoteRender();
-
-
   }
 
   // Don't forget to dispose renderers when the widget is no longer needed
@@ -437,21 +509,21 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
     localRenderer.dispose();
     _remoteRenderer.dispose();
   }
+
   Future<bool> endCall() async {
     // if(userOpenCallingPage){
 
-
+    emit(CallRejected());
     // }
     callSocket.emit('end-call', {'to': targetUserId});
     await hangup();
     await FlutterCallkitIncoming.endAllCalls();
-    emit(CallRejected());
     return true;
   }
-  Future<void> disposeLocalRender() async {
 
-    List<MediaStreamTrack> data=localRenderer.srcObject!.getTracks();
-    data.forEach((track){
+  Future<void> disposeLocalRender() async {
+    List<MediaStreamTrack> data = localRenderer.srcObject!.getTracks();
+    data.forEach((track) {
       track.stop();
     });
     if (localRenderer.srcObject != null) {
@@ -475,6 +547,7 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
 
     await localRenderer.dispose();
   }
+
   Future<void> disposeRemoteRender() async {
     remoteRenderers.forEach((key, renderer) async {
       if (renderer.srcObject != null) {
@@ -499,13 +572,10 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
       }
 
       await renderer.dispose();
-
     });
   }
 
-
-
-  Future<void> resetCubit()async {
+  Future<void> resetCubit() async {
     emit(CallSocketHandleInitial());
   }
 }
@@ -514,6 +584,8 @@ void showFlutterCallNotification({
   required String callSessionId,
   required String userId,
   required String callerName,
+  int callerId = 0,
+  int receiverId = 0,
   String? avatar,
 }) async {
   final params = CallKitParams(
@@ -529,7 +601,11 @@ void showFlutterCallNotification({
       showNotification: true,
       subtitle: 'Missed call',
     ),
-    extra: <String, dynamic>{'userId': '$userId'},
+    extra: <String, dynamic>{
+      'userId': '$userId',
+      'callerId': callerId.toString(),
+      'receiverId': receiverId.toString(),
+    },
     android: const AndroidParams(
       isCustomNotification: false,
       isShowLogo: true,

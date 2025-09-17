@@ -1,9 +1,11 @@
 import 'dart:ui';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:vibration/vibration.dart';
 
 import '../../cubits/call_cubit/call_duration_handler/call_duration_handle_cubit.dart';
 import '../../cubits/call_cubit/call_socket_handle_cubit.dart';
@@ -33,10 +35,33 @@ class CallingScreen extends StatefulWidget {
 class _CallingScreenState extends State<CallingScreen> {
    bool _isNavigating = false;
 
+   // 🎵 audio players
+  final AudioPlayer _ringtonePlayer = AudioPlayer();
+  final AudioPlayer _hangupPlayer = AudioPlayer();
+
   @override
   void initState() {
     super.initState();
+    _playRingtone();
+  }
 
+  Future<void> _playRingtone() async {
+    await _ringtonePlayer.setReleaseMode(ReleaseMode.loop);
+    await _ringtonePlayer.play(
+      AssetSource("audio/phone-ringing-382734.mp3"),
+    );
+  }
+
+  Future<void> _stopRingtone() async {
+    await _ringtonePlayer.stop();
+  }
+
+
+   @override
+  void dispose() {
+    _ringtonePlayer.dispose();
+    _hangupPlayer.dispose();
+    super.dispose(); 
   }
 
   Future<String> _getAvatarUrl(int? avatarId) async {
@@ -107,14 +132,16 @@ class _CallingScreenState extends State<CallingScreen> {
 
     return Scaffold(
       body: BlocListener<CallSocketHandleCubit, CallSocketHandleState>(
-        listener: (context, state) {
+        listener: (context, state) async {
           if (_isNavigating) return;
 
           if (state is CallRejected) {
+            await _stopRingtone();
             _isNavigating = true;
             Navigator.of(context).pop();
             context.read<CallSocketHandleCubit>().resetCubit();
           } else if (state is CallAccepted) {
+            await _stopRingtone();
             _isNavigating = true;
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(
@@ -200,7 +227,17 @@ class _CallingScreenState extends State<CallingScreen> {
                   GestureDetector(
                     onTap: () async {
                       try {
+                         await _stopRingtone(); // stop ringing
+                        if (await Vibration.hasVibrator() ?? false) {
+    Vibration.vibrate(duration: 500); // 0.5 second vibration
+  }
+
                         await context.read<CallSocketHandleCubit>().endCall();
+                        if (widget.friendId != null) {
+      await context
+          .read<CallSocketHandleCubit>()
+          .sendCallEndNotification(widget.friendId!);
+    }
                         await context.read<CallLogCubit>().postCallLog(
                           receiverId: safeFriendId.toString(),
                           callType: "audio",

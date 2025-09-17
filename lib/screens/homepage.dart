@@ -8,17 +8,23 @@ import 'package:flutter_callkit_incoming/entities/call_event.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:phone_state/phone_state.dart';
+import 'package:picturo_app/classes/services/connectivity_service.dart';
 import 'package:picturo_app/cubits/bottom_navigator_index_cubit.dart';
 import 'package:picturo_app/providers/profileprovider.dart';
+import 'package:picturo_app/providers/requests_provider.dart';
+import 'package:picturo_app/providers/unread_count_provider.dart';
 import 'package:picturo_app/responses/books_response.dart';
 import 'package:picturo_app/screens/call/widgets/call_receive_widget.dart';
 import 'package:picturo_app/screens/chatbotpage.dart';
 import 'package:picturo_app/screens/chatlistpage.dart';
+import 'package:picturo_app/screens/earnings_ref/referral_details.dart';
 import 'package:picturo_app/screens/gamespage.dart';
 import 'package:picturo_app/screens/notificationspage.dart';
 import 'package:picturo_app/screens/topicspage.dart';
 import 'package:picturo_app/screens/voicecallscreen.dart';
 import 'package:picturo_app/screens/widgets/commons.dart';
+import 'package:picturo_app/screens/widgets/offline_indicator.dart';
+import 'package:picturo_app/screens/widgets/offline_overlay.dart';
 import 'package:picturo_app/services/api_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -155,25 +161,27 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver {
     },
     {
       'image': 'assets/idioms.png',
-      'text': 'Idiom',
+      'text': 'Idioms',
       'gradient': LinearGradient(
         colors: [Color(0xFFFF96FF), Color(0xFFAD07AD)],
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
       ),
       'page': TopicsScreen(
-        title: 'Idiom',
+        title: 'Idioms',
         topicId: 5,
       ),
     },
     {
       'image': 'assets/waiting.png',
-      'text': 'The essential language proces',
+      'text': 'The essential language process',
       'gradient': LinearGradient(
         colors: [Color(0xFF8B8BC4), Color(0xFF8B8BC4)],
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
       ),
+      // 'page':ReferralPage(  
+      // )
     },
   ];
   String? currentUserId = '';
@@ -204,6 +212,9 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver {
     // handleCall();
     context.read<CallSocketHandleCubit>().fetchAllUsers();
     context.read<UserFriendsCubit>().resetCubit();
+     Future.microtask(() =>
+      Provider.of<RequestsProvider>(context, listen: false)
+          .fetchRequestsCount());
     fetchBooksAndUpdateGrid();
   }
 
@@ -294,9 +305,9 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver {
       if (mounted) {
         final profileProvider =
             Provider.of<ProfileProvider>(context, listen: false);
-        await profileProvider.updateProfile(userResponse);
+        await profileProvider.updateProfile(userResponse.user);
         final userDetails = profileProvider.fetchProfile();
-        print('Languages da: ${userResponse.speakingLanguage}');
+        print('Languages da: ${userResponse.user.speakingLanguage}');
         // This will update the provider state
 
         // Alternatively, you could directly set the user if needed:
@@ -334,9 +345,8 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver {
           if (i < _gridItems.length) {
             _gridItems[i]['text'] = bookNames[i];
           } else {
-            // Add new items if the fetched data is longer than the existing _gridItems
             _gridItems.add({
-              'image': 'assets/default_image.png', // Add a default image
+              'image': 'assets/default_image.png', 
               'text': bookNames[i],
               'gradient': LinearGradient(
                 colors: [Colors.cyan, Colors.indigo],
@@ -348,11 +358,11 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver {
         }
 
         // Add the last item (LSRW Concept) back to the list
-        _gridItems.add({
-          'image': '',
-          'text': 'The essential language process',
-          'gradient': Color(0xff8b8b8b80),
-        });
+        // _gridItems.add({
+        //   'image': '',
+        //   'text': 'The essential language process',
+        //   'gradient': Color(0xff8b8b8b80),
+        // });
       });
     } catch (e) {
       print("Error fetching books: $e");
@@ -398,113 +408,201 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     // ignore: deprecated_member_use
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider(
-          create: (context) => NotificationCubit(),
-        )
-      ],
-      child: BlocBuilder<BottomNavigatorIndexCubit, BottomNavigatorIndexState>(
-        builder: (context, bottomNavState) {
-          if (bottomNavState is BottomNavigatorIndexInitial) {
-            return StreamBuilder<PhoneState>(
-                stream:
-                    PhoneState.stream, // assuming this is a Stream<PhoneState>
-                builder: (context, snapshot) {
-                  final state = snapshot.data;
+    return Consumer<ConnectivityService>(
+       builder: (context, connectivityService, child) {
+         final bool isOnline = connectivityService.isOnline;
 
-                  if (snapshot.connectionState == ConnectionState.active &&
-                      state != null) {
-                    // Perform logic based on new PhoneState
-                    if (state.status == PhoneStateStatus.CALL_STARTED) {
-                      // Example: Start a timer
-                      context.read<CallSocketHandleCubit>().onNativeCallStart();
-                      // context.read<CallTimerCubit>().startTimer();
-                    } else if (state.status == PhoneStateStatus.CALL_ENDED) {
-                      context.read<CallSocketHandleCubit>().onNativeCallEnd();
-                    }
-                  }
-                  return WillPopScope(
-                    onWillPop: onWillPop,
-                    child: Scaffold(
-                      backgroundColor: Color(0xFFE0F7FF),
-                      body: _pages[bottomNavState.selectedIndex],
-                      bottomNavigationBar: BottomNavigationBar(
-                        type: BottomNavigationBarType.fixed,
-                        backgroundColor: Colors.white,
-                        currentIndex: bottomNavState.selectedIndex,
-                        onTap: (index) {
-                          context
-                              .read<BottomNavigatorIndexCubit>()
-                              .onChageIndex(index);
-                        },
-                        items: List.generate(4, (index) {
-                          return BottomNavigationBarItem(
-                            icon: Image.asset(
-                              bottomNavState.selectedIndex == index
-                                  ? _navIconsSelected[index]
-                                  : _navIcons[index],
-                              width: 23,
-                              height: 28,
-                              color: bottomNavState.selectedIndex == index
-                                  ? Color(0xFF49329A).withValues(alpha: .8)
-                                  : Colors.grey.shade500,
-                            ),
-                            label: _navLabels[index],
-                          );
-                        }),
-                        selectedItemColor: Color(0xFF49329A),
-                        selectedLabelStyle:
-                            TextStyle(fontWeight: FontWeight.w800),
-                        unselectedFontSize: 13,
-                        unselectedLabelStyle: TextStyle(
-                            color: Colors.black,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700),
-                        unselectedItemColor: Colors.grey,
-                      ),
-                      floatingActionButton: bottomNavState.selectedIndex == 0
-                          ? ClipOval(
-                              child: Material(
-                                color:
-                                    Color(0xFF49329A), // Transparent background
-                                child: InkWell(
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (context) =>
-                                              ChatBotScreen()),
-                                    );
-                                  },
-                                  child: Container(
-                                    width:
-                                        45, // Maintain the size of the button
-                                    height: 45, // Keep the FAB size
-                                    alignment: Alignment
-                                        .center, // Center the image within the button
-                                    child: Image.asset(
-                                      'assets/fluent_bot-28-filled.png', // Replace with the image you want to use
-                                      width:
-                                          28, // Image size, smaller than the button
-                                      height:
-                                          28, // Image size, smaller than the button
-                                    ),
+        return MultiBlocProvider(
+          providers: [
+            BlocProvider(
+              create: (context) => NotificationCubit(),
+            )
+          ],
+          child: BlocBuilder<BottomNavigatorIndexCubit, BottomNavigatorIndexState>(
+            builder: (context, bottomNavState) {
+              if (bottomNavState is BottomNavigatorIndexInitial) {
+                return StreamBuilder<PhoneState>(
+                    stream:
+                        PhoneState.stream, // assuming this is a Stream<PhoneState>
+                    builder: (context, snapshot) {
+                      final state = snapshot.data;
+        
+                      if (snapshot.connectionState == ConnectionState.active &&
+                          state != null) {
+                        // Perform logic based on new PhoneState
+                        if (state.status == PhoneStateStatus.CALL_STARTED) {
+                          // Example: Start a timer
+                          context.read<CallSocketHandleCubit>().onNativeCallStart();
+                          // context.read<CallTimerCubit>().startTimer();
+                        } else if (state.status == PhoneStateStatus.CALL_ENDED) {
+                          context.read<CallSocketHandleCubit>().onNativeCallEnd();
+                        }
+                      }
+                      return WillPopScope(
+                        onWillPop: onWillPop,
+                        child: Scaffold(
+                          backgroundColor: Color(0xFFE0F7FF),
+                          body: _pages[bottomNavState.selectedIndex],
+                          bottomNavigationBar: BottomNavigationBar(
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: Colors.white,
+          currentIndex: bottomNavState.selectedIndex,
+          onTap: (index) {
+        context.read<BottomNavigatorIndexCubit>().onChageIndex(index);
+          },
+          items: List.generate(4, (index) {
+        return BottomNavigationBarItem(
+          icon: index == 3
+              ? Consumer<RequestsProvider>(
+                  builder: (context, requestsProvider, _) {
+                    int count = requestsProvider.requestsCount;
+                    return Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Image.asset(
+                          bottomNavState.selectedIndex == index
+                              ? _navIconsSelected[index]
+                              : _navIcons[index],
+                          width: 23,
+                          height: 28,
+                          color: bottomNavState.selectedIndex == index
+                              ? Color(0xFF49329A).withValues(alpha: .8)
+                              : Colors.grey.shade500,
+                        ),
+                        if (count > 0)
+                          Positioned(
+                            right: -6,
+                            top: -4,
+                            child: Container(
+                              padding: EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              constraints: BoxConstraints(minWidth: 18, minHeight: 18),
+                              child: Center(
+                                child: Text(
+                                  '$count',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ),
-                            )
-                          : null,
-                      floatingActionButtonLocation:
-                          FloatingActionButtonLocation.endFloat,
-                    ),
-                  );
-                });
-          } else {
-            return Scaffold();
-          }
-        },
-      ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ) 
+              // : index == 1
+              //   ? Consumer<UnreadCountProvider>(
+              //       builder: (context, unreadCountProvider, _) {
+              //         int unread = unreadCountProvider.totalUnreadCount;
+              //         return Stack(
+              //           clipBehavior: Clip.none,
+              //           children: [
+              //             Image.asset(
+              //             bottomNavState.selectedIndex == index
+              //                 ? _navIconsSelected[index]
+              //                 : _navIcons[index],
+              //             width: 23,
+              //             height: 28,
+              //             color: bottomNavState.selectedIndex == index
+              //                 ? Color(0xFF49329A).withValues(alpha: .8)
+              //                 : Colors.grey.shade500,
+              //           ),
+              //             if (unread > 0)
+              //               Positioned(
+              //                 right: -6,
+              //                 top: -4,
+              //                 child: Container(
+              //                   padding: EdgeInsets.all(4),
+              //                   decoration: BoxDecoration(
+              //                     color: Colors.green,
+              //                     shape: BoxShape.circle,
+              //                   ),
+              //                   constraints:
+              //                       BoxConstraints(minWidth: 18, minHeight: 18),
+              //                   child: Center(
+              //                     child: Text(
+              //                       '$unread',
+              //                       style: TextStyle(
+              //                         color: Colors.white,
+              //                         fontSize: 10,
+              //                         fontWeight: FontWeight.bold,
+              //                       ),
+              //                     ),
+              //                   ),
+              //                 ),
+              //               ),
+              //           ],
+              //         );
+              //       },
+              //     ) 
+             : Image.asset(
+                          bottomNavState.selectedIndex == index
+                              ? _navIconsSelected[index]
+                              : _navIcons[index],
+                          width: 23,
+                          height: 28,
+                          color: bottomNavState.selectedIndex == index
+                              ? Color(0xFF49329A).withValues(alpha: .8)
+                              : Colors.grey.shade500,
+                        ),
+          label: _navLabels[index],
+        );
+                            }),
+                            selectedItemColor: Color(0xFF49329A),
+                            selectedLabelStyle:
+                                TextStyle(fontWeight: FontWeight.w800),
+                            unselectedFontSize: 13,
+                            unselectedLabelStyle: TextStyle(
+                                color: Colors.black,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700),
+                            unselectedItemColor: Colors.grey,
+                          ),
+                         floatingActionButton: (bottomNavState.selectedIndex == 0 && isOnline)
+    ? ClipOval(
+        child: Material(
+          color: Color(0xFF49329A),
+          child: InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => ChatBotScreen()),
+              );
+            },
+            child: Container(
+              width: 45,
+              height: 45,
+              alignment: Alignment.center,
+              child: Image.asset(
+                'assets/fluent_bot-28-filled.png',
+                width: 28,
+                height: 28,
+              ),
+            ),
+          ),
+        ),
+      )
+    : null,
+floatingActionButtonLocation: isOnline
+    ? FloatingActionButtonLocation.endFloat
+    : null,
+
+                        ),
+                      );
+                    });
+              } else {
+                return Scaffold();
+              }
+            },
+          ),
+        );
+      }
     );
   }
 }
@@ -528,7 +626,7 @@ class _HomeContentState extends State<HomeContent> {
   }
 
   Future<void> connectSocket() async {
-    await ChatSocket.connectScoket();
+    await ChatSocket.connectSocket();
   }
 
   @override
@@ -548,169 +646,181 @@ class _HomeContentState extends State<HomeContent> {
       return true;
     }
 
-    return WillPopScope(
-      onWillPop: onWillPop,
-      child: Scaffold(
-        backgroundColor: Color(0xFFE0F7FF),
-        appBar: CommonAppBar(
-          title: "Home",
-          isFromHomePage: true,
-        ),
-        body: FutureBuilder(
-          future: Future.value(
-              widget.gridItems), // Use the gridItems passed to the widget
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return Center(child: CircularProgressIndicator());
-            } else if (snapshot.hasError) {
-              return Center(child: Text("Error loading data"));
-            } else {
-              List<Map<String, dynamic>> items =
-                  snapshot.data as List<Map<String, dynamic>>;
-              return Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Color(0xFFE0F7FF),
-                      Color(0xFFEAE4FF),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    Align(
-                      alignment: Alignment.bottomLeft,
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 24, top: 18),
-                        child: Text(
-                          "Topics",
-                          textAlign: TextAlign.left,
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: AppConstants.commonFont,
-                            color: Color(0xFF414141),
-                          ),
+    return Consumer<ConnectivityService>(
+    builder: (context, connectivityService, child) {
+      final bool isOnline = connectivityService.isOnline;
+      
+        return Stack(
+          children: [
+          WillPopScope(
+            onWillPop: onWillPop,
+            child: Scaffold(
+              backgroundColor: Color(0xFFE0F7FF),
+              appBar: CommonAppBar(
+                title: "Home",
+                isFromHomePage: true,
+              ),
+              body: FutureBuilder(
+                future: Future.value(
+                    widget.gridItems), 
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Center(child: CircularProgressIndicator());
+                  } else if (snapshot.hasError) {
+                    return Center(child: Text("Error loading data"));
+                  } else {
+                    List<Map<String, dynamic>> items =
+                        snapshot.data as List<Map<String, dynamic>>;
+                    return Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Color(0xFFE0F7FF),
+                            Color(0xFFEAE4FF),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
                       ),
-                    ),
-                    Expanded(
-                      child: ListView.builder(
-                        padding: EdgeInsets.only(left: 24, right: 24, top: 5),
-                        itemCount: items.length,
-                        itemBuilder: (context, index) {
-                          var gridItem = items[index];
-                          return GestureDetector(
-                            onTap: () {
-                              if (gridItem['text'] ==
-                                  'The essential language proces') {
-                                return;
-                              }
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) => gridItem['page']),
-                              );
-                            },
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                Container(
-                                  margin: EdgeInsets.symmetric(vertical: 10),
-                                  decoration: BoxDecoration(
-                                    gradient: (gridItem['text'] ==
-                                            'The essential language proces')
-                                        ? null
-                                        : gridItem['gradient'],
-                                    color: (gridItem['text'] ==
-                                            'The essential language proces')
-                                        ? Colors.grey.withValues(alpha: 0.44)
-                                        : null,
-                                    borderRadius: BorderRadius.circular(20),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color:
-                                            Colors.black.withValues(alpha: 0.2),
-                                        spreadRadius: 1,
-                                        blurRadius: 6,
-                                        offset: Offset(0, 3),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.center,
+                      child: Column(
+                        children: [
+                          Align(
+                            alignment: Alignment.bottomLeft,
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 24, top: 18),
+                              child: Text(
+                                "Topics",
+                                textAlign: TextAlign.left,
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: AppConstants.commonFont,
+                                  color: Color(0xFF414141),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: ListView.builder(
+                              padding: EdgeInsets.only(left: 24, right: 24, top: 5),
+                              itemCount: items.length,
+                              itemBuilder: (context, index) {
+                                var gridItem = items[index];
+                                return GestureDetector(
+                                  onTap: () {
+                                    if (gridItem['text'] ==
+                                        'The essential language process') {
+                                      return;
+                                    }
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) => gridItem['page']),
+                                    );
+                                  },
+                                  child: Stack(
+                                    alignment: Alignment.center,
                                     children: [
-                                      Padding(
-                                        padding: const EdgeInsets.only(
-                                            left: 18, top: 8, bottom: 8),
-                                        child: Container(
-                                          height: 55,
-                                          width: 55,
-                                          alignment: Alignment.bottomCenter,
-                                          decoration: (gridItem['text'] ==
-                                                  'The essential language proces')
+                                      Container(
+                                        margin: EdgeInsets.symmetric(vertical: 10),
+                                        decoration: BoxDecoration(
+                                          gradient: (gridItem['text'] ==
+                                                  'The essential language process')
                                               ? null
-                                              : BoxDecoration(
-                                                  image: DecorationImage(
-                                                    image: AssetImage(
-                                                        gridItem['image']),
-                                                    fit: BoxFit.cover,
-                                                  ),
-                                                ),
-                                          child: (gridItem['text'] ==
-                                                  'The essential language proces')
-                                              ? Center(
-                                                  child: Icon(
-                                                  Icons.lock,
-                                                  size: 30,
-                                                  color: Colors.white,
-                                                ))
+                                              : gridItem['gradient'],
+                                          color: (gridItem['text'] ==
+                                                  'The essential language process')
+                                              ? Colors.grey.withValues(alpha: 0.44)
                                               : null,
+                                          borderRadius: BorderRadius.circular(20),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color:
+                                                  Colors.black.withValues(alpha: 0.2),
+                                              spreadRadius: 1,
+                                              blurRadius: 6,
+                                              offset: Offset(0, 3),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.center,
+                                          children: [
+                                            Padding(
+                                              padding: const EdgeInsets.only(
+                                                  left: 18, top: 8, bottom: 8),
+                                              child: Container(
+                                                height: 55,
+                                                width: 55,
+                                                alignment: Alignment.bottomCenter,
+                                                decoration: (gridItem['text'] ==
+                                                        'The essential language process')
+                                                    ? null
+                                                    : BoxDecoration(
+                                                        image: DecorationImage(
+                                                          image: AssetImage(
+                                                              gridItem['image']),
+                                                          fit: BoxFit.cover,
+                                                        ),
+                                                      ),
+                                                child: (gridItem['text'] ==
+                                                        'The essential language process')
+                                                    ? Center(
+                                                        child: Icon(
+                                                        Icons.lock,
+                                                        size: 30,
+                                                        color: Colors.white,
+                                                      ))
+                                                    : null,
+                                              ),
+                                            ),
+                                            SizedBox(width: 15),
+                                            Expanded(
+                                              child: Text(
+                                                "${capitalizeFirstLetter(gridItem['text'])}",
+                                                style: TextStyle(
+                                                  fontSize: 18,
+                                                  fontFamily: AppConstants.commonFont,
+                                                  fontWeight: (gridItem['text'] ==
+                                                          'The essential language process')
+                                                      ? FontWeight.w500
+                                                      : FontWeight.w900,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                      SizedBox(width: 15),
-                                      Expanded(
-                                        child: Text(
-                                          "${capitalizeFirstLetter(gridItem['text'])}s",
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            fontFamily: AppConstants.commonFont,
-                                            fontWeight: (gridItem['text'] ==
-                                                    'The essential language process')
-                                                ? FontWeight.w500
-                                                : FontWeight.w900,
+                                      if (gridItem['text'] ==
+                                          'The essential language process')
+                                        Positioned(
+                                          child: Icon(
+                                            Icons.lock,
                                             color: Colors.white,
+                                            size: 40,
                                           ),
                                         ),
-                                      ),
                                     ],
                                   ),
-                                ),
-                                if (gridItem['text'] ==
-                                    'The essential language process')
-                                  Positioned(
-                                    child: Icon(
-                                      Icons.lock,
-                                      color: Colors.white,
-                                      size: 40,
-                                    ),
-                                  ),
-                              ],
+                                );
+                              },
                             ),
-                          );
-                        },
+                          ),
+                          
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-              );
-            }
-          },
-        ),
-      ),
+                    );
+                  }
+                },
+              ),
+            ),
+          ),
+          if (!isOnline) const OfflineOverlay(),
+          ],
+        );
+      }
     );
   }
 }

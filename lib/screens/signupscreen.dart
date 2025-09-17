@@ -303,7 +303,11 @@ class _SignupscreenState extends State<Signupscreen> {
                           Center(
                             child: TextButton(
                               onPressed: () {
-                                Navigator.push(context, MaterialPageRoute(builder: (context)=>LoginScreen()));
+                                 Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          (route) => false,
+        );
                               },
                               child: Text.rich(
                                 TextSpan(

@@ -112,21 +112,21 @@ class _LoginScreenState extends State<LoginScreen> {
           final profileResponse = await apiService.fetchProfileDetails();
 
 
-          if (profileResponse.age == 0 ||
-              profileResponse.gender.isEmpty ||
-              profileResponse.qualification.isEmpty ||
-              profileResponse.speakingLevel.isEmpty ||
-              profileResponse.reason.isEmpty) {
+          if (profileResponse.user.age == 0 ||
+              profileResponse.user.gender.isEmpty ||
+              profileResponse.user.qualification.isEmpty ||
+              profileResponse.user.speakingLevel.isEmpty ||
+              profileResponse.user.reason.isEmpty) {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const GenderAgeScreen()),
             );
-          } else if (profileResponse.speakingLanguage.isEmpty) {
+          } else if (profileResponse.user.speakingLanguage.isEmpty) {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => const LanguageSelectionApp()),
             );
-          } else if (profileResponse.location.isEmpty) {
+          } else if (profileResponse.user.location.isEmpty) {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => const LocationGetPage(isFromProfile: false,)),
@@ -407,7 +407,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                     recognizer: TapGestureRecognizer()
                                       ..onTap = () {
-                                     Navigator.push(context, MaterialPageRoute(builder: (context)=>Signupscreen()));
+                                        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const Signupscreen()),
+        );
                                       },
                                   ),
                                 ],
@@ -419,7 +422,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             onTap: (){
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (context) => HelperBotScreen()), // Navigate to BlockedUsersPage
+                                MaterialPageRoute(builder: (context) => HelperBotScreen()), 
                               );
                             },
                             child: Center(
