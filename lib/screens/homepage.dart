@@ -174,7 +174,7 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver {
     },
     {
       'image': 'assets/waiting.png',
-      'text': 'The essential language process',
+      'text': 'Coming Soon',
       'gradient': LinearGradient(
         colors: [Color(0xFF8B8BC4), Color(0xFF8B8BC4)],
         begin: Alignment.topCenter,
@@ -209,7 +209,7 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver {
     initializeServices();
     requestPermission();
     callSocketInit();
-    handleCall();
+    // handleCall();
     context.read<CallSocketHandleCubit>().fetchAllUsers();
     context.read<UserFriendsCubit>().resetCubit();
      Future.microtask(() =>
@@ -230,36 +230,36 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver {
       PermissionStatus.provisional || PermissionStatus.granted => true,
     };
   }
-
-  void handleCall() {
-    FlutterCallkitIncoming.onEvent.listen((event) {
-      print('Calling Listen: ${event?.event}');
-
-
-      if (event?.event == Event.actionCallAccept) {
-        Map<String, dynamic> data = event?.body ?? {};
-
-        if (currentUserId != '') {
-          int target = int.parse(data["extra"]['userId'] ?? "0");
-
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => VoiceCallScreen(
-                  callerId: target,
-                  callerName: "${data['nameCaller']}",
-                  callerImage: '',
-                  isIncoming: false),
-            ),
-          );
-        }
-      } else if (event?.event == Event.actionCallDecline) {
-        Map<String, dynamic> data = event?.body ?? {};
-        int target = int.parse(data["extra"]['userId'] ?? "0");
-        context.read<CallSocketHandleCubit>().endCall();
-      } else if (event?.event == Event.actionCallEnded) {}
-    });
-  }
+  //
+  // void handleCall() {
+  //   FlutterCallkitIncoming.onEvent.listen((event) {
+  //     print('Calling Listen: ${event?.event}');
+  //
+  //
+  //     if (event?.event == Event.actionCallAccept) {
+  //       Map<String, dynamic> data = event?.body ?? {};
+  //
+  //       if (currentUserId != '') {
+  //         int target = int.parse(data["extra"]['userId'] ?? "0");
+  //
+  //         Navigator.push(
+  //           context,
+  //           MaterialPageRoute(
+  //             builder: (context) => VoiceCallScreen(
+  //                 callerId: target,
+  //                 callerName: "${data['nameCaller']}",
+  //                 callerImage: '',
+  //                 isIncoming: false),
+  //           ),
+  //         );
+  //       }
+  //     } else if (event?.event == Event.actionCallDecline) {
+  //       Map<String, dynamic> data = event?.body ?? {};
+  //       int target = int.parse(data["extra"]['userId'] ?? "0");
+  //       context.read<CallSocketHandleCubit>().endCall();
+  //     } else if (event?.event == Event.actionCallEnded) {}
+  //   });
+  // }
 
   void callSocketInit() async {
     final prefs = await SharedPreferences.getInstance();
@@ -709,7 +709,7 @@ class _HomeContentState extends State<HomeContent> {
                                 return GestureDetector(
                                   onTap: () {
                                     if (gridItem['text'] ==
-                                        'The essential language process') {
+                                        'Coming Soon') {
                                       return;
                                     }
                                     Navigator.push(
@@ -724,14 +724,8 @@ class _HomeContentState extends State<HomeContent> {
                                       Container(
                                         margin: EdgeInsets.symmetric(vertical: 10),
                                         decoration: BoxDecoration(
-                                          gradient: (gridItem['text'] ==
-                                                  'The essential language process')
-                                              ? null
-                                              : gridItem['gradient'],
-                                          color: (gridItem['text'] ==
-                                                  'The essential language process')
-                                              ? Colors.grey.withValues(alpha: 0.44)
-                                              : null,
+                                          gradient:gridItem['gradient'],
+                                          
                                           borderRadius: BorderRadius.circular(20),
                                           boxShadow: [
                                             BoxShadow(
@@ -754,10 +748,7 @@ class _HomeContentState extends State<HomeContent> {
                                                 height: 55,
                                                 width: 55,
                                                 alignment: Alignment.bottomCenter,
-                                                decoration: (gridItem['text'] ==
-                                                        'The essential language process')
-                                                    ? null
-                                                    : BoxDecoration(
+                                                decoration:BoxDecoration(
                                                         image: DecorationImage(
                                                           image: AssetImage(
                                                               gridItem['image']),
@@ -765,7 +756,7 @@ class _HomeContentState extends State<HomeContent> {
                                                         ),
                                                       ),
                                                 child: (gridItem['text'] ==
-                                                        'The essential language process')
+                                                        'Coming Soon')
                                                     ? Center(
                                                         child: Icon(
                                                         Icons.lock,
@@ -783,7 +774,7 @@ class _HomeContentState extends State<HomeContent> {
                                                   fontSize: 18,
                                                   fontFamily: AppConstants.commonFont,
                                                   fontWeight: (gridItem['text'] ==
-                                                          'The essential language process')
+                                                          'Coming Soon')
                                                       ? FontWeight.w500
                                                       : FontWeight.w900,
                                                   color: Colors.white,
@@ -793,15 +784,15 @@ class _HomeContentState extends State<HomeContent> {
                                           ],
                                         ),
                                       ),
-                                      if (gridItem['text'] ==
-                                          'The essential language process')
-                                        Positioned(
-                                          child: Icon(
-                                            Icons.lock,
-                                            color: Colors.white,
-                                            size: 40,
-                                          ),
-                                        ),
+                                      // if (gridItem['text'] ==
+                                      //     'Coming Soon')
+                                      //   Positioned(
+                                      //     child: Icon(
+                                      //       Icons.lock,
+                                      //       color: Colors.white,
+                                      //       size: 40,
+                                      //     ),
+                                      //   ),
                                     ],
                                   ),
                                 );

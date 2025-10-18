@@ -33,9 +33,9 @@ class CallingScreen extends StatefulWidget {
 }
 
 class _CallingScreenState extends State<CallingScreen> {
-   bool _isNavigating = false;
+  bool _isNavigating = false;
 
-   // 🎵 audio players
+  // 🎵 audio players
   final AudioPlayer _ringtonePlayer = AudioPlayer();
   final AudioPlayer _hangupPlayer = AudioPlayer();
 
@@ -56,17 +56,43 @@ class _CallingScreenState extends State<CallingScreen> {
     await _ringtonePlayer.stop();
   }
 
+  void _showErrorToastAndExit(String message) async {
+    if (_isNavigating) return;
 
-   @override
+    _isNavigating = true;
+
+    // Stop ringtone
+    await _stopRingtone();
+
+    // Show toast
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_LONG,
+      gravity: ToastGravity.CENTER,
+      backgroundColor: Colors.red,
+      textColor: Colors.white,
+      fontSize: 16.0,
+    );
+
+    // Navigate back after a short delay to allow toast to be visible
+    if (mounted) {
+      Future.delayed(const Duration(milliseconds: 1500), () {
+        Navigator.of(context).pop();
+        context.read<CallSocketHandleCubit>().resetCubit();
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _ringtonePlayer.dispose();
     _hangupPlayer.dispose();
-    super.dispose(); 
+    super.dispose();
   }
 
   Future<String> _getAvatarUrl(int? avatarId) async {
     if (avatarId == null || avatarId == 0) {
-      return ''; 
+      return '';
     }
 
     try {
@@ -83,8 +109,7 @@ class _CallingScreenState extends State<CallingScreen> {
     }
   }
 
-
-   Widget _buildUserAvatar(int? avatarId) {
+  Widget _buildUserAvatar(int? avatarId) {
     // Handle null or default avatar case
     if (avatarId == null || avatarId == 0) {
       return const CircleAvatar(
@@ -107,7 +132,7 @@ class _CallingScreenState extends State<CallingScreen> {
             ),
           );
         }
-        
+
         if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
           return const CircleAvatar(
             radius: 25,
@@ -128,7 +153,7 @@ class _CallingScreenState extends State<CallingScreen> {
   Widget build(BuildContext context) {
     final double avatarRadius = 80;
 
-    final int safeFriendId = widget.friendId ?? 0; 
+    final int safeFriendId = widget.friendId ?? 0;
 
     return Scaffold(
       body: BlocListener<CallSocketHandleCubit, CallSocketHandleState>(
@@ -143,7 +168,8 @@ class _CallingScreenState extends State<CallingScreen> {
           } else if (state is CallAccepted) {
             await _stopRingtone();
             _isNavigating = true;
-            Navigator.of(context).pushReplacement(
+            Navigator.of(context)
+                .pushReplacement(
               MaterialPageRoute(
                 builder: (context) => VoiceCallScreen(
                   callerId: safeFriendId,
@@ -152,11 +178,15 @@ class _CallingScreenState extends State<CallingScreen> {
                   isIncoming: false,
                 ),
               ),
-            ).then((_) {
+            )
+                .then((_) {
               if (mounted) {
                 context.read<CallSocketHandleCubit>().resetCubit();
               }
             });
+          } else if (state is CallErrorState) {
+            // Handle call error state
+            _showErrorToastAndExit(state.message);
           }
         },
         child: Container(
@@ -227,23 +257,23 @@ class _CallingScreenState extends State<CallingScreen> {
                   GestureDetector(
                     onTap: () async {
                       try {
-                         await _stopRingtone(); // stop ringing
+                        await _stopRingtone(); // stop ringing
                         if (await Vibration.hasVibrator() ?? false) {
-    Vibration.vibrate(duration: 500); // 0.5 second vibration
-  }
+                          Vibration.vibrate(duration: 500);
+                        }
 
                         await context.read<CallSocketHandleCubit>().endCall();
                         if (widget.friendId != null) {
-      await context
-          .read<CallSocketHandleCubit>()
-          .sendCallEndNotification(widget.friendId!);
-    }
+                          await context
+                              .read<CallSocketHandleCubit>()
+                              .sendCallEndNotification(widget.friendId!);
+                        }
                         await context.read<CallLogCubit>().postCallLog(
-                          receiverId: safeFriendId.toString(),
-                          callType: "audio",
-                          status: "inCompleted",
-                          duration: 1,
-                        );
+                              receiverId: safeFriendId.toString(),
+                              callType: "audio",
+                              status: "inCompleted",
+                              duration: 1,
+                            );
                         if (mounted) Navigator.of(context).pop();
                       } catch (e) {
                         print('Error ending call: $e');

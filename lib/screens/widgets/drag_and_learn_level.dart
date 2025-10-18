@@ -89,8 +89,8 @@ class _DragLearnPageState extends State<DragLearnPage> {
                                             borderRadius: BorderRadius.circular(10)
                                         ),
                                         backgroundColor: Colors.white,
-                                        title: Text("Are you Sure want Start",style: TextStyle(fontSize: 16,fontFamily: AppConstants.commonFont,),textAlign: TextAlign.center,),
-                                        content: Text("Every level use 1 coin",textAlign: TextAlign.center,style: TextStyle(fontFamily: AppConstants.commonFont,),),
+                                        title: Text("Are you Sure want Start the Game?",style: TextStyle(fontSize: 16,fontFamily: AppConstants.commonFont,),textAlign: TextAlign.center,),
+                                        //content: Text("Every level use 1 coin",textAlign: TextAlign.center,style: TextStyle(fontFamily: AppConstants.commonFont,),),
                                         actions: [
                                           Row(
                                             mainAxisAlignment: MainAxisAlignment.end,

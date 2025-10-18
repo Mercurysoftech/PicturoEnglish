@@ -10,6 +10,8 @@ import 'package:picturo_app/screens/signupscreen.dart';
 import 'package:picturo_app/services/api_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:url_launcher/url_launcher_string.dart';
 
 import '../utils/common_file.dart';
 import 'helperbotpage.dart';
@@ -36,12 +38,12 @@ class _LoginScreenState extends State<LoginScreen> {
     _loadSavedCredentials();
   }
 
-   // Load saved credentials if they exist
+  // Load saved credentials if they exist
   Future<void> _loadSavedCredentials() async {
     final prefs = await SharedPreferences.getInstance();
     final savedEmail = prefs.getString('saved_email');
     final savedPassword = prefs.getString('saved_password');
-    
+
     if (savedEmail != null && savedPassword != null) {
       setState(() {
         _emailController.text = savedEmail;
@@ -64,7 +66,6 @@ class _LoginScreenState extends State<LoginScreen> {
     await prefs.remove('saved_email');
     await prefs.remove('saved_password');
   }
-
 
   Future<void> initializeApiService() async {
     apiService = await ApiService.create();
@@ -91,15 +92,14 @@ class _LoginScreenState extends State<LoginScreen> {
       final response = await apiService.login(email, password, context);
 
       if (response["success"] == true) {
-         if (_isChecked) {
+        if (_isChecked) {
           await _saveCredentials(email, password);
         } else {
           await _clearCredentials();
         }
-        
+
         final String? token = response["token"];
         final String? userId = response["userid"];
-        
 
         if (token != null && userId != null) {
           final prefs = await SharedPreferences.getInstance();
@@ -110,7 +110,6 @@ class _LoginScreenState extends State<LoginScreen> {
           Provider.of<UserProvider>(context, listen: false).setUserId(userId);
 
           final profileResponse = await apiService.fetchProfileDetails();
-
 
           if (profileResponse.user.age == 0 ||
               profileResponse.user.gender.isEmpty ||
@@ -124,12 +123,16 @@ class _LoginScreenState extends State<LoginScreen> {
           } else if (profileResponse.user.speakingLanguage.isEmpty) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const LanguageSelectionApp()),
+              MaterialPageRoute(
+                  builder: (context) => const LanguageSelectionApp()),
             );
           } else if (profileResponse.user.location.isEmpty) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const LocationGetPage(isFromProfile: false,)),
+              MaterialPageRoute(
+                  builder: (context) => const LocationGetPage(
+                        isFromProfile: false,
+                      )),
             );
           } else {
             _showMessage("Login successful!");
@@ -143,23 +146,20 @@ class _LoginScreenState extends State<LoginScreen> {
             _isLoading = false;
           });
           _showMessage("Invalid response from server. Please try again.");
-
         }
       } else {
         setState(() {
           _isLoading = false;
         });
 
-        if(response['error'].toString().contains("User already logged in on another device.")){
+        if (response['error']
+            .toString()
+            .contains("User already logged in on another device.")) {
           _showMessage("User already logged in on another device.");
-        }else{
+        } else {
           _showMessage(response["error"] ?? "Login failed. Please try again.");
         }
-
-
       }
-
-
     } catch (e) {
       setState(() {
         _isLoading = false;
@@ -187,7 +187,12 @@ class _LoginScreenState extends State<LoginScreen> {
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFFEEEFFF), Color(0xFFFFF0D3), Color(0xFFE7F8FF), Color(0xFFEEEFFF)],
+            colors: [
+              Color(0xFFEEEFFF),
+              Color(0xFFFFF0D3),
+              Color(0xFFE7F8FF),
+              Color(0xFFEEEFFF)
+            ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -216,7 +221,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                           Text(
+                          Text(
                             "Welcome back",
                             style: TextStyle(
                               fontSize: 26,
@@ -239,7 +244,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             controller: _emailController,
                             decoration: InputDecoration(
                               hintText: "Email",
-                              hintStyle: const TextStyle(color: Color(0xFF737373)),
+                              hintStyle:
+                                  const TextStyle(color: Color(0xFF737373)),
                               prefixIcon: IconButton(
                                 icon: Image.asset(
                                   'assets/Vector.png',
@@ -253,13 +259,16 @@ class _LoginScreenState extends State<LoginScreen> {
                               border: InputBorder.none,
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(color: Color(0xFFC3C3C3), width: 0.5),
+                                borderSide: const BorderSide(
+                                    color: Color(0xFFC3C3C3), width: 0.5),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(color: Color(0xFFC3C3C3), width: 0.5),
+                                borderSide: const BorderSide(
+                                    color: Color(0xFFC3C3C3), width: 0.5),
                               ),
-                              floatingLabelBehavior: FloatingLabelBehavior.never,
+                              floatingLabelBehavior:
+                                  FloatingLabelBehavior.never,
                             ),
                             style: const TextStyle(
                               fontFamily: 'Poppins Regular',
@@ -272,7 +281,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             obscureText: !_isPasswordVisible,
                             decoration: InputDecoration(
                               hintText: "Password",
-                              hintStyle: const TextStyle(color: Color(0xFF737373)),
+                              hintStyle:
+                                  const TextStyle(color: Color(0xFF737373)),
                               prefixIcon: IconButton(
                                 icon: Image.asset(
                                   'assets/solar_lock-linear.png',
@@ -283,7 +293,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               suffixIcon: IconButton(
                                 icon: Icon(
-                                  _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                                  _isPasswordVisible
+                                      ? Icons.visibility
+                                      : Icons.visibility_off,
                                   color: const Color(0xFF737373),
                                 ),
                                 onPressed: () {
@@ -296,13 +308,16 @@ class _LoginScreenState extends State<LoginScreen> {
                               fillColor: Colors.white,
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(color: Color(0xFFC3C3C3), width: 0.5),
+                                borderSide: const BorderSide(
+                                    color: Color(0xFFC3C3C3), width: 0.5),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(color: Color(0xFFC3C3C3), width: 0.5),
+                                borderSide: const BorderSide(
+                                    color: Color(0xFFC3C3C3), width: 0.5),
                               ),
-                              floatingLabelBehavior: FloatingLabelBehavior.never,
+                              floatingLabelBehavior:
+                                  FloatingLabelBehavior.never,
                             ),
                             style: const TextStyle(
                               fontFamily: 'Poppins Regular',
@@ -323,12 +338,17 @@ class _LoginScreenState extends State<LoginScreen> {
                                       });
                                     },
                                     side: BorderSide(
-                                      color: _isChecked ? const Color(0xFF4CAF50) : Colors.grey,
+                                      color: _isChecked
+                                          ? const Color(0xFF4CAF50)
+                                          : Colors.grey,
                                       width: _isChecked ? 2.0 : 0.0,
                                     ),
                                     activeColor: const Color(0xFF4CAF50),
-                                    fillColor: WidgetStateProperty.resolveWith<Color>((states) {
-                                      if (states.contains(WidgetState.selected)) {
+                                    fillColor:
+                                        WidgetStateProperty.resolveWith<Color>(
+                                            (states) {
+                                      if (states
+                                          .contains(WidgetState.selected)) {
                                         return const Color(0xFF4CAF50);
                                       }
                                       return Colors.white;
@@ -348,7 +368,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 onPressed: () {
                                   Navigator.push(
                                     context,
-                                    MaterialPageRoute(builder: (context) => const ForgotPasswordPage()),
+                                    MaterialPageRoute(
+                                        builder: (context) =>
+                                            const ForgotPasswordPage()),
                                   );
                                 },
                                 child: const Text(
@@ -369,14 +391,16 @@ class _LoginScreenState extends State<LoginScreen> {
                               onPressed: !_isLoading ? _login : null,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF49329A),
-                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                               ),
                               child: _isLoading
-                                  ? const CircularProgressIndicator(color: Colors.white)
-                                  :  Text(
+                                  ? const CircularProgressIndicator(
+                                      color: Colors.white)
+                                  : Text(
                                       "Sign In",
                                       style: TextStyle(
                                         fontSize: 16,
@@ -399,7 +423,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 children: [
                                   TextSpan(
                                     text: "Sign Up",
-                                    style:  TextStyle(
+                                    style: TextStyle(
                                       color: Color(0xFF49329A),
                                       fontFamily: AppConstants.commonFont,
                                       fontSize: 15,
@@ -408,54 +432,88 @@ class _LoginScreenState extends State<LoginScreen> {
                                     recognizer: TapGestureRecognizer()
                                       ..onTap = () {
                                         Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const Signupscreen()),
-        );
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (_) =>
+                                                  const Signupscreen()),
+                                        );
                                       },
                                   ),
                                 ],
                               ),
                             ),
                           ),
-                          SizedBox(height: 20,),
-                          InkWell(
-                            onTap: (){
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => HelperBotScreen()), 
-                              );
-                            },
-                            child: Center(
-                              child: RichText(
-                                text: TextSpan(
-                                  text: "Do You Need Help ? ",
+                          SizedBox(height: 30,),
+                          Column(
+                            children: [
+                              Text(
+                                'By Continuing, you agree to Picturo\'s Terms of Use. ',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey,
+                                  fontFamily: 'Poppins Regular',
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              GestureDetector(
+                                onTap: _launchPrivacyPolicy,
+                                child: Text(
+                                  'Read our Privacy Policy.',
                                   style: TextStyle(
-                                    color: Colors.grey[600],
-                                    fontFamily: AppConstants.commonFont,
-                                    fontSize: 15,
+                                    fontSize: 14,
+                                    color: Color(0xFF49329A),
+                                    fontFamily: 'Poppins Medium',
+                                    decoration: TextDecoration.underline,
                                   ),
-                                  children: [
-                                    TextSpan(
-                                      text: "Click Here",
-                                      style:  TextStyle(
-                                        color: Colors.orange,
-                                        fontFamily: AppConstants.commonFont,
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      recognizer: TapGestureRecognizer()
-                                        ..onTap = () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(builder: (context) => HelperBotScreen()), // Navigate to BlockedUsersPage
-                                          );
-                                        },
-                                    ),
-                                  ],
+                                  textAlign: TextAlign.center,
                                 ),
                               ),
-                            ),
+                            ],
                           ),
+                          // SizedBox(
+                          //   height: 20,
+                          // ),
+                          // InkWell(
+                          //   onTap: () {
+                          //     Navigator.push(
+                          //       context,
+                          //       MaterialPageRoute(
+                          //           builder: (context) => HelperBotScreen()),
+                          //     );
+                          //   },
+                          //   child: Center(
+                          //     child: RichText(
+                          //       text: TextSpan(
+                          //         text: "Do You Need Help ? ",
+                          //         style: TextStyle(
+                          //           color: Colors.grey[600],
+                          //           fontFamily: AppConstants.commonFont,
+                          //           fontSize: 15,
+                          //         ),
+                          //         children: [
+                          //           TextSpan(
+                          //             text: "Click Here",
+                          //             style: TextStyle(
+                          //               color: Colors.orange,
+                          //               fontFamily: AppConstants.commonFont,
+                          //               fontSize: 15,
+                          //               fontWeight: FontWeight.bold,
+                          //             ),
+                          //             recognizer: TapGestureRecognizer()
+                          //               ..onTap = () {
+                          //                 Navigator.push(
+                          //                   context,
+                          //                   MaterialPageRoute(
+                          //                       builder: (context) =>
+                          //                           HelperBotScreen()), // Navigate to BlockedUsersPage
+                          //                 );
+                          //               },
+                          //           ),
+                          //         ],
+                          //       ),
+                          //     ),
+                          //   ),
+                          // ),
                         ],
                       ),
                     ),
@@ -467,5 +525,13 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _launchPrivacyPolicy() async {
+    final Uri url =
+        Uri.parse("https://picturoenglish.com/termsandconditions.html");
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      throw Exception('Could not launch $url');
+    }
   }
 }

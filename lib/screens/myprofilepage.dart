@@ -305,7 +305,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
             _buildDetailRow("Referral code", user.referralCode), 
             _buildDetailRow("Numbers of referral",wallet?.transactions?.length.toString() ?? "0"), 
             _buildDetailRow("Total earning", "₹ ${wallet?.totalBalance ?? 0}"),
-            _buildDetailRow("Plan Ends", user?.planEndTime ?? "No Active Plans"), 
+            //_buildDetailRow("Plan Ends", user?.planEndTime ?? "No Active Plans"), 
             _buildDetailRow("Location", user.location),
           ],
         ),
@@ -608,9 +608,9 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
       Navigator.of(context).pop();
 
       // Clear local storage
-      context.read<CallSocketHandleCubit>().disposeLocalRender();
+      //context.read<CallSocketHandleCubit>().disposeLocalRender();
       context.read<CallSocketHandleCubit>().disposeRemoteRender();
-      context.read<CallSocketHandleCubit>().disposeRenderers();
+     //context.read<CallSocketHandleCubit>().disposeRenderers();
       context.read<CallSocketHandleCubit>().disposeScoket();
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('token');  // Clear token
@@ -670,7 +670,7 @@ class PremiumButton extends StatelessWidget {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => PremiumPlansScreen(userName: userName,)), // Navigate to PremiumScreen
+          MaterialPageRoute(builder: (context) => PremiumPlansScreen(userName: userName, isChatBot: false, isCall: false)), // Navigate to PremiumScreen
         );
       },
       child: Container(

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="flutter_background_service_notification_channel_name">Ongoing Call</string>
+    <string name="flutter_background_service_notification_channel_description">Ongoing call notifications</string>
+    <color name="flutter_background_service_notification_color">#FF8C00</color>
+    <drawable name="flutter_background_service_notification_icon">@mipmap/ic_launcher</drawable>
+</resources>

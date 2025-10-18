@@ -38,104 +38,114 @@ class _GamesPageState extends State<GamesPage> {
     context.read<GameCubit>().fetchGamesAndUpdateGrid();
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Consumer<ConnectivityService>(
-    builder: (context, connectivityService, child) {
+        builder: (context, connectivityService, child) {
       final bool isOnline = connectivityService.isOnline;
-      
-        return Stack(
-          children: [
-            Scaffold(
-              backgroundColor: Color(0xFFE5EEFF),
-              appBar: CommonAppBar(title:"Games" ,isFromHomePage: true,),
-              body: BlocBuilder<GameCubit, GameState>(
+
+      return Stack(
+        children: [
+          Scaffold(
+            backgroundColor: Color(0xFFE5EEFF),
+            appBar: CommonAppBar(
+              title: "Games",
+              isFromHomePage: true,
+            ),
+            body: BlocBuilder<GameCubit, GameState>(
               builder: (context, gameState) {
-            if(gameState is GameLoaded){
-              List<String> gameNames =gameState.gameNames;
-              return Container(
-                margin: EdgeInsets.only(top: 12),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Color(0xFFE0F7FF),
-                      Color(0xFFEAE4FF),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 15,right: 15,top: 5),
-                  child: ListView(
-                    children: [
-                      // Drag and Learn Card
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => DragandLearnTopicScreen(gameName:'Drag and Learn'),
-                            ),
-                          );
-                        },
-                        child: buildBlurImageCard(
-                          'assets/game2.png',
-                          gameNames.isNotEmpty ? gameNames[1] : "Drag and Learn", // Use fetched game name
-                          "Match the correct picture and word",
-                        ),
+                if (gameState is GameLoaded) {
+                  List<String> gameNames = gameState.gameNames;
+                  return Container(
+                    margin: EdgeInsets.only(top: 12),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Color(0xFFE0F7FF),
+                          Color(0xFFEAE4FF),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                      SizedBox(height: 20),
-                      // Picture Grammar Quest Card
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => PictureGrammarQuestScreen(),
+                    ),
+                    child: Padding(
+                      padding:
+                          const EdgeInsets.only(left: 15, right: 15, top: 5),
+                      child: ListView(
+                        children: [
+                          // Drag and Learn Card
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => DragandLearnTopicScreen(
+                                      gameName: 'Drag and Learn'),
+                                ),
+                              );
+                            },
+                            child: buildBlurImageCard(
+                              'assets/game2.png',
+                              gameNames.isNotEmpty
+                                  ? gameNames[1]
+                                  : "Drag and Learn", // Use fetched game name
+                              "Match the correct picture and word",
                             ),
-                          );
-                        },
-                        child: buildBlurImageCard(
-                          'assets/game1.png',
-                          gameNames.length > 1 ? gameNames[0] : "Picture Grammar Quest", // Use fetched game name
-                          "Find the correct verb, adverb, and adjective",
-                        ),
-                      ),
-                      SizedBox(height: 20),
-                      // Action Snap Card
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ActionSnapTopicsScreen(gameName:'Action Snap',),
+                          ),
+                          SizedBox(height: 20),
+                          // Picture Grammar Quest Card
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      PictureGrammarQuestScreen(),
+                                ),
+                              );
+                            },
+                            child: buildBlurImageCard(
+                              'assets/game1.png',
+                              gameNames.length > 1
+                                  ? gameNames[0]
+                                  : "Picture Grammar Quest", // Use fetched game name
+                              "Find the correct verb, adverb, and adjective",
                             ),
-                          );
-                        },
-                        child: buildBlurImageCard(
-                          'assets/game3.png',
-                          gameNames.length > 2 ? gameNames[2] : "Action Snap", // Use fetched game name
-                          "Take a correct action verb snaps",
-                        ),
+                          ),
+                          SizedBox(height: 20),
+                          // Action Snap Card
+                          GestureDetector(
+                            onTap: () {
+                              // Navigator.push(
+                              //   context,
+                              //   MaterialPageRoute(
+                              //     builder: (context) => ActionSnapTopicsScreen(gameName:'Action Snap',),
+                              //   ),
+                              // );
+                            },
+                            child: buildBlurImageCard(
+                              'assets/game3.png',
+                              // gameNames.length > 2
+                              //     ? gameNames[2] :
+                              "Word Puzzle",
+                              "Take a correct Words",
+                              isLocked: true, // 🔒 Pass lock flag here
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-              );
-            }else{
-              return Center(child: CircularProgressIndicator());
-            }
-            
+                    ),
+                  );
+                } else {
+                  return Center(child: CircularProgressIndicator());
+                }
               },
             ),
-            ),
-            if (!isOnline) const OfflineOverlay(),
-          ],
-        );
-      }
-    );
+          ),
+          if (!isOnline) const OfflineOverlay(),
+        ],
+      );
+    });
   }
 }
 
@@ -143,17 +153,17 @@ Future<String> _getCurrentUserAvatar() async {
   try {
     final apiService = await ApiService.create();
     final profile = await apiService.fetchProfileDetails();
-    
+
     if (profile.user.avatarId == null || profile.user.avatarId == 0) {
       throw Exception('Using default avatar');
     }
-    
+
     final avatarResponse = await apiService.fetchAvatars();
     final avatar = avatarResponse.data.firstWhere(
       (a) => a.id == profile.user.avatarId,
       orElse: () => throw Exception('Avatar not found'),
     );
-    
+
     return 'https://picturoenglish.com/admin/${avatar.avatarUrl}';
   } catch (e) {
     print('Error fetching current user avatar: $e');
@@ -161,7 +171,8 @@ Future<String> _getCurrentUserAvatar() async {
   }
 }
 
-Widget buildBlurImageCard(String imageUrl, String title, String subtitle) {
+Widget buildBlurImageCard(String imageUrl, String title, String subtitle,
+    {bool isLocked = false}) {
   return ClipRRect(
     borderRadius: BorderRadius.circular(20),
     child: Stack(
@@ -172,12 +183,30 @@ Widget buildBlurImageCard(String imageUrl, String title, String subtitle) {
           height: 200,
           fit: BoxFit.cover,
         ),
+        // 🔒 Lock overlay (only shown if isLocked = true)
+        if (isLocked)
+          Container(
+            width: double.infinity,
+            height: 200,
+            color: Colors.black.withOpacity(0.4),
+            child: const Center(
+              child: Text(
+                  'Coming Soon',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontFamily: 'Poppins Medium',
+                    fontWeight: FontWeight.bold,
+                  )),
+            ),
+          ),
         // Blurred Overlay
         Positioned(
           bottom: 0,
           left: 0,
           right: 0,
-          child: RepaintBoundary( // Add RepaintBoundary here
+          child: RepaintBoundary(
+            // Add RepaintBoundary here
             child: ClipRRect(
               borderRadius: BorderRadius.vertical(
                 top: Radius.circular(15),

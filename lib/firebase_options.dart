@@ -17,10 +17,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -28,15 +25,9 @@ class DefaultFirebaseOptions {
       case TargetPlatform.iOS:
         return ios;
       case TargetPlatform.macOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for macos - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return macos;
       case TargetPlatform.windows:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return windows;
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -65,4 +56,34 @@ class DefaultFirebaseOptions {
     storageBucket: 'picturoenglish-1012d.firebasestorage.app',
     iosBundleId: 'com.example.picturoApp',
   );
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyBrvIKre09LheDb4dJFN559bvxii-ZKpcQ',
+    appId: '1:414535387061:web:c78374794c6100020b3bfc',
+    messagingSenderId: '414535387061',
+    projectId: 'picturoenglish-1012d',
+    authDomain: 'picturoenglish-1012d.firebaseapp.com',
+    storageBucket: 'picturoenglish-1012d.firebasestorage.app',
+    measurementId: 'G-WLC056H15S',
+  );
+
+  static const FirebaseOptions macos = FirebaseOptions(
+    apiKey: 'AIzaSyAZRBl8DbQHLoMzkLVJmSsrfIrO98cHu6Y',
+    appId: '1:414535387061:ios:d6583d66f993bef00b3bfc',
+    messagingSenderId: '414535387061',
+    projectId: 'picturoenglish-1012d',
+    storageBucket: 'picturoenglish-1012d.firebasestorage.app',
+    iosBundleId: 'com.example.picturoApp',
+  );
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyBrvIKre09LheDb4dJFN559bvxii-ZKpcQ',
+    appId: '1:414535387061:web:ff7c2ec835c8cb440b3bfc',
+    messagingSenderId: '414535387061',
+    projectId: 'picturoenglish-1012d',
+    authDomain: 'picturoenglish-1012d.firebaseapp.com',
+    storageBucket: 'picturoenglish-1012d.firebasestorage.app',
+    measurementId: 'G-KJQQ1BJ6NS',
+  );
+
 }

@@ -2,7 +2,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:picturo_app/providers/remaining_bot_calls_provider';
+import 'package:picturo_app/providers/remaining_bot_calls_provider.dart';
 import 'package:provider/provider.dart';
 
 class BotCallsRefreshService {

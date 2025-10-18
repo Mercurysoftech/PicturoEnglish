@@ -83,7 +83,7 @@ class MoodDiaryVew extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                "Chat & Call",
+                "Chat & Call to Learn English",
                 style: TextStyle(fontSize: 26.0, fontWeight: FontWeight.bold,fontFamily: 'Poppins Medium'),
               ),
               SlideTransition(
@@ -94,7 +94,7 @@ class MoodDiaryVew extends StatelessWidget {
                     padding: EdgeInsets.only(
                         left: 64, right: 64, top: 16, bottom: 16),
                     child: Text(
-                      "Stay connected with seamless messaging and high-quality voice or video calls, enjoy group chats, and experience secure, real-time communication anytime, anywhere.",
+                      "Boost your English skills through real conversations!Chat with mentors or co-learners, join fun group discussions, and practice speaking with high-quality voice calls.Experience interactive, real-time English learning — anytime, anywhere!",
                       style: TextStyle(fontFamily: 'Poppins Regular'),
                       textAlign: TextAlign.center,
                     ),

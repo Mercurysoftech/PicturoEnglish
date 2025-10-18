@@ -11,9 +11,11 @@ import 'package:picturo_app/classes/services/notification_service.dart';
 import 'package:picturo_app/classes/svgfiles.dart';
 import 'package:picturo_app/cubits/user_status/user_status_cubit.dart';
 import 'package:picturo_app/main.dart';
+import 'package:picturo_app/providers/remaining_minutes_provider.dart';
 import 'package:picturo_app/screens/chatmessagelayout.dart';
 import 'package:picturo_app/screens/homepage.dart';
 import 'package:picturo_app/screens/myprofilepage.dart';
+import 'package:picturo_app/screens/premium_plans_screen.dart';
 import 'package:picturo_app/services/api_service.dart';
 import 'package:picturo_app/services/socket_notifications_service.dart';
 import 'package:provider/provider.dart';
@@ -66,22 +68,263 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isUserTyping = false;
   String? _userId;
   bool _isBlocked = false;
+  int _remainingMinutes = 0;
+  bool _showUpgradeDialog = false;
 
   @override
   void initState() {
     super.initState();
     _initializeApiService();
     initSocket();
+    requestRemainingMinutes();
     ChatScreenTracker.activeChatUserId = widget.userId.toString();
     print(
         'User name received: ${widget.userName} and User ID: ${widget.userId}');
     _setupTypingListener();
+
+    _initializeProviderConnection();
   }
 
 //--------------------------------------------New Updates Start-----------------------------------
 
   RTCPeerConnection? peerConnection;
   MediaStream? localStream;
+
+  void _initializeProviderConnection() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final callSocketCubit = context.read<CallSocketHandleCubit>();
+      final remainingMinutesProvider =
+          Provider.of<RemainingMinutesProvider>(context, listen: false);
+
+      // Set the provider in cubit
+      callSocketCubit.setRemainingMinutesProvider(remainingMinutesProvider);
+
+      // Request initial minutes
+      callSocketCubit.requestRemainingMinutes();
+
+      // Listen for minutes changes to show dialog
+      remainingMinutesProvider.addListener(_checkRemainingMinutes);
+    });
+  }
+
+  void _checkRemainingMinutes() {
+    final remainingMinutesProvider =
+        Provider.of<RemainingMinutesProvider>(context, listen: false);
+    final minutes = remainingMinutesProvider.remainingMinutes;
+
+    if (minutes <= 0 && !_showUpgradeDialog && mounted) {
+      setState(() {
+        _showUpgradeDialog = true;
+      });
+
+      // // Show the upgrade dialog
+      // WidgetsBinding.instance.addPostFrameCallback((_) {
+      //   _showFullScreenUpgradeDialog();
+      // });
+    }
+  }
+
+  void _showFullScreenUpgradeDialog() {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierLabel: "Upgrade Required",
+      transitionDuration: Duration(milliseconds: 300),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return _buildUpgradeDialogContent();
+      },
+    );
+  }
+
+  Widget _buildUpgradeDialogContent() {
+    return Scaffold(
+      backgroundColor: Color(0xFF49329A),
+      body: SafeArea(
+        child: Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFF49329A),
+                Color(0xFF6A5ACD),
+                Color(0xFF483D8B),
+              ],
+            ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Icon
+              Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(14.0),
+                  child: Image.asset(
+                    'assets/crown.png',
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+
+              SizedBox(height: 30),
+
+              // Title
+              Text(
+                'Call Minutes Expired',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  fontFamily: 'Poppins Medium',
+                ),
+                textAlign: TextAlign.center,
+              ),
+
+              SizedBox(height: 20),
+
+              // Message
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 40),
+                child: Text(
+                  'You have used all your daily call minutes. Upgrade your plan to continue making calls and enjoy unlimited conversations.',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.white.withOpacity(0.9),
+                    fontFamily: 'Poppins Regular',
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+
+              SizedBox(height: 40),
+
+              // Features List
+              _buildFeatureItem(Icons.call, 'Unlimited Calls'),
+              _buildFeatureItem(Icons.timer, 'More Daily Minutes'),
+              //_buildFeatureItem(Icons.workspace_premium, 'Premium Features'),
+
+              SizedBox(height: 50),
+
+              // Buttons
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 40),
+                child: Column(
+                  children: [
+                    // Upgrade Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 55,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop(); // Close dialog
+                          _navigateToPremiumPlans();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.amber,
+                          foregroundColor: Colors.black,
+                          elevation: 5,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                        ),
+                        child: Text(
+                          'UPGRADE NOW',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Poppins Medium',
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    SizedBox(height: 15),
+
+                    // OK Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 55,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop(); // Close dialog
+                          setState(() {
+                            _showUpgradeDialog = false;
+                          });
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white.withOpacity(0.2),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15),
+                            side: BorderSide(
+                                color: Colors.white.withOpacity(0.5)),
+                          ),
+                        ),
+                        child: Text(
+                          'OK, MAYBE LATER',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            fontFamily: 'Poppins Regular',
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeatureItem(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 40),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            color: Colors.amber,
+            size: 20,
+          ),
+          SizedBox(width: 15),
+          Text(
+            text,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontFamily: 'Poppins Regular',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _navigateToPremiumPlans() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PremiumPlansScreen(
+          isChatBot: false,
+          isCall: true, // Navigate to call plans specifically
+        ),
+      ),
+    );
+  }
 
   void initSocket() async {
     final prefs = await SharedPreferences.getInstance();
@@ -106,6 +349,16 @@ class _ChatScreenState extends State<ChatScreen> {
       });
     });
 
+    // ChatSocket.socket?.on('remainingMinutes', (data) {
+    //   if (data is Map<String, dynamic>) {
+    //     final userId = data['userId']?.toString();
+    //     final remainingMinutes = data['dailyMinutes'] ?? 0;
+    //     print('Remaining Minutes: $remainingMinutes');
+
+    //     ChatScreenTracker.updateRemainingMinutes(remainingMinutes);
+    //   }
+    // });
+
     ChatSocket.socket?.onError((handler) {});
     ChatSocket.socket?.on('userOnline', (data) {
       _handleOnlineStatus({'user_id': data['user_id'], 'is_online': true});
@@ -128,6 +381,16 @@ class _ChatScreenState extends State<ChatScreen> {
         'is_typing': false,
       });
     });
+  }
+
+  Future<void> requestRemainingMinutes() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString('user_id');
+    if (userId != null) {
+      ChatSocket.socket?.emit('getRemainingMinutes', {
+        'userId': userId,
+      });
+    }
   }
 
   void _showMessageBlockedDialog(String message) {
@@ -260,7 +523,6 @@ class _ChatScreenState extends State<ChatScreen> {
           _isUserTyping = isTyping;
         });
 
-        // Automatically reset typing status after 3 seconds if no new typing events come in
         if (isTyping) {
           Future.delayed(const Duration(seconds: 3), () {
             if (mounted && _isUserTyping) {
@@ -504,75 +766,129 @@ class _ChatScreenState extends State<ChatScreen> {
                     SizedBox(
                       width: 5,
                     ),
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () async {
-                          if (context
-                              .read<CallSocketHandleCubit>()
-                              .isLiveCallActive) {
-                            Fluttertoast.showToast(
-                              msg: "You're already in another call",
-                              backgroundColor: Colors.orange,
-                            );
-                          } else {
-                            final prefs = await SharedPreferences.getInstance();
-                            String? userId = prefs.getString("user_id");
+                    BlocConsumer<CallSocketHandleCubit, CallSocketHandleState>(
+                      listener: (context, callState) {
+                        //
+                      },
+                      builder: (context, callState) {
+                        final remainingMinutesProvider =
+                            Provider.of<RemainingMinutesProvider>(context,
+                                listen: true);
+                        final minutes =
+                            remainingMinutesProvider.remainingMinutes;
 
-                            int? profileProvider =
-                                userId != null && userId != ''
-                                    ? int.tryParse(userId)
-                                    : null;
+                        print('The Remaining Minutes from Cubit: $minutes');
+                        return Stack(
+                          children: [
+                            Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () async {
+                                  if (minutes <= 0) {
+                                    _showFullScreenUpgradeDialog();
+                                    return;
+                                  }
 
-                            if (profileProvider != null) {
-                              await requestPermissions();
+                                  if (context
+                                      .read<CallSocketHandleCubit>()
+                                      .isLiveCallActive) {
+                                    Fluttertoast.showToast(
+                                      msg: "You're already in another call",
+                                      backgroundColor: Colors.orange,
+                                    );
+                                  } else {
+                                    final prefs =
+                                        await SharedPreferences.getInstance();
+                                    String? userId = prefs.getString("user_id");
 
-                              context
-                                  .read<CallSocketHandleCubit>()
-                                  .resetCubit();
+                                    int? profileProvider =
+                                        userId != null && userId != ''
+                                            ? int.tryParse(userId)
+                                            : null;
 
-                              context
-                                  .read<CallSocketHandleCubit>()
-                                  .emitCallingFunction(
-                                    targetId: widget.userId ?? 0,
-                                    currentUserId: profileProvider,
-                                    targettedUserName: "${widget.userName}",
-                                  );
-                              // Navigate first
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => CallingScreen(
-                                    currentUserId: profileProvider,
-                                    callerName: widget.userName,
-                                    avatarUrl: widget.profilePicId,
-                                    friendId: widget.userId,
+                                    if (profileProvider != null) {
+                                      await requestPermissions();
+
+                                      context
+                                          .read<CallSocketHandleCubit>()
+                                          .resetCubit();
+
+                                      context
+                                          .read<CallSocketHandleCubit>()
+                                          .emitCallingFunction(
+                                            targetId: widget.userId ?? 0,
+                                            currentUserId: profileProvider,
+                                            targettedUserName:
+                                                "${widget.userName}",
+                                          );
+                                      // Navigate first
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => CallingScreen(
+                                            currentUserId: profileProvider,
+                                            callerName: widget.userName,
+                                            avatarUrl: widget.profilePicId,
+                                            friendId: widget.userId,
+                                          ),
+                                        ),
+                                      );
+
+                                      // Emit socket events
+
+                                      // Reset timer if not in active call
+                                      if (!context
+                                          .read<CallSocketHandleCubit>()
+                                          .isLiveCallActive) {
+                                        context
+                                            .read<CallTimerCubit>()
+                                            .resetTimer();
+                                      }
+                                    }
+                                  }
+                                },
+                                borderRadius: BorderRadius.circular(70),
+                                child: Container(
+                                  padding: EdgeInsets.all(5),
+                                  child: SvgPicture.string(
+                                    Svgfiles.svgString,
+                                    width: 28,
+                                    height: 28,
+                                    fit: BoxFit.fitHeight,
                                   ),
                                 ),
-                              );
-
-                              // Emit socket events
-
-                              // Reset timer if not in active call
-                              if (!context
-                                  .read<CallSocketHandleCubit>()
-                                  .isLiveCallActive) {
-                                context.read<CallTimerCubit>().resetTimer();
-                              }
-                            }
-                          }
-                        },
-                        borderRadius: BorderRadius.circular(70),
-                        child: Container(
-                          padding: EdgeInsets.all(5),
-                          child: SvgPicture.string(
-                            Svgfiles.svgString,
-                            width: 28,
-                            height: 28,
-                            fit: BoxFit.fitHeight,
-                          ),
-                        ),
-                      ),
+                              ),
+                            ),
+                            if (minutes > 0)
+                              Positioned(
+                                right: 0,
+                                top: 0,
+                                child: Container(
+                                  padding: EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                        color: Colors.white, width: 1.5),
+                                  ),
+                                  constraints: BoxConstraints(
+                                    minWidth: 16,
+                                    minHeight: 16,
+                                  ),
+                                  child: Text(
+                                    '$minutes',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        );
+                      },
                     ),
                     PopupMenuButton<ChatMenuAction>(
                       icon:
@@ -762,5 +1078,30 @@ class _ChatScreenState extends State<ChatScreen> {
         SnackBar(content: Text('Failed to block user: $e')),
       );
     }
+  }
+}
+
+class RemainingMinutesIndicator extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<RemainingMinutesProvider>(
+      builder: (context, provider, child) {
+        return Container(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: provider.remainingMinutes > 0 ? Colors.green : Colors.red,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            '${provider.remainingMinutes} min',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        );
+      },
+    );
   }
 }

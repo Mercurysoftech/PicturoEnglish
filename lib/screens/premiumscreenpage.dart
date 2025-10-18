@@ -134,7 +134,7 @@ class _PremiumScreenState extends State<PremiumScreen> {
           Navigator.pop(context);
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => PremiumPlansScreen(userName: widget.userName,)), // Navigate to PremiumScreen
+            MaterialPageRoute(builder: (context) => PremiumPlansScreen(userName: widget.userName, isChatBot: false, isCall: false)), 
           );
 
         }
@@ -183,7 +183,7 @@ class _PremiumScreenState extends State<PremiumScreen> {
           Navigator.pop(context);
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => PremiumPlansScreen(userName: widget.userName,)), // Navigate to PremiumScreen
+            MaterialPageRoute(builder: (context) => PremiumPlansScreen(userName: widget.userName, isChatBot: false, isCall: false,)), // Navigate to PremiumScreen
           );
 
         }
@@ -226,7 +226,7 @@ class _PremiumScreenState extends State<PremiumScreen> {
         Navigator.pop(context);
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => PremiumPlansScreen(userName: widget.userName,)), // Navigate to PremiumScreen
+          MaterialPageRoute(builder: (context) => PremiumPlansScreen(userName: widget.userName, isChatBot: false, isCall: false)), // Navigate to PremiumScreen
         );
 
       } else {

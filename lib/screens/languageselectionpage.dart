@@ -7,8 +7,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../utils/common_file.dart';
 
-
-
 class LanguageSelectionApp extends StatefulWidget {
   const LanguageSelectionApp({super.key});
 
@@ -18,7 +16,7 @@ class LanguageSelectionApp extends StatefulWidget {
 
 class _LanguageSelectionAppState extends State<LanguageSelectionApp> {
   String? selectedLanguage;
-  final double _scale = 1.0;  // This controls the scaling effect
+  final double _scale = 1.0; // This controls the scaling effect
   List<LanguageData> languages = []; // Store fetched languages
 
   @override
@@ -27,17 +25,23 @@ class _LanguageSelectionAppState extends State<LanguageSelectionApp> {
     fetchAndDisplayLanguages(); // Fetch languages on screen load
   }
 
-
-   Future<void> fetchAndDisplayLanguages() async {
+  Future<void> fetchAndDisplayLanguages() async {
     try {
       final apiService = await ApiService.create();
-      final LanguageResponse languageResponse = await apiService.fetchLanguages();
+      final LanguageResponse languageResponse =
+          await apiService.fetchLanguages();
 
       // Filter the languages where country_id is 97
-      final filteredLanguages = languageResponse.data.where((language) => language.countryId == 97 &&  ["Tamil", "Telugu", "Hindi", "Malayalam", "English"].contains(language.language)).toList();
+      final filteredLanguages = languageResponse.data
+          .where((language) =>
+              language.countryId == 97 &&
+              ["Tamil", "Telugu", "Hindi", "Malayalam", "English"]
+                  .contains(language.language))
+          .toList();
 
       setState(() {
-        languages = filteredLanguages; // Update the state with filtered languages
+        languages =
+            filteredLanguages; // Update the state with filtered languages
       });
     } catch (e) {
       print("Error fetching languages: $e");
@@ -45,7 +49,7 @@ class _LanguageSelectionAppState extends State<LanguageSelectionApp> {
   }
 
   void _showLanguageBottomSheet() {
-    if(languages.isNotEmpty) {
+    if (languages.isNotEmpty) {
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
@@ -55,15 +59,12 @@ class _LanguageSelectionAppState extends State<LanguageSelectionApp> {
         ),
         builder: (context) {
           return Container(
-            width: MediaQuery
-                .of(context)
-                .size
-                .width,
+            width: MediaQuery.of(context).size.width,
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(20)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(20)),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -91,8 +92,8 @@ class _LanguageSelectionAppState extends State<LanguageSelectionApp> {
                             selectedLanguage = language.language;
                           });
                           // Save the selected language to SharedPreferences
-                          SharedPreferences prefs = await SharedPreferences
-                              .getInstance();
+                          SharedPreferences prefs =
+                              await SharedPreferences.getInstance();
                           await prefs.setString(
                               'selectedLanguage', language.language);
                           Navigator.pop(context);
@@ -102,8 +103,9 @@ class _LanguageSelectionAppState extends State<LanguageSelectionApp> {
                           padding: const EdgeInsets.symmetric(
                               vertical: 12, horizontal: 20),
                           decoration: BoxDecoration(
-                            color: isSelected ? const Color(0xFF49329A) : Colors
-                                .white,
+                            color: isSelected
+                                ? const Color(0xFF49329A)
+                                : Colors.white,
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
                                 color: const Color(0xFF49329A), width: 1),
@@ -115,8 +117,9 @@ class _LanguageSelectionAppState extends State<LanguageSelectionApp> {
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                               fontFamily: AppConstants.commonFont,
-                              color: isSelected ? Colors.white : const Color(
-                                  0xFF49329A),
+                              color: isSelected
+                                  ? Colors.white
+                                  : const Color(0xFF49329A),
                             ),
                           ),
                         ),
@@ -131,214 +134,238 @@ class _LanguageSelectionAppState extends State<LanguageSelectionApp> {
         },
       );
     }
-}
+  }
 
   @override
   Widget build(BuildContext context) {
     return PopScope(
-    canPop: false,
-    onPopInvoked: (didPop) async {
-      if (didPop) return; // If already popped, do nothing
-  final shouldExit = await showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Exit App?'),
-      content: const Text('Do you want to exit the app?'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('No'),
-        ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Yes'),
-        ),
-      ],
-    ),
-  );
-  if (shouldExit ?? false) {
-    SystemNavigator.pop(); // Close the app if "Yes" is pressed
-  }
-},
-    child:
-    Scaffold(
-      backgroundColor: Colors.white,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Purple Container with Image and Text
-          Stack(
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.only(top: 50, left: 20, right: 20, bottom: 150),
-                decoration: const BoxDecoration(
-                  color: Color(0xFF49329A),
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(30),
-                    bottomRight: Radius.circular(30),
-                  ),
-                ),
-                child: Align(
-                  alignment: Alignment.bottomRight,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: const [
-                      Text(
-                        "Select your",
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: AppConstants.commonFont,
-                          color: Colors.white,
-                        ),
-                      ),
-                      SizedBox(height: 5),
-                      Text(
-                        "Language  ",
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: AppConstants.commonFont,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+      canPop: false,
+      onPopInvoked: (didPop) async {
+        if (didPop) return; // If already popped, do nothing
+        final shouldExit = await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Exit App?'),
+            content: const Text('Do you want to exit the app?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('No'),
               ),
-              Positioned(
-                bottom: 0,
-                left: 40,
-                child: Image.asset(
-                  'assets/select_language.png',
-                  height: 200,
-                ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Yes'),
               ),
             ],
           ),
-
-          // Description
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-            child: Text(
-              "Choose your preferred language to personalize your learning experience. This will help us with translations and explanations to make learning English easier and more effective for you!",
-              textAlign: TextAlign.start,
-              style: TextStyle(fontSize: 13, color: Colors.grey[700], fontFamily: 'Poppins Regular'),
-            ),
-          ),
-
-          const SizedBox(height: 20),
-          // Language Selection Tiles
-          languageSelectionTile("You're Learning ", "English"),
-          const SizedBox(height: 20),
-          const Icon(Icons.arrow_downward, color: Color(0xFF49329A), size: 30),
-          const SizedBox(height: 15),
-
-
-          // You're Learning - TextField with Bottom Sheet
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Positioned label similar to languageSelectionTile
-              const SizedBox(height: 5),
-              (languages.isEmpty)?SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(strokeWidth: 0.8,),
-              ):GestureDetector(
-                onTap: _showLanguageBottomSheet,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    // Border Box for TextField
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 15),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: const Color(0xFF49329A), width: 1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        textAlign: TextAlign.center,
-                        selectedLanguage ?? "Select a language",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: AppConstants.commonFont,
-                          color: selectedLanguage != null ? Color(0xFF49329A) : Colors.grey,
-                        ),
-                      ),
+        );
+        if (shouldExit ?? false) {
+          SystemNavigator.pop(); // Close the app if "Yes" is pressed
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Purple Container with Image and Text
+            Stack(
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.only(
+                      top: 50, left: 20, right: 20, bottom: 150),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF49329A),
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(30),
+                      bottomRight: Radius.circular(30),
                     ),
-                    // Positioned label inside the text field
-                    Positioned(
-                      left: 12,
-                      top: -10, // Adjusted for perfect alignment
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5),
-                        color: Colors.white,
-                        child: const Text(
-                          "Native Language",
+                  ),
+                  child: Align(
+                    alignment: Alignment.bottomRight,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: const [
+                        Text(
+                          "Select your",
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            fontFamily: 'Poppins Regular',
-                            color: Color(0xFF49329A),
-                            backgroundColor: Colors.white, // Ensures clarity
+                            fontFamily: AppConstants.commonFont,
+                            color: Colors.white,
                           ),
                         ),
-                      ),
+                        SizedBox(height: 5),
+                        Text(
+                          "Language  ",
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: AppConstants.commonFont,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
+                ),
+                Positioned(
+                  bottom: 0,
+                  left: 40,
+                  child: Image.asset(
+                    'assets/select_language.png',
+                    height: 200,
+                  ),
+                ),
+              ],
+            ),
+
+            // Description
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+              child: Text(
+                "Choose your preferred language to personalize your learning experience. This will help us with translations and explanations to make learning English easier and more effective for you!",
+                textAlign: TextAlign.start,
+                style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey[700],
+                    fontFamily: 'Poppins Regular'),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+            // Language Selection Tiles
+            languageSelectionTile("You're Learning ", "English"),
+            const SizedBox(height: 20),
+            const Icon(Icons.arrow_downward,
+                color: Color(0xFF49329A), size: 30),
+            const SizedBox(height: 15),
+
+            // You're Learning - TextField with Bottom Sheet
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Positioned label similar to languageSelectionTile
+                  const SizedBox(height: 5),
+                  (languages.isEmpty)
+                      ? SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 0.8,
+                          ),
+                        )
+                      : GestureDetector(
+                          onTap: _showLanguageBottomSheet,
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              // Border Box for TextField
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 15, horizontal: 15),
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                      color: const Color(0xFF49329A), width: 1),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  textAlign: TextAlign.center,
+                                  selectedLanguage ?? "Select a language",
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: AppConstants.commonFont,
+                                    color: selectedLanguage != null
+                                        ? Color(0xFF49329A)
+                                        : Colors.grey,
+                                  ),
+                                ),
+                              ),
+                              // Positioned label inside the text field
+                              Positioned(
+                                left: 12,
+                                top: -10, // Adjusted for perfect alignment
+                                child: Container(
+                                  padding:
+                                      const EdgeInsets.symmetric(horizontal: 5),
+                                  color: Colors.white,
+                                  child: const Text(
+                                    "Native Language",
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'Poppins Regular',
+                                      color: Color(0xFF49329A),
+                                      backgroundColor:
+                                          Colors.white, // Ensures clarity
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                ],
+              ),
+            ),
+            const Spacer(),
+
+            // Done Button
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+              child: ElevatedButton(
+                onPressed: () async {
+                  String selectedNativeLanguage =
+                      selectedLanguage?.toLowerCase() ?? 'english';
+                  SharedPreferences prefs =
+                      await SharedPreferences.getInstance();
+                  await prefs.setString(
+                      'selectedLanguage', selectedNativeLanguage ?? '');
+
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => LocationGetPage(
+                              isFromProfile: false,
+                            )),
+                    // (route) => false,
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF49329A),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  minimumSize: const Size(double.infinity, 55),
+                  elevation: 5, // Default elevation
+                  splashFactory:
+                      InkRipple.splashFactory, // Enable ripple effect
+                  // Adjust elevation when the button is pressed for a 'pressed' effect
+                  shadowColor: Colors.purple.withOpacity(0.5),
+                ),
+                child: const Text(
+                  "Done",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: AppConstants.commonFont,
+                    color: Colors.white,
+                  ),
                 ),
               ),
-            ],
-          ),
+            )
+          ],
         ),
-          const Spacer(),
-
-          // Done Button
-          Padding(
-  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-  child: ElevatedButton(
-    onPressed: () {
-      Navigator.pushReplacement(
-    context,
-    MaterialPageRoute(builder: (context) => LocationGetPage(isFromProfile: false,)),
-    // (route) => false,
-  );
-    },
-    style: ElevatedButton.styleFrom(
-      backgroundColor: const Color(0xFF49329A),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
       ),
-      minimumSize: const Size(double.infinity, 55),
-      elevation: 5, // Default elevation
-      splashFactory: InkRipple.splashFactory, // Enable ripple effect
-      // Adjust elevation when the button is pressed for a 'pressed' effect
-      shadowColor: Colors.purple.withOpacity(0.5),
-    ),
-    child: const Text(
-      "Done",
-      style: TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-        fontFamily: AppConstants.commonFont,
-        color: Colors.white,
-      ),
-    ),
-  ),
-)
-        ],
-      ),
-    ),
     );
   }
 
-Widget languageSelectionTile(String title, String language) {
+  Widget languageSelectionTile(String title, String language) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Stack(
@@ -353,10 +380,10 @@ Widget languageSelectionTile(String title, String language) {
               borderRadius: BorderRadius.circular(10),
               color: Colors.white,
             ),
-            child: Text(        
+            child: Text(
               language,
               textAlign: TextAlign.center,
-              style:  TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
                 fontFamily: AppConstants.commonFont,
@@ -388,5 +415,4 @@ Widget languageSelectionTile(String title, String language) {
       ),
     );
   }
-
 }

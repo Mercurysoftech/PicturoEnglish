@@ -242,7 +242,7 @@ _buildProcessStep(
           onPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const PremiumPlansScreen()),
+              MaterialPageRoute(builder: (context) => const PremiumPlansScreen( isChatBot: false, isCall: false)),
             );
           },
           child: const Text(

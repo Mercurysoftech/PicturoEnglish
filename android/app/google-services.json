@@ -7,6 +7,25 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:414535387061:android:c7159d870413b6090b3bfc",
+        "android_client_info": {
+          "package_name": "com.picturo.picturoenglish"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBb6LsAihWTucNM5g0KC2kdPh_ygbLL5xI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:414535387061:android:af0a6e651b6a5c4b0b3bfc",
         "android_client_info": {
           "package_name": "com.picturoenglish.picturo"

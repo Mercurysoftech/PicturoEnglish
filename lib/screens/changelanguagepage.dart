@@ -22,15 +22,15 @@ class ChangeLanguagePage extends StatefulWidget {
 
 class _ChangeLanguagePageState extends State<ChangeLanguagePage> {
   String? selectedLanguage;
-  final double _scale = 1.0;  // This controls the scaling effect
-  List<LanguageData> languages = []; // Store fetched languages
+  final double _scale = 1.0;  
+  List<LanguageData> languages = []; 
   UserResponse? userResponse;
   bool loading=false;
   @override
   void initState() {
     super.initState();
     fetchUserDetails();
-    fetchAndDisplayLanguages(); // Fetch languages on screen load
+    fetchAndDisplayLanguages(); 
   }
   Future<void> fetchUserDetails() async {
     try {
@@ -159,11 +159,11 @@ class _ChangeLanguagePageState extends State<ChangeLanguagePage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(80), // Increased app bar height
+        preferredSize: Size.fromHeight(80), 
         child: AppBar(
           backgroundColor: Color(0xFF49329A),
           leading: Padding(
-            padding: const EdgeInsets.only(top: 15.0, left: 24.0), // Adjust top padding
+            padding: const EdgeInsets.only(top: 15.0, left: 24.0), 
             child: IconButton(
               icon: Icon(Icons.arrow_back_ios, color: Colors.white, size: 26),
               onPressed: () {
@@ -172,7 +172,7 @@ class _ChangeLanguagePageState extends State<ChangeLanguagePage> {
             ),
           ),
           title: Padding(
-            padding: const EdgeInsets.only(top: 15.0), // Adjust top padding
+            padding: const EdgeInsets.only(top: 15.0), 
             child: Row(
               children: [
                 Text(

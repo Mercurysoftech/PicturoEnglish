@@ -18,7 +18,7 @@ class _CallScreenState extends State<CallScreen> {
   String? receiverId;
   Timer? callTimer;
   DateTime? callStartTime;
-  final int callDurationLimit = 5 * 60; // seconds
+  final int callDurationLimit = 5 * 60;
   String callTime = "00:00";
   bool inCall = false;
 

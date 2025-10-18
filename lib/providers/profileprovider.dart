@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:picturo_app/responses/my_profile_response.dart';
 import 'package:picturo_app/services/api_service.dart';
 import 'package:picturo_app/utils/sharedPrefsService.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileProvider with ChangeNotifier {
   User? _user;
@@ -75,6 +76,11 @@ class ProfileProvider with ChangeNotifier {
 
       _user = userResponse.user;
       _wallet = userResponse.wallet;
+
+      String selectedNativeLanguage =
+          userResponse.user.speakingLanguage?.toLowerCase() ?? 'english';
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setString('selectedLanguage', selectedNativeLanguage ?? '');
 
       notifyListeners();
 

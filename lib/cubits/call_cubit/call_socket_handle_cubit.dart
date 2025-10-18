@@ -6,11 +6,16 @@ import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_callkit_incoming/entities/android_params.dart';
 import 'package:flutter_callkit_incoming/entities/call_kit_params.dart';
 import 'package:flutter_callkit_incoming/entities/ios_params.dart';
 import 'package:flutter_callkit_incoming/entities/notification_params.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:picturo_app/classes/services/native_foreground_service.dart';
+import 'package:picturo_app/providers/remaining_minutes_provider.dart';
+import 'package:picturo_app/services/applifecycleservice.dart';
+import 'package:picturo_app/services/call_foreground_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
@@ -29,6 +34,7 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
   RTCPeerConnection? _peerConnection;
   MediaStream? _localStream;
   bool isLiveCallActive = false;
+  bool isAnotherCall = false;
 
   List<Friends> friends = [];
   final RTCVideoRenderer localRenderer = RTCVideoRenderer();
@@ -37,20 +43,30 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
   final Map<String, RTCVideoRenderer> remoteRenderers = {};
   int? targetUserId;
   String? callerName;
+  Timer? _callTimeoutTimer;
+  final int _callTimeoutSeconds = 30;
+
+  RemainingMinutesProvider? _remainingMinutesProvider;
+  bool _isSystemCallActive = false;
+  StreamSubscription? _callKitEventListener;
+
+  //final ForegroundService _foregroundService = ForegroundService();
+  final NativeForegroundService _foregroundService = NativeForegroundService();
 
   final _config = {
     'iceServers': [
       {'urls': 'stun:stun.l.google.com:19302'},
-      {'urls': 
-      ['turn:server.srivelavantraders.com:3478?transport=udp',
-            'turn:server.srivelavantraders.com:3478?transport=tcp',
-            'turns:server.srivelavantraders.com:5349?transport=tcp'
-            ],
+      {
+        'urls': [
+          'turn:server.srivelavantraders.com:3478?transport=udp',
+          'turn:server.srivelavantraders.com:3478?transport=tcp',
+          'turns:server.srivelavantraders.com:5349?transport=tcp'
+        ],
         'username': 'demo',
         'credential': 'password@123'
       }
     ],
-     'sdpSemantics': 'unified-plan',
+    'sdpSemantics': 'unified-plan',
     // 'iceTransportPolicy': 'all', // or 'relay' to force TURN for testing
   };
 
@@ -68,6 +84,69 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
   //     log("❌ Error making reject call API: $e");
   //   }
   // }
+  
+
+  void setRemainingMinutesProvider(RemainingMinutesProvider provider) {
+    _remainingMinutesProvider = provider;
+  }
+
+  void updateRemainingMinutes(int minutes) {
+    emit(state.copyWith(remainingMinutes: minutes));
+  }
+
+  Future<void> _storeCallDataForService(
+      int targetUserId, String callerName) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('last_call_target_id', targetUserId);
+    await prefs.setString('last_caller_name', callerName);
+    await prefs.setBool('has_active_call', true);
+  }
+
+  Future<Map<String, dynamic>?> _getStoredCallData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final hasActiveCall = prefs.getBool('has_active_call') ?? false;
+    if (hasActiveCall) {
+      final targetUserId = prefs.getInt('last_call_target_id');
+      final callerName = prefs.getString('last_caller_name');
+      return {
+        'targetUserId': targetUserId,
+        'callerName': callerName,
+      };
+    }
+    return null;
+  }
+
+  Future<void> _clearStoredCallData() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('last_call_target_id');
+    await prefs.remove('last_caller_name');
+    await prefs.remove('has_active_call');
+  }
+
+  void toggleMute() {
+    final currentState = state;
+    final newMuteState = !currentState.isMuted;
+
+    // Update the actual audio state
+    _muteLocalAudio(newMuteState);
+
+    // Emit socket event
+    callSocket.emit("mute-call", {"to": targetUserId, "muted": newMuteState});
+
+    // Update UI state
+    emit(state.copyWith(isMuted: newMuteState));
+  }
+
+  void toggleSpeaker() async {
+    final currentState = state;
+    final newSpeakerState = !currentState.isSpeakerOn;
+
+    // Update the actual speaker state
+    await Helper.setSpeakerphoneOn(newSpeakerState);
+
+    // Update UI state
+    emit(state.copyWith(isSpeakerOn: newSpeakerState));
+  }
 
   void userOpenCalling() {
     // userOpenCallingPage=true;
@@ -91,6 +170,15 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
     callSocket.dispose();
   }
 
+  void requestRemainingMinutes() {
+    if (callSocket.connected) {
+      callSocket.emit("get-remaining-daily-minutes");
+      log("📊 Requesting remaining minutes...");
+    } else {
+      log("⚠️ Socket not connected, cannot request remaining minutes");
+    }
+  }
+
   Future<void> initCallSocket() async {
     FirebaseMessaging messaging = FirebaseMessaging.instance;
     String? token = await messaging.getToken();
@@ -98,10 +186,12 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
     final prefs = await SharedPreferences.getInstance();
     String? userId = prefs.getString("user_id");
 
+    //await _foregroundService.initializeService();
+
     callSocket = IO.io(
       'https://picturoenglish.com:2027',
       IO.OptionBuilder()
-          .setTransports(['websocket']) // for Flutter or Dart VM
+          .setTransports(['websocket'])
           .disableAutoConnect()
           .setQuery({
             'userId': userId,
@@ -114,8 +204,44 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
     localRenderer.initialize();
     _remoteRenderer.initialize();
 
+    //await _foregroundService.initializeService();
+
     callSocket.onConnect((_) {
       callSocket.emit('register', {"userId": userId, "fcmToken": token});
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        requestRemainingMinutes();
+      });
+    });
+
+    callSocket.on("low-time-alert", (data) async {
+    final remaining = data['remaining'] ?? 0;
+    final threshold = data['threshold'] ?? 0;
+    final message = data['message'] ?? '';
+
+    log("⚠️ Low time alert received: $remaining minutes left");
+
+    // Emit the low time alert state
+    emit(state.copyWith(
+      lowTimeAlert: LowTimeAlert(
+        remaining: remaining,
+        threshold: threshold,
+        message: message,
+      ),
+    ));
+
+    // You can also vibrate or play a sound here
+    if (await Vibration.hasVibrator() ?? false) {
+      Vibration.vibrate(duration: 1000, pattern: [0, 500, 200, 500]);
+    }
+  });
+
+    callSocket.on("remaining-daily-minutes", (data) {
+      final remaining = data['remaining'] ?? 0;
+      log("📊 Remaining daily minutes: $data");
+
+      emit(state.copyWith(remainingMinutes: remaining));
+      _remainingMinutesProvider?.updateRemainingMinutes(remaining);
     });
 
     callSocket.on('incoming-call', (data) async {
@@ -132,25 +258,41 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
         callerName = friends[findedIndex].friendName;
 
         showFlutterCallNotification(
-            callSessionId: 'sdkjcslkcmslkcmsdc',
-            userId: '$from',
-            callerName: '${friends[findedIndex].friendName}',
-          callerId: int.parse(from ?? "0"), // Pass the actual caller ID
-          receiverId: int.parse(userId ?? "0"), 
-            );
+          callSessionId: 'sdkjcslkcmslkcmsdc',
+          userId: '$from',
+          callerName: '${friends[findedIndex].friendName}',
+          callerId: int.parse(from ?? "0"),
+          receiverId: int.parse(userId ?? "0"),
+        );
 
         targetUserId = int.parse(from ?? "0");
       }
     });
+
     callSocket.on('call-accepted', (data) async {
+      _cancelCallTimeoutTimer();
+
       emit(CallAccepted());
       isLiveCallActive = true;
+
+      // Store call data for service
+      if (targetUserId != null && callerName != null) {
+        await _storeCallDataForService(targetUserId!, callerName!);
+      }
+
+      _foregroundService.startCallService(
+        callerName: callerName ?? 'Unknown',
+        targetUserId: targetUserId?.toString() ?? '0',
+        isVideoCall: false,
+      );
+
+      await _foregroundService.callConnected();
+
       FlutterCallkitIncoming.setCallConnected("sdkjcslkcmslkcmsdc");
 
       if (await Vibration.hasVibrator() ?? false) {
-        Vibration.vibrate(duration: 500); 
+        Vibration.vibrate(duration: 500);
       }
-
     });
 
     callSocket.on('call-rejected', (data) async {
@@ -159,7 +301,28 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
       // if (callerId != null) {
       //   await rejectCallWithApi(callerId);
       // }
+      //await _foregroundService.stopForegroundService();
+      _cancelCallTimeoutTimer();
+      isLiveCallActive = false;
+
+      await _foregroundService.stopCallService();
+
       endCall();
+    });
+
+    // In CallSocketHandleCubit - update the call-error handler
+    callSocket.on('call-error', (data) async {
+      final String errorMessage = data['message'] ?? 'Unknown error';
+
+      // Check if it's a "another call" error
+      if (errorMessage.toLowerCase().contains('another call') ||
+          errorMessage.toLowerCase().contains('already in call')) {}
+
+      emit(CallErrorState(errorMessage));
+
+      // // Also stop services if needed
+      // await _foregroundService.stopCallService();
+      // _cancelCallTimeoutTimer();
     });
 
     callSocket.on('signal', (data) async {
@@ -178,8 +341,8 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
           await connectNewUser(from, int.parse(userId ?? '0'));
           await peerConnections[from.toString()]?.setRemoteDescription(rtcDesc);
 
-          // ✅ Ensure local media is initialized
-          _localStream ??= await navigator.mediaDevices.getUserMedia({'audio': true});
+          _localStream ??=
+              await navigator.mediaDevices.getUserMedia({'audio': true});
 
           final answer = await peerConnections[from.toString()]!.createAnswer();
           await peerConnections[from.toString()]!.setLocalDescription(answer);
@@ -205,8 +368,15 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
     });
 
     callSocket.on('call-ended', (data) async {
+      _cancelCallTimeoutTimer();
+
       isLiveCallActive = false;
-      
+
+      await _foregroundService.callDisconnected();
+
+      await Future.delayed(Duration(seconds: 2));
+      await _foregroundService.stopCallService();
+
       FlutterCallkitIncoming.endCall("sdkjcslkcmslkcmsdc");
 
       await hangup();
@@ -220,7 +390,6 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
     });
 
     callSocket.on("call-resume", (_) {
-      _muteLocalAudio(false);
       emit(CallResumed());
     });
 
@@ -254,11 +423,13 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
         },
         body: jsonEncode(body),
       );
-      print('Call log added successfully: ${response.body} __ ${body}');
+      print('Call log added successfully: ${response.body} __ $body');
       if (response.statusCode == 200) {
       } else {
-        print('Failed to add call log. Status code: ${response.statusCode}');
-        print('Response body: ${response.body}');
+        if (kDebugMode) {
+          print('Failed to add call log. Status code: ${response.statusCode}');
+          print('Response body: ${response.body}');
+        }
       }
     } catch (e) {
       print('Error posting call log: $e');
@@ -266,35 +437,38 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
   }
 
   Future<void> sendCallEndNotification(int userId) async {
-  final url = Uri.parse('https://picturoenglish.com/api/callend-fcm-push-notifications.php')
-      .replace(queryParameters: {
-    'user_id': userId.toString(),
-    'type': "end_call",
-  });
+    final url = Uri.parse(
+            'https://picturoenglish.com/api/callend-fcm-push-notifications.php')
+        .replace(queryParameters: {
+      'user_id': userId.toString(),
+      'type': "end_call",
+    });
 
-  SharedPreferences pref = await SharedPreferences.getInstance();
-  String? token = pref.getString("auth_token");
+    SharedPreferences pref = await SharedPreferences.getInstance();
+    String? token = pref.getString("auth_token");
 
-  try {
-    final response = await http.post(
-      url,
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-      },
-    );
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+      );
 
-    if (response.statusCode == 200) {
-      log("✅ Call end FCM push notification sent: ${response.body}");
-    } else {
-      log("⚠️ Failed to send call end notification. Code: ${response.statusCode}, Body: ${response.body}");
+      if (response.statusCode == 200) {
+        log("✅ Call end FCM push notification sent: ${response.body}");
+      } else {
+        log("⚠️ Failed to send call end notification. Code: ${response.statusCode}, Body: ${response.body}");
+      }
+    } catch (e) {
+      log("❌ Error sending call end notification: $e");
     }
-  } catch (e) {
-    log("❌ Error sending call end notification: $e");
   }
-}
 
-
+  // void updateCallDurationNotification(String duration) {
+  //   _foregroundService.updateCallDuration(duration);
+  // }
 
   void listenEvent(String event, Function(dynamic) callback) {
     callSocket.on(event, callback);
@@ -338,18 +512,45 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
   }
 
   void acceptCall(int targetUser) async {
-    final prefs = await SharedPreferences.getInstance();
-    String? userId = prefs.getString("user_id");
-    int currentUserId = int.parse(userId ?? "0");
-    await connectNewUser(targetUser, currentUserId);
-    initiateWebRTCCall(
-      targetId: targetUser,
-      currentUserId: currentUserId,
-    );
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      String? userId = prefs.getString("user_id");
+      int currentUserId = int.parse(userId ?? "0");
+      await connectNewUser(targetUser, currentUserId);
+      initiateWebRTCCall(
+        targetId: targetUser,
+        currentUserId: currentUserId,
+      );
 
-    callSocket.emit("call-accepted", {"to": targetUser});
-    isLiveCallActive = true;
-    emit(CallAccepted());
+      callSocket.emit("call-accepted", {"to": targetUser});
+      isLiveCallActive = true;
+
+      //await AppLifecycleService().onCallStarted(targetUser);
+
+      // await _foregroundService.startForegroundService(
+      //   callerName: callerName ?? 'Unknown',
+      //   callDuration: '00:00',
+      //   isVideoCall: false,
+      // );
+      await _foregroundService.startCallService(
+        callerName: callerName ?? 'Unknown',
+        targetUserId: targetUserId?.toString() ?? '0',
+        isVideoCall: false,
+      );
+
+      await _foregroundService.callConnected();
+
+      emit(CallAccepted());
+    } catch (e) {
+      log("❌ Error accepting call: $e");
+      emit(CallErrorState("Failed to accept call: $e"));
+    }
+  }
+
+  void handleCallNotConnected() async {
+    if (!isLiveCallActive) {
+      await _foregroundService.stopCallService();
+    }
   }
 
   void emitCallingFunction({
@@ -362,22 +563,58 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
 
     log("📞 Initiating call to $targettedUserName (ID: $targetId)");
 
+    // _foregroundService.startCallService(
+    //   callerName: targettedUserName,
+    //   isVideoCall: false,
+    // );
+
+    _startCallTimeoutTimer();
+
     print("ldkjmclksdmclkdsc _ ${{
       'from': currentUserId,
       'to': targetId,
       "userName": targettedUserName
     }} _${{'from': currentUserId, 'to': targetId}} ${callSocket.connected}");
+
     callSocket.emit('call-user', {
       'from': currentUserId,
       'to': targetId,
       "type": "incoming_call",
       "caller_id": currentUserId, // ✅ safe replacement
       "receiver_id": targetId,
-      "deep_link": "/call/${currentUserId}"
+      "deep_link": "/call/$currentUserId"
     });
 
     callSocket.emit('incoming-call',
         {'from': currentUserId, 'to': targetId, "userName": targettedUserName});
+  }
+
+  void _startCallTimeoutTimer() {
+    _callTimeoutTimer?.cancel();
+    _callTimeoutTimer = Timer(Duration(seconds: _callTimeoutSeconds), () async {
+      if (!isLiveCallActive) {
+        log("⏰ Call timeout - no answer within $_callTimeoutSeconds seconds");
+
+        // ✅ Stop service on timeout
+        await _foregroundService.stopCallService();
+
+        // Send call end notification if needed
+        if (targetUserId != null) {
+          await sendCallEndNotification(targetUserId!);
+        }
+
+        handleCallNotConnected();
+        emit(CallErrorState("Call timed out"));
+
+        // End the call properly
+        await endCall();
+      }
+    });
+  }
+
+  void _cancelCallTimeoutTimer() {
+    _callTimeoutTimer?.cancel();
+    _callTimeoutTimer = null;
   }
 
   Future<void> initiateWebRTCCall({
@@ -398,42 +635,43 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
   }
 
   Future<void> connectNewUser(int userId, int currentUserId) async {
-  await Helper.setSpeakerphoneOn(false);
+    await Helper.setSpeakerphoneOn(false);
 
-  final pc = await createPeerConnection(_config);
+    final pc = await createPeerConnection(_config);
 
-  // request mic
-  _localStream = await navigator.mediaDevices.getUserMedia({'audio': true});
+    // request mic
+    _localStream = await navigator.mediaDevices.getUserMedia({'audio': true});
 
-  _localStream!.getTracks().forEach((track) => pc.addTrack(track, _localStream!));
+    _localStream!
+        .getTracks()
+        .forEach((track) => pc.addTrack(track, _localStream!));
 
-  pc.onIceCandidate = (RTCIceCandidate candidate) {
-    if (candidate.candidate != null) {
-      callSocket.emit('signal', {
-        'to': userId,
-        'from': currentUserId,
-        'candidate': {
-          'candidate': candidate.candidate,
-          'sdpMid': candidate.sdpMid,
-          'sdpMLineIndex': candidate.sdpMLineIndex,
-        }
-      });
-    }
-  };
+    pc.onIceCandidate = (RTCIceCandidate candidate) {
+      if (candidate.candidate != null) {
+        callSocket.emit('signal', {
+          'to': userId,
+          'from': currentUserId,
+          'candidate': {
+            'candidate': candidate.candidate,
+            'sdpMid': candidate.sdpMid,
+            'sdpMLineIndex': candidate.sdpMLineIndex,
+          }
+        });
+      }
+    };
 
-  pc.onTrack = (event) async {
-    final stream = event.streams.first;
-    if (!remoteRenderers.containsKey(userId.toString())) {
-      final renderer = RTCVideoRenderer();
-      await renderer.initialize();
-      remoteRenderers[userId.toString()] = renderer;
-    }
-    remoteRenderers[userId.toString()]?.srcObject = stream;
-  };
+    pc.onTrack = (event) async {
+      final stream = event.streams.first;
+      if (!remoteRenderers.containsKey(userId.toString())) {
+        final renderer = RTCVideoRenderer();
+        await renderer.initialize();
+        remoteRenderers[userId.toString()] = renderer;
+      }
+      remoteRenderers[userId.toString()]?.srcObject = stream;
+    };
 
-  peerConnections[userId.toString()] = pc;
-}
-
+    peerConnections[userId.toString()] = pc;
+  }
 
   Future<void> muteACall(bool isMuted) async {
     // Mute/unmute local stream
@@ -465,17 +703,18 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
   Future<void> hangup() async {
     isLiveCallActive = false;
     emit(state);
-    
-    if (await Vibration.hasVibrator() ?? false) {
-    Vibration.vibrate(duration: 500); // 0.5 second vibration
-  }
+
+    if (isLiveCallActive == true) {
+      if (await Vibration.hasVibrator() ?? false) {
+        Vibration.vibrate(duration: 500);
+      }
+    }
 
     await releaseAudioFocus();
-    // Stop and dispose local stream
 
     if (_localStream != null) {
       for (var track in _localStream!.getTracks()) {
-        track.stop(); // Stops mic & camera
+        track.stop();
       }
       _localStream!.dispose();
       _localStream = null;
@@ -512,20 +751,38 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
 
   Future<bool> endCall() async {
     // if(userOpenCallingPage){
+    try {
+      emit(CallRejected());
+      await _clearStoredCallData();
+      // }
+      //await AppLifecycleService().onCallEnded();
+      //await _foregroundService.callDisconnected();
+      if (isLiveCallActive == true) {
+        await _foregroundService.stopCallService();
+      }
 
-    emit(CallRejected());
-    // }
-    callSocket.emit('end-call', {'to': targetUserId});
-    await hangup();
-    await FlutterCallkitIncoming.endAllCalls();
-    return true;
+      callSocket.emit('end-call', {'to': targetUserId});
+      await hangup();
+
+      // await Future.delayed(Duration(seconds: 1));
+      // await _foregroundService.stopCallService();
+
+      await FlutterCallkitIncoming.endAllCalls();
+      requestRemainingMinutes();
+
+      return true;
+    } catch (e) {
+      log("❌ Error ending call: $e");
+      emit(CallErrorState("Failed to end call: $e"));
+      return false;
+    }
   }
 
   Future<void> disposeLocalRender() async {
     List<MediaStreamTrack> data = localRenderer.srcObject!.getTracks();
-    data.forEach((track) {
+    for (var track in data) {
       track.stop();
-    });
+    }
     if (localRenderer.srcObject != null) {
       final audioTracks = localRenderer.srcObject!.getAudioTracks();
       if (audioTracks.isNotEmpty) {
@@ -576,7 +833,14 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
   }
 
   Future<void> resetCubit() async {
-    emit(CallSocketHandleInitial());
+    final currentMinutes = state.remainingMinutes;
+
+    emit(CallSocketHandleInitial().copyWith(
+      remainingMinutes: currentMinutes,
+    ));
+
+    _remainingMinutesProvider?.updateRemainingMinutes(currentMinutes);
+    requestRemainingMinutes();
   }
 }
 

@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_callkit_incoming/entities/call_event.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
@@ -17,13 +20,16 @@ import 'package:picturo_app/classes/helper/bot_calls_refresh.dart';
 import 'package:picturo_app/classes/services/connectivity_service.dart';
 import 'package:picturo_app/classes/services/notification_service.dart';
 import 'package:picturo_app/classes/services/typing_state_manager.dart';
+import 'package:picturo_app/cubits/call_controls/call_controls_cubit.dart';
 import 'package:picturo_app/cubits/premium_cubit/premium_plans_cubit.dart';
 import 'package:picturo_app/cubits/referal_cubit/referal_cubit.dart';
 import 'package:picturo_app/cubits/user_status/user_status_cubit.dart';
+import 'package:picturo_app/providers/audiosettingsprovider.dart';
 import 'package:picturo_app/providers/bankaccountprovider.dart';
 import 'package:picturo_app/providers/online_status_provider.dart';
 import 'package:picturo_app/providers/profileprovider.dart';
-import 'package:picturo_app/providers/remaining_bot_calls_provider';
+import 'package:picturo_app/providers/remaining_bot_calls_provider.dart';
+import 'package:picturo_app/providers/remaining_minutes_provider.dart';
 import 'package:picturo_app/providers/requests_provider.dart';
 import 'package:picturo_app/providers/unread_count_provider.dart';
 import 'package:picturo_app/providers/userprovider.dart';
@@ -35,6 +41,8 @@ import 'package:picturo_app/screens/splashscreenpage.dart';
 import 'package:picturo_app/screens/voicecallscreen.dart';
 import 'package:picturo_app/services/api_service.dart';
 import 'package:picturo_app/services/app_lifecycle_manager.dart';
+import 'package:picturo_app/services/applifecycleservice.dart';
+import 'package:picturo_app/services/call_foreground_service.dart';
 import 'package:picturo_app/services/chat_socket_service.dart';
 import 'package:picturo_app/services/global_service.dart';
 import 'package:picturo_app/services/navigation_service.dart';
@@ -43,6 +51,7 @@ import 'package:picturo_app/services/socket_notifications_service.dart';
 import 'package:picturo_app/socket/socketservice.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shimmer/main.dart';
 
 import 'cubits/bottom_navigator_index_cubit.dart';
 import 'cubits/call_cubit/call_duration_handler/call_duration_handle_cubit.dart';
@@ -167,11 +176,60 @@ Future<void> setupFlutterNotifications() async {
   await flutterLocalNotificationsPlugin.initialize(initializationSettings);
 }
 
+Future<void> _handleCallOnError() async {
+  try {
+    // Try to end any active call when error occurs
+    await FlutterCallkitIncoming.endAllCalls();
+
+    // Notify server about unexpected call ending
+    final prefs = await SharedPreferences.getInstance();
+    final hadActiveCall = prefs.getBool('last_active_call') ?? false;
+
+    if (hadActiveCall) {
+      final apiService = await ApiService.create();
+      final userId = prefs.getString('user_id');
+      final targetId = prefs.getString('last_call_target_id');
+
+      if (userId != null && targetId != null) {
+        await apiService.rejectCall(
+          int.parse(userId),
+          int.parse(targetId),
+        );
+      }
+    }
+  } catch (e) {
+    log('❌ Error in error handler: $e');
+  }
+}
+
 String? initialNotificationPayload;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   //await AppLifecycleManager().initialize();
+
+  await ForegroundService().initializeService();
+
+  final ongoingCall = await ForegroundService().getOngoingCallData();
+
+  FlutterError.onError = (details) {
+    log('🚨 FLUTTER ERROR: ${details.exception}');
+    log('Stack trace: ${details.stack}');
+
+    // Try to end call on flutter error
+    _handleCallOnError();
+  };
+
+  // Platform-level error handling
+  PlatformDispatcher.instance.onError = (error, stack) {
+    log('🚨 PLATFORM ERROR: $error');
+    log('Stack trace: $stack');
+
+    // Try to end call on platform error
+    _handleCallOnError();
+
+    return true; // Prevent app from crashing
+  };
 
   await setupFlutterNotifications();
 
@@ -272,12 +330,15 @@ void main() async {
         ChangeNotifierProvider(create: (_) => TypingStateManager()),
         ChangeNotifierProvider(create: (_) => ConnectivityService()),
         ChangeNotifierProvider(create: (_) => RemainingBotCallsProvider()),
+        ChangeNotifierProvider(create: (_) => AudioSettingsProvider()),
+        ChangeNotifierProvider(create: (_) => RemainingMinutesProvider()),
         ChangeNotifierProvider(
             create: (_) => RequestsProvider()..fetchRequestsCount()),
         ChangeNotifierProvider(
             create: (_) => UnreadCountProvider()..totalUnreadCount),
         BlocProvider(
             create: (context) => CallSocketHandleCubit()..initCallSocket()),
+        BlocProvider(create: (context) => CallControlsCubit()),
         BlocProvider(create: (context) => DragLearnCubit()),
         BlocProvider(create: (context) => SubtopicCubit()),
         BlocProvider(create: (context) => AvatarCubit()),
@@ -298,17 +359,26 @@ void main() async {
         BlocProvider(create: (context) => ReferralCubit()),
         BlocProvider(create: (_) => UserStatusCubit())
       ],
-      child:Builder(
-      builder: (context) {
-        // 👇 inject the cubit into ChatSocket
-        ChatSocket.init(context.read<UserStatusCubit>());
-         WidgetsBinding.instance.addPostFrameCallback((_) {
-        context.read<RemainingBotCallsProvider>().fetchRemainingBotCalls();
-      });
-      
-        return const MyApp();
-      },
-    ),
+      child: Builder(
+        builder: (context) {
+          // 👇 inject the cubit into ChatSocket
+          ChatSocket.init(context.read<UserStatusCubit>());
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            context.read<RemainingBotCallsProvider>().fetchRemainingBotCalls();
+          });
+          // AppLifecycleService().initialize(
+          //   onCallEnd: () async {
+          //     try {
+          //       await context.read<CallSocketHandleCubit>().endCall();
+          //     } catch (e) {
+          //       log('❌ Error in lifecycle call end: $e');
+          //     }
+          //   },
+          // );
+
+          return const MyApp();
+        },
+      ),
     ),
   );
 }
@@ -320,14 +390,19 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   String? _currentUuid;
   bool _handledInitialNotification = false;
+  final MethodChannel _callChannel = MethodChannel('picturo_call_service');
 
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
+    _handleInitialIntent();
+
     if (initialNotificationPayload != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _handleNotificationNavigation(initialNotificationPayload!);
@@ -337,6 +412,14 @@ class _MyAppState extends State<MyApp> {
     }
     _initializeApp();
     checkAndNavigationCallingPage();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Check for intents when app comes to foreground
+      _handleInitialIntent();
+    }
   }
 
   @override
@@ -360,6 +443,65 @@ class _MyAppState extends State<MyApp> {
 
       await profileProvider.initialize();
     }
+  }
+
+
+  Future<void> _handleInitialIntent() async {
+    try {
+      // First check getInitialIntent
+      final intentData = await _callChannel.invokeMethod('getInitialIntent');
+      if (intentData != null && intentData is Map) {
+        final openCallScreen = intentData['open_call_screen'] == true;
+        if (openCallScreen) {
+          final callerName = intentData['caller_name'] ?? 'Unknown';
+          final callerId = intentData['caller_id'] ?? 0;
+          final isVideoCall = intentData['is_video_call'] == true;
+
+          log("📞 Navigating from getInitialIntent: $callerName, $callerId");
+          _navigateToVoiceCallScreen(callerId, callerName, isVideoCall);
+          return;
+        }
+      }
+
+      // If no intent data, check pending call data
+      final pendingData = await _callChannel.invokeMethod('getPendingCallData');
+      if (pendingData != null && pendingData is Map) {
+        final hasPendingCall = pendingData['has_pending_call'] == true;
+        if (hasPendingCall) {
+          final callerName = pendingData['caller_name'] ?? 'Unknown';
+          final callerId =
+              int.tryParse(pendingData['caller_id']?.toString() ?? '0') ?? 0;
+          final isVideoCall = pendingData['is_video_call'] == true;
+
+          log("📞 Navigating from pending call data: $callerName, $callerId");
+          _navigateToVoiceCallScreen(callerId, callerName, isVideoCall);
+        }
+
+      }
+    } catch (e) {
+      log('Error handling initial intent: $e');
+    }
+  }
+
+  void _navigateToVoiceCallScreen(
+      int callerId, String callerName, bool isVideoCall) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final context = NavigationService.instance.navigationKey.currentContext;
+      if (context != null &&
+          ModalRoute.of(context)?.settings.name != '/voice-call') {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (context) => VoiceCallScreen(
+              callerId: callerId,
+              callerName: callerName,
+              callerImage: '',
+              isIncoming: false,
+            ),
+          ),
+          (route) => false,
+        );
+      }
+    });
   }
 
   void _handleNotificationNavigation(String payload) async {
@@ -506,6 +648,7 @@ class _MyAppState extends State<MyApp> {
         Future.delayed(Duration.zero, () {
           if (contextx.mounted) {
             int target = int.parse(currentCall["extra"]['userId'] ?? "0");
+            callerName = "${currentCall['nameCaller']}";
 
             Navigator.push(
               contextx,
@@ -516,7 +659,9 @@ class _MyAppState extends State<MyApp> {
                     callerImage: '',
                     isIncoming: false),
               ),
-            );
+            ).then((val) {
+              Homepage();
+            });
           }
         });
       }
@@ -545,8 +690,8 @@ class _MyAppState extends State<MyApp> {
     String initialRoute = '/';
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-        BotCallsRefreshService.startPeriodicRefresh(context);
-      });
+      BotCallsRefreshService.startPeriodicRefresh(context);
+    });
 
     // If app opened from terminated state via notification
     if (initialNotificationPayload != null) {
@@ -565,7 +710,7 @@ class _MyAppState extends State<MyApp> {
                         callerName: "${callerName}",
                         callerImage: '',
                         isIncoming: false)
-                    : const LoadedrSatste()
+                    : const SplashScreen()
                 : const SplashScreen()));
   }
 }
@@ -621,10 +766,22 @@ class _UserPageState extends State<UserPage> {
 class ChatScreenTracker {
   static String? activeChatUserId;
 
-  static bool isInChatWithUser(String userId) {
-    return activeChatUserId == userId;
+  static final _remainingMinutesController = StreamController<int>.broadcast();
+  static Stream<int> get remainingMinutesStream =>
+      _remainingMinutesController.stream;
+
+  static void updateRemainingMinutes(int minutes) {
+    _remainingMinutesController.add(minutes);
   }
+
+  static void dispose() {
+    _remainingMinutesController.close();
+  }
+
+  static bool isInChatWithUser(String userId) => activeChatUserId == userId;
 }
+
+
 
 // class AppLifecycleService with WidgetsBindingObserver {
 //   static final AppLifecycleService _instance = AppLifecycleService._internal();

@@ -1,9 +1,6 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"  package="com.picturoenglish.picturo">
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"  package="com.picturo.picturoenglish">
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
-    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.INTERNET"/>
@@ -19,13 +16,13 @@
     <uses-permission android:name="android.permission.BLUETOOTH"/>
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_PHONE_CALL" />
     <uses-permission android:name="android.permission.MANAGE_OWN_CALLS" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.READ_CALL_LOG" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
-<uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.VIBRATE" />
 
 
 
@@ -59,6 +56,7 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        
 
 
 
@@ -74,10 +72,70 @@
 
     
 </receiver>
+
+ <!-- <service
+        android:name=".CallService"
+        android:enabled="true"
+        android:exported="false" />
+        
+    <receiver
+        android:name=".CallActionReceiver"
+        android:enabled="true"
+        android:exported="false">
+        <intent-filter>
+            <action android:name="HANGUP_ACTION" />
+        </intent-filter>
+    </receiver>
+    
+
+ <service
+        android:name="io.flutter.plugins.firebase.messaging.FlutterFirebaseMessagingBackgroundService"
+        android:exported="false" />
+    
+    <service
+        android:name="io.flutter.plugins.firebase.messaging.FlutterFirebaseMessagingService"
+        android:exported="false">
+        <intent-filter>
+            <action android:name="com.google.firebase.MESSAGING_EVENT" />
+        </intent-filter>
+    </service> -->
+    
+
+    <service
+    android:name=".CallForegroundService"
+    android:enabled="true"
+    android:exported="false"
+    android:foregroundServiceType="microphone|phoneCall" />
+
+    
+
+    <service
+        android:name="com.shadow.blackhole.FlutterBackgroundService"
+        android:enabled="true"
+        android:exported="false" />
+
+    <service
+    android:name="id.flutter.flutter_background_service.BackgroundService"
+    android:exported="true"
+   android:permission="android.permission.FOREGROUND_SERVICE"
+    android:foregroundServiceType="microphone|phoneCall|mediaProjection|connectedDevice" />
+
+
+     <service
+        android:name="com.chaudhary.flutterbackgroundservice.FlutterBackgroundService"
+        android:enabled="true"
+        android:exported="false" 
+        
+        android:foregroundServiceType="microphone|phoneCall"/>
+        
+    <meta-data
+        android:name="flutterBackgroundService"
+        android:resource="@xml/background_service_config" />
+
         <service
             android:name="com.dexterous.flutterlocalnotifications.ForegroundService"
             android:exported="false"
-            android:foregroundServiceType="mediaProjection|microphone|camera|dataSync" />
+            android:foregroundServiceType="microphone" />
 
             <service
     android:name="io.wazo.callkeep.VoiceConnectionService"

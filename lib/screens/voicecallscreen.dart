@@ -3,11 +3,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:picturo_app/classes/services/native_foreground_service.dart';
 import 'package:picturo_app/cubits/call_cubit/call_socket_handle_cubit.dart';
+import 'package:picturo_app/providers/audiosettingsprovider.dart';
 import 'package:picturo_app/screens/homepage.dart';
+import 'package:phone_state/phone_state.dart'; // ADD THIS
 
 import '../cubits/call_cubit/call_duration_handler/call_duration_handle_cubit.dart';
-
 
 class VoiceCallScreen extends StatefulWidget {
   final int callerId;
@@ -27,27 +30,221 @@ class VoiceCallScreen extends StatefulWidget {
   _VoiceCallScreenState createState() => _VoiceCallScreenState();
 }
 
-class _VoiceCallScreenState extends State<VoiceCallScreen> {
+class _VoiceCallScreenState extends State<VoiceCallScreen>
+    with WidgetsBindingObserver {
   bool isMuted = false;
   bool isSpeakerOn = false;
   bool isKeypadVisible = false;
   bool showCallControls = true;
   late MediaStream _localStream;
   late RTCPeerConnection _peerConnection;
+  Timer? _durationUpdateTimer;
+  final NativeForegroundService _foregroundService = NativeForegroundService();
 
+  // NEW: Phone state tracking
+  StreamSubscription<PhoneState>? _phoneStateSubscription;
+  bool _wasAutoMutedBySystemCall = false;
+  bool _wasMutedBeforeSystemCall = false;
+  bool _hasShownLowTimeAlert = false;
 
   @override
   void initState() {
     super.initState();
-    context.read<CallSocketHandleCubit>().resetCubit();
-    if(!context.read<CallSocketHandleCubit>().isLiveCallActive) {
+    WidgetsBinding.instance.addObserver(this);
+
+    if (!context.read<CallSocketHandleCubit>().isLiveCallActive) {
+      context.read<CallSocketHandleCubit>().resetCubit();
       context.read<CallTimerCubit>().resetTimer();
+      context.read<CallSocketHandleCubit>().acceptCall(widget.callerId);
     }
-    context.read<CallSocketHandleCubit>().acceptCall(widget.callerId);
+
     context.read<CallTimerCubit>().startTimer();
 
+    _startDurationUpdateTimer();
+    _initPhoneStateListener(); // NEW: Initialize phone state listener
   }
 
+  @override
+  void dispose() {
+    _durationUpdateTimer?.cancel();
+    _phoneStateSubscription?.cancel(); // NEW: Cancel phone state listener
+    WidgetsBinding.instance.removeObserver(this);
+
+    if (!context.read<CallSocketHandleCubit>().isLiveCallActive) {
+      context.read<CallSocketHandleCubit>().handleCallNotConnected();
+    }
+
+    super.dispose();
+  }
+
+  // NEW: Initialize phone state listener
+  void _initPhoneStateListener() async {
+    try {
+      _phoneStateSubscription = PhoneState.stream.listen((PhoneState status) {
+        print("📱 Phone state changed: ${status.status}");
+        _handlePhoneStateChange(status);
+      }, onError: (error) {
+        print("⚠️ Phone state error: $error");
+        // Permission might not be granted or feature not available
+      });
+    } catch (e) {
+      print("⚠️ Failed to initialize phone state listener: $e");
+      // Handle permission or initialization errors
+    }
+  }
+
+  void _showLowTimeAlertDialog(LowTimeAlert alert) {
+    if (_hasShownLowTimeAlert) return; // Prevent multiple dialogs
+
+    _hasShownLowTimeAlert = true;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false, // User must tap button to close
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.orange[50],
+          icon: Icon(Icons.timer, color: Colors.orange, size: 40),
+          title: Text(
+            'Low Call Time Alert',
+            style: TextStyle(
+              color: Colors.orange[800],
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Text(
+            alert.message,
+            style: TextStyle(fontSize: 16),
+            textAlign: TextAlign.center,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                _hasShownLowTimeAlert = false;
+                Navigator.of(context).pop();
+              },
+              child: Text(
+                'OK',
+                style: TextStyle(
+                  color: Colors.orange[800],
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    ).then((_) {
+      // Reset the flag when dialog is closed
+      _hasShownLowTimeAlert = false;
+    });
+  }
+
+  // NEW: Handle system call state changes
+  void _handlePhoneStateChange(PhoneState phoneState) {
+    final callCubit = context.read<CallSocketHandleCubit>();
+    final audioSettings = context.read<AudioSettingsProvider>();
+
+    switch (phoneState.status) {
+      case PhoneStateStatus.CALL_INCOMING:
+        // System call is just ringing - don't do anything yet
+        print("📞 System call ringing - waiting for answer");
+        break;
+
+      case PhoneStateStatus.CALL_STARTED:
+        // System call CONNECTED - now mute everything
+        print("📞 System call CONNECTED - muting both sides");
+
+        // Store current mute state before auto-muting
+        _wasMutedBeforeSystemCall = audioSettings.isMuted;
+        _wasAutoMutedBySystemCall = true;
+
+        // 1. Mute your microphone (so they don't hear you)
+        if (!audioSettings.isMuted) {
+          audioSettings.setMute(true);
+          callCubit.muteACall(true);
+        }
+
+        // 2. Mute remote audio (so you don't hear them)
+        _muteRemoteAudio(true);
+
+        // 3. DON'T send hold signal - keep connection alive
+        // We're just muting audio, not putting call on hold
+
+        // 4. Pause call timer (optional - since no one is talking)
+        context.read<CallTimerCubit>().pauseTimer();
+        break;
+
+      case PhoneStateStatus.CALL_ENDED:
+        // System call ended
+        print("📞 System call ended - restoring WebRTC audio");
+
+        if (_wasAutoMutedBySystemCall) {
+          // Unmute your microphone if it wasn't manually muted before
+          if (!_wasMutedBeforeSystemCall) {
+            audioSettings.setMute(false);
+            callCubit.muteACall(false);
+          }
+
+          // Unmute remote audio
+          _muteRemoteAudio(false);
+
+          _wasAutoMutedBySystemCall = false;
+        }
+
+        // Resume call timer
+        context.read<CallTimerCubit>().resumeTimer();
+        break;
+
+      case PhoneStateStatus.NOTHING:
+        // No system call activity
+        break;
+    }
+  }
+
+  // NEW: Method to mute/unmute remote audio
+  void _muteRemoteAudio(bool mute) {
+    final callCubit = context.read<CallSocketHandleCubit>();
+
+    // Mute all remote renderers
+    callCubit.remoteRenderers.forEach((key, renderer) {
+      if (renderer.srcObject != null) {
+        final audioTracks = renderer.srcObject!.getAudioTracks();
+        for (var track in audioTracks) {
+          track.enabled = !mute;
+        }
+      }
+    });
+
+    print("🔇 Remote audio ${mute ? 'MUTED' : 'UNMUTED'}");
+  }
+
+  void _startDurationUpdateTimer() {
+    _durationUpdateTimer = Timer.periodic(Duration(seconds: 1), (timer) {
+      final timerState = context.read<CallTimerCubit>().state;
+      final duration = formatDuration(timerState.duration);
+      _foregroundService.updateCallDuration(duration);
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.paused:
+        // App went to background
+        break;
+      case AppLifecycleState.resumed:
+        // App came to foreground
+        break;
+      case AppLifecycleState.detached:
+      case AppLifecycleState.inactive:
+        // Clean up when app is being closed
+        _durationUpdateTimer?.cancel();
+        break;
+      default:
+        break;
+    }
+  }
 
   String formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
@@ -58,38 +255,58 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
   }
 
   void _toggleMute() {
-    setState(() {
-      isMuted = ! isMuted;
-    });
-    context.read<CallSocketHandleCubit>().muteACall(isMuted);
+    final audioSettings = context.read<AudioSettingsProvider>();
+    audioSettings.toggleMute();
+
+    // also update WebRTC mute/unmute:
+    context.read<CallSocketHandleCubit>().muteACall(audioSettings.isMuted);
   }
 
   void _toggleSpeaker() async {
-    await Helper.setSpeakerphoneOn(!isSpeakerOn);
-    setState(() {
-      isSpeakerOn = !isSpeakerOn;
-    });
+    final audioSettings = context.read<AudioSettingsProvider>();
+    await Helper.setSpeakerphoneOn(!audioSettings.isSpeakerOn);
+    audioSettings.toggleSpeaker();
   }
+
   @override
   Widget build(BuildContext context) {
+    final audioSettings = context.watch<AudioSettingsProvider>();
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: BlocBuilder<CallSocketHandleCubit, CallSocketHandleState>(
         builder: (context, state) {
-
-          if(state is CallRejected){
-            context.read<CallTimerCubit>().stopTimer(
-              receiverId: widget.callerId.toString(),
-              callType: "audio",
-              status: "completed",
+          if (state.lowTimeAlert != null && !_hasShownLowTimeAlert) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _showLowTimeAlertDialog(state.lowTimeAlert!);
+            });
+          }
+          
+          if (state is CallErrorState) {
+            Fluttertoast.showToast(
+              msg: state.message,
+              backgroundColor: Colors.red,
+              toastLength: Toast.LENGTH_LONG,
             );
-            Future.delayed(Duration.zero,(){
-                Navigator.pop(context);
+          }
+          if (state is CallRejected) {
+            context.read<CallTimerCubit>().stopTimer(
+                  receiverId: widget.callerId.toString(),
+                  callType: "audio",
+                  status: "completed",
+                );
+
+            Future.microtask(() {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const Homepage()),
+                (route) => false,
+              );
               context.read<CallSocketHandleCubit>().resetCubit();
             });
-          }else if(state is CallOnHold){
+          } else if (state is CallOnHold) {
             context.read<CallTimerCubit>().pauseTimer();
-          }else if(state is CallResumed){
+          } else if (state is CallResumed) {
             context.read<CallTimerCubit>().resumeTimer();
           }
 
@@ -119,7 +336,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
                     children: [
                       CircleAvatar(
                         radius: 60,
-                        backgroundImage:AssetImage('assets/avatar_1.png'),
+                        backgroundImage: AssetImage('assets/avatar_1.png'),
                       ),
                       SizedBox(height: 20),
                       Text(
@@ -130,12 +347,11 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      // SizedBox(height: 10),
                       SizedBox(height: 10),
                       BlocBuilder<CallTimerCubit, CallTimerState>(
                         builder: (context, timerState) {
                           return Text(
-                              (state is CallOnHold)?"Call on Hold":formatDuration(timerState.duration),
+                                formatDuration(timerState.duration),
                             style: TextStyle(fontSize: 16, color: Colors.white),
                           );
                         },
@@ -144,11 +360,9 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
                   ),
 
                   Spacer(),
-
-                  // Call controls
                   if (showCallControls) ...[
                     if (isKeypadVisible) _buildKeypad(),
-                    if (!isKeypadVisible) _buildCallControls(),
+                    if (!isKeypadVisible) _buildCallControls(context),
                   ],
                 ],
               ),
@@ -160,10 +374,9 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
                 child: IconButton(
                   icon: Icon(Icons.arrow_back, color: Colors.white),
                   onPressed: () => Navigator.pushReplacement(
-  context,
-  MaterialPageRoute(builder: (context) => const Homepage()),
-)
-,
+                    context,
+                    MaterialPageRoute(builder: (context) => const Homepage()),
+                  ),
                 ),
               ),
             ],
@@ -173,78 +386,46 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
     );
   }
 
-  Widget _buildCallControls() {
+  Widget _buildCallControls(BuildContext context) {
+    final audioSettings = context.watch<AudioSettingsProvider>();
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 40),
       child: Column(
         children: [
-          // First row of controls
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _buildControlButton(
-                icon: isMuted ? Icons.mic_off : Icons.mic,
+                icon: audioSettings.isMuted ? Icons.mic_off : Icons.mic,
                 label: "Mute",
-                isActive: isMuted,
-                onPressed: (){
-                  _toggleMute();
-                },
+                isActive: audioSettings.isMuted,
+                onPressed: _toggleMute,
               ),
-              // _buildControlButton(
-              //   icon: Icons.dialpad,
-              //   label: "Keypad",
-              //   onPressed: () => setState(() => isKeypadVisible = true),
-              // ),
               _buildControlButton(
-                icon: isSpeakerOn ? Icons.volume_up : Icons.volume_off,
+                icon: audioSettings.isSpeakerOn
+                    ? Icons.volume_up
+                    : Icons.volume_off,
                 label: "Speaker",
-                isActive: isSpeakerOn,
-                onPressed: () {
-                  _toggleSpeaker();
-                },
+                isActive: audioSettings.isSpeakerOn,
+                onPressed: _toggleSpeaker,
               ),
             ],
           ),
-          SizedBox(height: 40),
-          // Second row of controls
-          // Row(
-          //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          //   children: [
-          //     _buildControlButton(
-          //       icon: Icons.person_add,
-          //       label: "Add call",
-          //       onPressed: () {},
-          //     ),
-          //     _buildControlButton(
-          //       icon: Icons.videocam,
-          //       label: "Video",
-          //       onPressed: () {},
-          //     ),
-          //     _buildControlButton(
-          //       icon: Icons.record_voice_over,
-          //       label: "Record",
-          //       onPressed: () {},
-          //     ),
-          //   ],
-          // ),
-          SizedBox(height: 60),
-          // End call button
+          const SizedBox(height: 60),
           GestureDetector(
-            onTap: (){
+            onTap: () {
               context.read<CallSocketHandleCubit>().endCall();
               context.read<CallTimerCubit>().resetTimer();
+              context.read<AudioSettingsProvider>().reset();
             },
             child: Container(
-              padding: EdgeInsets.all(15),
-              decoration: BoxDecoration(
+              padding: const EdgeInsets.all(15),
+              decoration: const BoxDecoration(
                 color: Colors.red,
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                Icons.call_end,
-                color: Colors.white,
-                size: 30,
-              ),
+              child: const Icon(Icons.call_end, color: Colors.white, size: 30),
             ),
           ),
         ],
@@ -346,7 +527,6 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
   Widget _buildKeypadButton(String number, String letters) {
     return GestureDetector(
       onTap: () {
-        // Handle keypad press
         print("Pressed: $number");
       },
       child: Container(
@@ -379,15 +559,3 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
     );
   }
 }
-
-// Example usage:
-// Navigator.push(
-//   context,
-//   MaterialPageRoute(
-//     builder: (context) => VoiceCallScreen(
-//       callerName: "John Doe",
-//       callerImage: "https://example.com/profile.jpg",
-//       isIncoming: false,
-//     ),
-//   ),
-// );

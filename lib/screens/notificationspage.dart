@@ -26,128 +26,124 @@ class NotificationScreen extends StatefulWidget {
 }
 
 class _NotificationScreenState extends State<NotificationScreen> {
-
   @override
   void initState() {
     // TODO: implement initState
     context.read<NotificationCubit>().fetchNotifications();
     super.initState();
   }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<ConnectivityService>(
-    builder: (context, connectivityService, child) {
+        builder: (context, connectivityService, child) {
       final bool isOnline = connectivityService.isOnline;
-      
-        return Stack(
-          children: [
-            DefaultTabController(
-              length: 2,
-              child: Scaffold(
+
+      return Stack(
+        children: [
+          DefaultTabController(
+            length: 2,
+            child: Scaffold(
                 backgroundColor: Color(0xFFE0F7FF),
-                  appBar: CommonAppBar(title:"Notification" ,isFromHomePage: true,),
+                appBar: CommonAppBar(
+                  title: "Notification",
+                  isFromHomePage: true,
+                ),
                 body: Column(
                   children: [
                     // TabBar placed outside of AppBar
-                    TabBar(onTap: (index){
-                      if(index==0){
-            
-                      }
-                      context.read<NotificationCubit>().fetchNotifications();
-                    },
-                      labelStyle: TextStyle(fontWeight: FontWeight.bold,fontFamily: AppConstants.commonFont,),
-            
-                      tabs: [
-              const Tab(text: 'Notifications'),
-              Consumer<RequestsProvider>(
-            builder: (context, requestsProvider, _) {
-              final count = requestsProvider.requestsCount;
-              return Tab(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text('Requests'),
-                    if (count > 0) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        child: Text(
-                          '$count',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                    TabBar(
+                      onTap: (index) {
+                        if (index == 0) {}
+                        context.read<NotificationCubit>().fetchNotifications();
+                      },
+                      labelStyle: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontFamily: AppConstants.commonFont,
                       ),
-                    ],
-                  ],
-                ),
-              );
-            },
-              ),
-            ],
-            
+                      tabs: [
+                        const Tab(text: 'Notifications'),
+                        Consumer<RequestsProvider>(
+                          builder: (context, requestsProvider, _) {
+                            final count = requestsProvider.requestsCount;
+                            return Tab(
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Text('Requests'),
+                                  if (count > 0) ...[
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red,
+                                        borderRadius: BorderRadius.circular(30),
+                                      ),
+                                      child: Text(
+                                        '$count',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ],
                     ),
                     Expanded(
-                      child:
-                Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Color(0xFFE0F7FF),
-                    Color(0xFFEAE4FF),
-                  ], // Set your gradient colors here
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              child:
-                TabBarView(
-                  children: [
-                    DailyTaskTab(),
-                    RequestsPage()
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Color(0xFFE0F7FF),
+                              Color(0xFFEAE4FF),
+                            ], // Set your gradient colors here
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        child: TabBarView(
+                          children: [DailyTaskTab(), RequestsPage()],
+                        ),
+                      ),
+                    ),
                   ],
-                ),
-            
-              ),
-              ),
-                  ],
-                )
-              ),
-            ),
-            if (!isOnline) const OfflineOverlay(),
-          ],
-        );
-      }
-    );
+                )),
+          ),
+          if (!isOnline) const OfflineOverlay(),
+        ],
+      );
+    });
   }
 
   Future<String> _getCurrentUserAvatar() async {
-  try {
-    final apiService = await ApiService.create();
-    final profile = await apiService.fetchProfileDetails();
+    try {
+      final apiService = await ApiService.create();
+      final profile = await apiService.fetchProfileDetails();
 
-    if (profile.user.avatarId == null || profile.user.avatarId == 0) {
-      throw Exception('Using default avatar');
+      if (profile.user.avatarId == null || profile.user.avatarId == 0) {
+        throw Exception('Using default avatar');
+      }
+
+      final avatarResponse = await apiService.fetchAvatars();
+      final avatar = avatarResponse.data.firstWhere(
+        (a) => a.id == profile.user.avatarId,
+        orElse: () => throw Exception('Avatar not found'),
+      );
+
+      return 'https://picturoenglish.com/admin/${avatar.avatarUrl}';
+    } catch (e) {
+      print('Error fetching current user avatar: $e');
+      throw e;
     }
-
-    final avatarResponse = await apiService.fetchAvatars();
-    final avatar = avatarResponse.data.firstWhere(
-      (a) => a.id == profile.user.avatarId,
-      orElse: () => throw Exception('Avatar not found'),
-    );
-
-    return 'https://picturoenglish.com/admin/${avatar.avatarUrl}';
-  } catch (e) {
-    print('Error fetching current user avatar: $e');
-    throw e;
   }
-}
 }
 
 class DailyTaskTab extends StatelessWidget {
@@ -159,93 +155,149 @@ class DailyTaskTab extends StatelessWidget {
       DateTime parsed = DateTime.parse(inputDate);
       return DateFormat('dd-MM-yyyy HH:mm').format(parsed);
     }
+
     return BlocBuilder<NotificationCubit, NotificationState>(
-  builder: (context, state) {
+      builder: (context, state) {
+        if (state is NotificationLoaded) {
+          List<NotificationModel> notifications = state.notifications;
 
-    if(state is NotificationLoaded){
-      List<NotificationModel> notifications=state.notifications;
-
-      return Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: (notifications.isEmpty)?Center(
-          child: Text(
-            'No notification found',
-            style: TextStyle(
-              fontSize: 16,
-              fontFamily: 'Poppins Regular',
-              color: Colors.grey,
+          return Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: (notifications.isEmpty)
+                ? Center(
+                    child: Text(
+                      'No notification found',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontFamily: 'Poppins Regular',
+                        color: Colors.grey,
+                      ),
+                    ),
+                  )
+                : Scrollbar(
+                    child: ListView.builder(
+                        padding: const EdgeInsets.all(8.0),
+                        itemCount: notifications.length,
+                        itemBuilder: (BuildContext context, index) {
+                          return Card(
+                            color: Colors.white,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                            elevation: 2,
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      // SizedBox(width: 8),
+                                      Text('${notifications[index].title},',
+                                          style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              fontFamily: 'Poppins Regular')),
+                                    ],
+                                  ),
+                                  SizedBox(height: 8),
+                                  Text(notifications[index].body,
+                                      style: TextStyle(
+                                          fontSize: 14,
+                                          fontFamily: 'Poppins Regular')),
+                                  SizedBox(height: 12),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                          formatDateTime(
+                                              notifications[index].createdAt),
+                                          style: TextStyle(
+                                              fontSize: 14,
+                                              fontFamily: 'Poppins Regular')),
+                                      ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Color(0xFF49329A),
+                                          shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8)),
+                                        ),
+                                        onPressed: () {
+                                          if ((notifications[index]
+                                                  .body
+                                                  .toString()
+                                                  .toLowerCase()
+                                                  .contains("game") ||
+                                              notifications[index]
+                                                  .title
+                                                  .toLowerCase()
+                                                  .toString()
+                                                  .contains("game"))) {
+                                            context
+                                                .read<
+                                                    BottomNavigatorIndexCubit>()
+                                                .onChageIndex(2);
+                                          } else if (notifications[index]
+                                                  .body
+                                                  .toString()
+                                                  .toLowerCase()
+                                                  .contains("refer") ||
+                                              notifications[index]
+                                                  .title
+                                                  .toLowerCase()
+                                                  .toString()
+                                                  .contains("refer")) {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    ReferralPage(),
+                                              ),
+                                            );
+                                          } else {
+                                            context
+                                                .read<
+                                                    BottomNavigatorIndexCubit>()
+                                                .onChageIndex(0);
+                                          }
+                                        },
+                                        child: Text(
+                                            (notifications[index]
+                                                        .body
+                                                        .toString()
+                                                        .toLowerCase()
+                                                        .contains("game") ||
+                                                    notifications[index]
+                                                        .title
+                                                        .toLowerCase()
+                                                        .toString()
+                                                        .contains("game"))
+                                                ? 'Play now'
+                                                : "View",
+                                            style: TextStyle(
+                                                fontFamily: 'Poppins Regular',
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.white)),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }),
+                  ),
+          );
+        } else {
+          return Center(
+            child: SizedBox(
+              height: 28,
+              width: 28,
+              child: CircularProgressIndicator(),
             ),
-          ),
-        ):Scrollbar(
-          child: ListView.builder(
-              padding: const EdgeInsets.all(8.0),
-              itemCount: notifications.length,
-              itemBuilder: (BuildContext context,index){
-            return   Card(
-              color: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              elevation: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        // SizedBox(width: 8),
-                        Text('${notifications[index].title},', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'Poppins Regular')),
-                      ],
-                    ),
-                    SizedBox(height: 8),
-                    Text(notifications[index].body,
-                        style: TextStyle(fontSize: 14, fontFamily: 'Poppins Regular')),
-                    SizedBox(height: 12),
-                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(formatDateTime(notifications[index].createdAt),
-                            style: TextStyle(fontSize: 14, fontFamily: 'Poppins Regular')),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(0xFF49329A),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          ),
-                          onPressed: () {
-                            if((notifications[index].body.toString().toLowerCase().contains("game")||notifications[index].title.toLowerCase().toString().contains("game"))){
-                              context.read<BottomNavigatorIndexCubit>().onChageIndex(2);
-                            } else if(notifications[index].body.toString().toLowerCase().contains("refer")||notifications[index].title.toLowerCase().toString().contains("refer")){
-                               Navigator.push(
-  context,
-  MaterialPageRoute(
-    builder: (context) => ReferralPage(),
-  ),
-);
-                            }
-                            else{
-                              context.read<BottomNavigatorIndexCubit>().onChageIndex(0);
-                            }
-                          },
-                          child: Text((notifications[index].body.toString().toLowerCase().contains("game")||notifications[index].title.toLowerCase().toString().contains("game"))?'Play now':"View", style: TextStyle(fontFamily: 'Poppins Regular', fontWeight: FontWeight.bold, color: Colors.white)),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }),
-        ),
-      );
-
-    }else{
-      return Center(
-        child: SizedBox(
-          height: 28,
-          width: 28,
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-  },
-);
+          );
+        }
+      },
+    );
   }
 }

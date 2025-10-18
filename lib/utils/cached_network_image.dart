@@ -9,6 +9,7 @@ class CachedNetworkImageWidget extends StatelessWidget {
   final double? width;
   final Widget Function(BuildContext, String)? placeHolder;
   final  Widget Function(BuildContext, String, Object)? errorWidget;
+  final Alignment alignment;
 
   const CachedNetworkImageWidget({
     super.key,
@@ -18,7 +19,8 @@ class CachedNetworkImageWidget extends StatelessWidget {
     this.height,
     this.width,
     this.errorWidget,
-    this.placeHolder
+    this.placeHolder,
+    this.alignment = Alignment.center,
 
   });
 
@@ -29,6 +31,7 @@ class CachedNetworkImageWidget extends StatelessWidget {
       child: CachedNetworkImage(
         imageUrl: imageUrl,
         fit: fit,
+        alignment: alignment,
         height: height,
         width: width,
         placeholder:placeHolder?? (context, url) => const Center(

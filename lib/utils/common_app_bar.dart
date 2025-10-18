@@ -8,6 +8,8 @@ import '../cubits/get_avatar_cubit/get_avatar_cubit.dart';
 import '../screens/myprofilepage.dart';
 import '../screens/voicecallscreen.dart';
 import 'common_file.dart';
+
+// ignore: must_be_immutable
 class CommonAppBar extends StatelessWidget implements PreferredSize {
    CommonAppBar({super.key,required this.title,this.isFromHomePage,this.isBackbutton,this.onBackButtonTap,this.actions});
   final String title;
@@ -46,6 +48,7 @@ class CommonAppBar extends StatelessWidget implements PreferredSize {
           ),
         ),
         actions: (actions!=null)?actions:(isFromHomePage!=null&&isFromHomePage==true && actions==null)? [
+           CoinBadge(),
         Padding(
             padding: const EdgeInsets.only(top: 2.0,left: 8, right: 28.0),
             child: Row(mainAxisAlignment: MainAxisAlignment.center,crossAxisAlignment: CrossAxisAlignment.center,
