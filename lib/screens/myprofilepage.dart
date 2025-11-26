@@ -42,7 +42,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
   ApiService? apiService;
   bool _isLoading = true;
   int? _currentAvatarId;
-  final String baseUrl = "https://picturoenglish.com/admin/";
+  final String baseUrl = "https://cdn.jsdelivr.net/gh/Mercurysoftech/PicturoEnglish@main/images_app/";
    late ApiService _apiService;
   
     

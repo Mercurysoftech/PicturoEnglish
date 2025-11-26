@@ -7,10 +7,9 @@ class DragAndLearnLevelModel {
   DragAndLearnLevelModel.fromJson(Map<String, dynamic> json) {
     status = json['status'];
     if (json['data'] != null) {
-      data = <Data>[];
-      json['data'].forEach((v) {
-        data!.add(new Data.fromJson(v));
-      });
+      data = (json['data'] as List)
+          .map((e) => Data.fromJson(e as Map<String, dynamic>))
+          .toList();
     }
   }
 

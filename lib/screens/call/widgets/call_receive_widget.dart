@@ -131,7 +131,7 @@ class _CallAcceptScreenState extends State<CallAcceptScreen> {
                       onTap: () async {
                         context
                             .read<CallSocketHandleCubit>()
-                            .acceptCall(widget.callerId);
+                            .acceptCall(widget.callerId,callerName: widget.callerName);
                         // navigation will be handled by BlocListener
                       },
                       child: Container(

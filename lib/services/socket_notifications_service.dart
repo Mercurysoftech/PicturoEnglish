@@ -11,45 +11,56 @@ class SocketNotificationsService {
       FlutterLocalNotificationsPlugin();
 
   static Future<void> initialize() async {
-    const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher'); // app icon
+  const AndroidInitializationSettings initializationSettingsAndroid =
+      AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    const InitializationSettings initializationSettings =
-        InitializationSettings(android: initializationSettingsAndroid);
+  const DarwinInitializationSettings initializationSettingsIOS =
+      DarwinInitializationSettings(
+    requestAlertPermission: true,
+    requestBadgePermission: true,
+    requestSoundPermission: true,
+  );
 
-    await _notificationsPlugin.initialize(initializationSettings,
-     // 🔹 Handle tap on notification
-      onDidReceiveNotificationResponse: (NotificationResponse response) {
-        if (response.payload != null) {
-          try {
-            final data = jsonDecode(response.payload!);
+  const InitializationSettings initializationSettings = InitializationSettings(
+    android: initializationSettingsAndroid,
+    iOS: initializationSettingsIOS,
+  );
 
-            final senderName = data['sender_username']?.toString() ?? "Unknown";
-            final profilePicId =
-                int.tryParse(data['avatar_id']?.toString() ?? "0") ?? 0;
-            final userId =
-                int.tryParse(data['sender_id']?.toString() ?? "0") ?? 0;
+  await _notificationsPlugin.initialize(
+    initializationSettings,
+    onDidReceiveNotificationResponse: (NotificationResponse response) {
+      if (response.payload != null) {
+        try {
+          final data = jsonDecode(response.payload!);
 
-            Navigator.of(NavigationService.instance.navigationKey.currentContext!)
-                .pushAndRemoveUntil(
-              MaterialPageRoute(
-                builder: (context) => ChatScreen(
-                  avatarWidget:
-                      PushNotificationService.buildUserAvatar(profilePicId),
-                  userName: senderName,
-                  userId: userId,
-                  profilePicId: profilePicId,
-                ),
+          final senderName = data['sender_username']?.toString() ?? "Unknown";
+          final profilePicId =
+              int.tryParse(data['avatar_id']?.toString() ?? "0") ?? 0;
+          final userId =
+              int.tryParse(data['sender_id']?.toString() ?? "0") ?? 0;
+
+          Navigator.of(
+            NavigationService.instance.navigationKey.currentContext!,
+          ).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) => ChatScreen(
+                avatarWidget:
+                    PushNotificationService.buildUserAvatar(profilePicId),
+                userName: senderName,
+                userId: userId,
+                profilePicId: profilePicId,
               ),
-              (route) => false,
-            );
-          } catch (e) {
-            print("⚠️ Error navigating from socket notification: $e");
-          }
+            ),
+            (route) => false,
+          );
+        } catch (e) {
+          print("⚠️ Error navigating from socket notification: $e");
         }
-      },
-      );
-  }
+      }
+    },
+  );
+}
+
 
   static Future<void> showNotification({
     required String title,

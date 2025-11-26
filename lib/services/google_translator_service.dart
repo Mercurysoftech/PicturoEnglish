@@ -13,13 +13,12 @@ class GoogleTranslatorService {
     String sourceLanguage = 'en',
   }) async {
     try {
-      // Validate inputs
       if (apiKey.isEmpty) {
         throw Exception('Google Translate API key is missing');
       }
       
       if (text.isEmpty) {
-        return text; // No need to translate empty text
+        return text; 
       }
       
       if (targetLanguage.isEmpty) {

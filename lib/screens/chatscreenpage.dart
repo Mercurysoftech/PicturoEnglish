@@ -84,7 +84,6 @@ class _ChatScreenState extends State<ChatScreen> {
 
     _initializeProviderConnection();
   }
-
 //--------------------------------------------New Updates Start-----------------------------------
 
   RTCPeerConnection? peerConnection;
@@ -225,7 +224,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       height: 55,
                       child: ElevatedButton(
                         onPressed: () {
-                          Navigator.of(context).pop(); // Close dialog
+                          Navigator.of(context).pop(); 
                           _navigateToPremiumPlans();
                         },
                         style: ElevatedButton.styleFrom(
@@ -255,7 +254,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       height: 55,
                       child: ElevatedButton(
                         onPressed: () {
-                          Navigator.of(context).pop(); // Close dialog
+                          Navigator.of(context).pop(); 
                           setState(() {
                             _showUpgradeDialog = false;
                           });
@@ -320,7 +319,7 @@ class _ChatScreenState extends State<ChatScreen> {
       MaterialPageRoute(
         builder: (context) => PremiumPlansScreen(
           isChatBot: false,
-          isCall: true, // Navigate to call plans specifically
+          isCall: true, 
         ),
       ),
     );
@@ -578,7 +577,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   String getCurrentFormattedTime() {
     final now = DateTime.now();
-    final formatter = DateFormat('hh:mm a'); // 12-hour format with AM/PM
+    final formatter = DateFormat('hh:mm a');
     return formatter.format(now);
   }
 
@@ -595,7 +594,7 @@ class _ChatScreenState extends State<ChatScreen> {
       print("My UserId : ${_userId}");
       final receiverId = widget.userId.toString();
       final now = _formatTimeTo12Hour(
-          DateTime.now().toIso8601String()); // Get current time in ISO format
+          DateTime.now().toIso8601String()); 
       sendMessage(
           _userId.toString(), receiverId, _messageController.text.trim());
       setState(() {
@@ -621,7 +620,6 @@ class _ChatScreenState extends State<ChatScreen> {
       final hour = dateTime.hour;
       final minute = dateTime.minute.toString().padLeft(2, '0');
 
-      // Convert to 12-hour format
       final period = hour >= 12 ? 'PM' : 'AM';
       final twelveHour = hour % 12;
       final displayHour = twelveHour == 0 ? 12 : twelveHour;
@@ -666,7 +664,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 Navigator.pushAndRemoveUntil(
                   context,
                   MaterialPageRoute(builder: (_) => const Homepage()),
-                  (route) => false, // remove everything from backstack
+                  (route) => false, 
                 );
               },
               child: Padding(
@@ -678,7 +676,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     Navigator.pushAndRemoveUntil(
                       context,
                       MaterialPageRoute(builder: (_) => const Homepage()),
-                      (route) => false, // remove everything from backstack
+                      (route) => false, 
                     );
                   },
                 ),
@@ -696,7 +694,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         Navigator.pushAndRemoveUntil(
                           context,
                           MaterialPageRoute(builder: (_) => const Homepage()),
-                          (route) => false, // remove everything from backstack
+                          (route) => false,
                         );
                       },
                       child: SizedBox(
@@ -709,7 +707,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         Navigator.pushAndRemoveUntil(
                           context,
                           MaterialPageRoute(builder: (_) => const Homepage()),
-                          (route) => false, // remove everything from backstack
+                          (route) => false, 
                         );
                       },
                       child: widget.avatarWidget),
@@ -789,14 +787,14 @@ class _ChatScreenState extends State<ChatScreen> {
                                     return;
                                   }
 
-                                  if (context
-                                      .read<CallSocketHandleCubit>()
-                                      .isLiveCallActive) {
-                                    Fluttertoast.showToast(
-                                      msg: "You're already in another call",
-                                      backgroundColor: Colors.orange,
-                                    );
-                                  } else {
+                                  // if (context
+                                  //     .read<CallSocketHandleCubit>()
+                                  //     .isLiveCallActive) {
+                                  //   Fluttertoast.showToast(
+                                  //     msg: "You're already in another call",
+                                  //     backgroundColor: Colors.orange,
+                                  //   );
+                                  // } else {
                                     final prefs =
                                         await SharedPreferences.getInstance();
                                     String? userId = prefs.getString("user_id");
@@ -833,10 +831,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                           ),
                                         ),
                                       );
-
-                                      // Emit socket events
-
-                                      // Reset timer if not in active call
+                                      
                                       if (!context
                                           .read<CallSocketHandleCubit>()
                                           .isLiveCallActive) {
@@ -845,7 +840,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                             .resetTimer();
                                       }
                                     }
-                                  }
+                                  //}
                                 },
                                 borderRadius: BorderRadius.circular(70),
                                 child: Container(
@@ -1015,6 +1010,7 @@ class _ChatScreenState extends State<ChatScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
+          backgroundColor: Colors.white,
           title: Text(
             'Block User',
             style: TextStyle(fontFamily: AppConstants.commonFont),

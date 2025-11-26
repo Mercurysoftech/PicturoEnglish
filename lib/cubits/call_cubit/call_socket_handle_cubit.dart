@@ -12,6 +12,7 @@ import 'package:flutter_callkit_incoming/entities/call_kit_params.dart';
 import 'package:flutter_callkit_incoming/entities/ios_params.dart';
 import 'package:flutter_callkit_incoming/entities/notification_params.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:picturo_app/classes/helper/call_info_storage_helper.dart';
 import 'package:picturo_app/classes/services/native_foreground_service.dart';
 import 'package:picturo_app/providers/remaining_minutes_provider.dart';
 import 'package:picturo_app/services/applifecycleservice.dart';
@@ -84,7 +85,43 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
   //     log("❌ Error making reject call API: $e");
   //   }
   // }
-  
+
+  Future<void> _syncCallerInfoToStorage() async {
+    if (targetUserId != null && callerName != null && callerName!.isNotEmpty) {
+      await CallInfoStorage.saveCallInfo(
+        callerId: targetUserId!,
+        callerName: callerName!,
+      );
+    }
+  }
+
+  Future<void> _loadCallerInfoFromStorage() async {
+    final callInfo = await CallInfoStorage.getCallInfo();
+    if (callInfo != null) {
+      targetUserId = callInfo['callerId'];
+      callerName = callInfo['callerName'];
+      log('✅ Loaded caller info from storage: $callerName (ID: $targetUserId)');
+    }
+  }
+
+  Future<String> getCallerName() async {
+    if (callerName != null &&
+        callerName!.isNotEmpty &&
+        callerName != 'Unknown') {
+      return callerName!;
+    }
+
+    final callInfo = await CallInfoStorage.getCallInfo();
+    if (callInfo != null) {
+      final storedName = callInfo['callerName'];
+      if (storedName != null && storedName.isNotEmpty) {
+        callerName = storedName;
+        return storedName;
+      }
+    }
+
+    return 'Unknown';
+  }
 
   void setRemainingMinutesProvider(RemainingMinutesProvider provider) {
     _remainingMinutesProvider = provider;
@@ -186,6 +223,8 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
     final prefs = await SharedPreferences.getInstance();
     String? userId = prefs.getString("user_id");
 
+    await _loadCallerInfoFromStorage();
+
     //await _foregroundService.initializeService();
 
     callSocket = IO.io(
@@ -215,26 +254,26 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
     });
 
     callSocket.on("low-time-alert", (data) async {
-    final remaining = data['remaining'] ?? 0;
-    final threshold = data['threshold'] ?? 0;
-    final message = data['message'] ?? '';
+      final remaining = data['remaining'] ?? 0;
+      final threshold = data['threshold'] ?? 0;
+      final message = data['message'] ?? '';
 
-    log("⚠️ Low time alert received: $remaining minutes left");
+      log("⚠️ Low time alert received: $remaining minutes left");
 
-    // Emit the low time alert state
-    emit(state.copyWith(
-      lowTimeAlert: LowTimeAlert(
-        remaining: remaining,
-        threshold: threshold,
-        message: message,
-      ),
-    ));
+      // Emit the low time alert state
+      emit(state.copyWith(
+        lowTimeAlert: LowTimeAlert(
+          remaining: remaining,
+          threshold: threshold,
+          message: message,
+        ),
+      ));
 
-    // You can also vibrate or play a sound here
-    if (await Vibration.hasVibrator() ?? false) {
-      Vibration.vibrate(duration: 1000, pattern: [0, 500, 200, 500]);
-    }
-  });
+      // You can also vibrate or play a sound here
+      if (await Vibration.hasVibrator() ?? false) {
+        Vibration.vibrate(duration: 1000, pattern: [0, 500, 200, 500]);
+      }
+    });
 
     callSocket.on("remaining-daily-minutes", (data) {
       final remaining = data['remaining'] ?? 0;
@@ -255,7 +294,10 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
           FlutterCallkitIncoming.endCall("sdkjcslkcmslkcmsdc");
           FlutterCallkitIncoming.endAllCalls();
         });
+
         callerName = friends[findedIndex].friendName;
+        targetUserId = int.parse(from ?? "0");
+        await _syncCallerInfoToStorage();
 
         showFlutterCallNotification(
           callSessionId: 'sdkjcslkcmslkcmsdc',
@@ -272,10 +314,13 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
     callSocket.on('call-accepted', (data) async {
       _cancelCallTimeoutTimer();
 
+      await Future.delayed(const Duration(milliseconds: 500));
       emit(CallAccepted());
+
       isLiveCallActive = true;
 
-      // Store call data for service
+      await _syncCallerInfoToStorage();
+
       if (targetUserId != null && callerName != null) {
         await _storeCallDataForService(targetUserId!, callerName!);
       }
@@ -309,18 +354,14 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
 
       endCall();
     });
-
-    // In CallSocketHandleCubit - update the call-error handler
     callSocket.on('call-error', (data) async {
       final String errorMessage = data['message'] ?? 'Unknown error';
 
-      // Check if it's a "another call" error
       if (errorMessage.toLowerCase().contains('another call') ||
           errorMessage.toLowerCase().contains('already in call')) {}
 
       emit(CallErrorState(errorMessage));
 
-      // // Also stop services if needed
       // await _foregroundService.stopCallService();
       // _cancelCallTimeoutTimer();
     });
@@ -330,7 +371,6 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
       final description = data['description'];
       final candidate = data['candidate'];
 
-      // ✅ FIX: prevent null SDP bug
       if (description == null) {
         log("⚠️ Received null description from $from");
       } else {
@@ -511,11 +551,18 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
     });
   }
 
-  void acceptCall(int targetUser) async {
+  void acceptCall(int targetUser, {String? callerName}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       String? userId = prefs.getString("user_id");
       int currentUserId = int.parse(userId ?? "0");
+
+      this.targetUserId = targetUser;
+      if (callerName != null && callerName.isNotEmpty) {
+        this.callerName = callerName;
+      }
+      await _syncCallerInfoToStorage();
+
       await connectNewUser(targetUser, currentUserId);
       initiateWebRTCCall(
         targetId: targetUser,
@@ -540,6 +587,8 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
 
       await _foregroundService.callConnected();
 
+      await Future.delayed(
+          const Duration(milliseconds: 500)); 
       emit(CallAccepted());
     } catch (e) {
       log("❌ Error accepting call: $e");
@@ -560,6 +609,7 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
   }) {
     callerName = targettedUserName;
     targetUserId = targetId;
+    _syncCallerInfoToStorage();
 
     log("📞 Initiating call to $targettedUserName (ID: $targetId)");
 
@@ -753,7 +803,10 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
     // if(userOpenCallingPage){
     try {
       emit(CallRejected());
+
       await _clearStoredCallData();
+      await CallInfoStorage.clearCallInfo();
+
       // }
       //await AppLifecycleService().onCallEnded();
       //await _foregroundService.callDisconnected();
@@ -834,6 +887,10 @@ class CallSocketHandleCubit extends Cubit<CallSocketHandleState> {
 
   Future<void> resetCubit() async {
     final currentMinutes = state.remainingMinutes;
+    targetUserId = null;
+    callerName = null;
+
+    await CallInfoStorage.clearCallInfo();
 
     emit(CallSocketHandleInitial().copyWith(
       remainingMinutes: currentMinutes,

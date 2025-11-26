@@ -38,7 +38,6 @@ class _LoginScreenState extends State<LoginScreen> {
     _loadSavedCredentials();
   }
 
-  // Load saved credentials if they exist
   Future<void> _loadSavedCredentials() async {
     final prefs = await SharedPreferences.getInstance();
     final savedEmail = prefs.getString('saved_email');
@@ -53,14 +52,12 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // Save credentials to shared preferences
   Future<void> _saveCredentials(String email, String password) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('saved_email', email);
     await prefs.setString('saved_password', password);
   }
 
-  // Clear saved credentials
   Future<void> _clearCredentials() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('saved_email');
@@ -160,11 +157,13 @@ class _LoginScreenState extends State<LoginScreen> {
           _showMessage(response["error"] ?? "Login failed. Please try again.");
         }
       }
-    } catch (e) {
+    } catch (e, stacktrace) {
       setState(() {
         _isLoading = false;
       });
-      _showMessage("An error occurred. Please try again.");
+      print("Login error: $e");
+      print("Stacktrace: $stacktrace");
+      _showMessage("An error occurred: $e");
     } finally {
       setState(() {
         _isLoading = false;
@@ -443,7 +442,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                           ),
-                          SizedBox(height: 30,),
+                          SizedBox(
+                            height: 30,
+                          ),
                           Column(
                             children: [
                               Text(

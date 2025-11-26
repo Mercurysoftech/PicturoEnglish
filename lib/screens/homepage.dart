@@ -10,7 +10,9 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:phone_state/phone_state.dart';
 import 'package:picturo_app/classes/services/connectivity_service.dart';
 import 'package:picturo_app/cubits/bottom_navigator_index_cubit.dart';
+import 'package:picturo_app/cubits/premium_cubit/premium_plans_cubit.dart';
 import 'package:picturo_app/providers/profileprovider.dart';
+import 'package:picturo_app/providers/remaining_minutes_provider.dart';
 import 'package:picturo_app/providers/requests_provider.dart';
 import 'package:picturo_app/providers/unread_count_provider.dart';
 import 'package:picturo_app/responses/books_response.dart';
@@ -29,6 +31,7 @@ import 'package:picturo_app/services/api_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'package:shimmer/shimmer.dart';
 import '../cubits/call_cubit/call_duration_handler/call_duration_handle_cubit.dart';
 import '../cubits/call_cubit/call_socket_handle_cubit.dart';
 import '../cubits/get_avatar_cubit/get_avatar_cubit.dart';
@@ -42,7 +45,7 @@ import '../utils/common_file.dart';
 
 class Homepage extends StatefulWidget {
   final int initialIndex;
-  const Homepage({super.key,this.initialIndex = 0});
+  const Homepage({super.key, this.initialIndex = 0});
 
   @override
   _HomepageState createState() => _HomepageState();
@@ -53,8 +56,7 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver {
   DateTime? lastPressed;
   ApiService? apiService;
   bool _isLoading = true;
-
-  
+  bool _booksLoaded = false;
 
   Future<void> updateFcmToken() async {
     const String url = 'https://picturoenglish.com/api/update_fcm_token.php';
@@ -106,84 +108,9 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver {
     'Notifications',
   ];
 
-  List<Map<String, dynamic>> _gridItems = [
-    {
-      'image': 'assets/verbs.png',
-      'text': 'Verb',
-      'gradient': LinearGradient(
-        colors: [Colors.cyan, Colors.indigo],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      ),
-      'page': TopicsScreen(
-        title: 'Verbs',
-        topicId: 1,
-      ),
-    },
-    {
-      'image': 'assets/adverb.png',
-      'text': 'Adverb',
-      'gradient': LinearGradient(
-        colors: [Color(0xFFDA90FF), Color(0xFF861FBA)],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      ),
-      'page': TopicsScreen(
-        title: 'Adverbs',
-        topicId: 2,
-      ),
-    },
-    {
-      'image': 'assets/adjective.png',
-      'text': 'Adjective',
-      'gradient': LinearGradient(
-        colors: [Color(0xFFFF999B), Color(0xFFA62426)],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      ),
-      'page': TopicsScreen(
-        title: 'Adjectives',
-        topicId: 3,
-      ),
-    },
-    {
-      'image': 'assets/phrasal verb.png',
-      'text': 'Phrasal Verb',
-      'gradient': LinearGradient(
-        colors: [Color(0xFFFFE09D), Color(0xFFE9A004)],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      ),
-      'page': TopicsScreen(
-        title: 'Phrasal Verbs',
-        topicId: 4,
-      ),
-    },
-    {
-      'image': 'assets/idioms.png',
-      'text': 'Idioms',
-      'gradient': LinearGradient(
-        colors: [Color(0xFFFF96FF), Color(0xFFAD07AD)],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      ),
-      'page': TopicsScreen(
-        title: 'Idioms',
-        topicId: 5,
-      ),
-    },
-    {
-      'image': 'assets/waiting.png',
-      'text': 'Coming Soon',
-      'gradient': LinearGradient(
-        colors: [Color(0xFF8B8BC4), Color(0xFF8B8BC4)],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      ),
-      // 'page':ReferralPage(  
-      // )
-    },
-  ];
+  List<Map<String, dynamic>> _gridItems = [];
+  bool _isBooksLoading = true;
+
   String? currentUserId = '';
 
   // Define the different pages/screens for each bottom navigation item
@@ -199,23 +126,51 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     super.initState();
     _currentIndex = widget.initialIndex;
+    final callSocketCubit = context.read<CallSocketHandleCubit>();
 
-    _pages.add(
-        HomeContent(gridItems: _gridItems)); 
+    // Initialize ProfileProvider
+    _initializeProfileProvider();
+
+    _pages.add(HomeContent(gridItems: _gridItems));
     _pages.add(ChatListPage());
     _pages.add(GamesPage());
     _pages.add(NotificationScreen());
 
     initializeServices();
     requestPermission();
-    callSocketInit();
     // handleCall();
-    context.read<CallSocketHandleCubit>().fetchAllUsers();
+    _initializeProviderConnection();
+    //callSocketInit();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await callSocketInit();
+      context.read<CallSocketHandleCubit>().fetchAllUsers();
+    });
+
+    context.read<PlanCubit>().fetchCurrentPlanOnly();
     context.read<UserFriendsCubit>().resetCubit();
-     Future.microtask(() =>
-      Provider.of<RequestsProvider>(context, listen: false)
-          .fetchRequestsCount());
+    Future.microtask(() => Provider.of<RequestsProvider>(context, listen: false)
+        .fetchRequestsCount());
     fetchBooksAndUpdateGrid();
+  }
+
+  void _initializeProviderConnection() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final callSocketCubit = context.read<CallSocketHandleCubit>();
+      final remainingMinutesProvider =
+          Provider.of<RemainingMinutesProvider>(context, listen: false);
+
+      // Set the provider in cubit
+      callSocketCubit.setRemainingMinutesProvider(remainingMinutesProvider);
+
+      // Request initial minutes
+      callSocketCubit.requestRemainingMinutes();
+    });
+  }
+
+  Future<void> _initializeProfileProvider() async {
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
+    await profileProvider.initialize();
   }
 
   Future<bool> requestPermission() async {
@@ -261,16 +216,16 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver {
   //   });
   // }
 
-  void callSocketInit() async {
+  Future<void> callSocketInit() async {
     final prefs = await SharedPreferences.getInstance();
     String? userId = prefs.getString("user_id");
     currentUserId = userId;
     int? profileProvider =
         userId != null && userId != '' ? int.parse(userId) : null;
     if (profileProvider != null) {
-      await context
-          .read<CallSocketHandleCubit>()
-          .initCallSocket();
+      final cubit = context.read<CallSocketHandleCubit>();
+
+      await cubit.initCallSocket(); // wait for initialization
       Future.delayed(Duration(seconds: 2), () {
         context.read<CallSocketHandleCubit>().listenEvent("call-ended", (data) {
           CallTimerState state = context.read<CallTimerCubit>().state;
@@ -324,49 +279,130 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver {
     }
   }
 
-  // Function to fetch books and update _gridItems
   Future<void> fetchBooksAndUpdateGrid() async {
+    setState(() => _isBooksLoading = true);
     try {
-      // Fetch the books data
       final apiService = await ApiService.create();
       BookResponse bookResponse = await apiService.fetchBooks();
 
-      // Extract the book names from the response
-      List<String> bookNames =
-          bookResponse.data.map((book) => book.booksName).toList();
+      if (!bookResponse.hasData) {
+        print("⚠️ No books data received");
+        setState(() => _isBooksLoading = false);
+        return;
+      }
 
-      // Update _gridItems with the fetched book names
+      print("✅ Fetched ${bookResponse.data.length} books from API");
+
       setState(() {
-        // Keep the last item (LSRW Concept) intact
-        _gridItems = _gridItems.take(_gridItems.length - 1).toList();
+        _gridItems.clear();
 
-        // Add the fetched book names to _gridItems
-        for (int i = 0; i < bookNames.length; i++) {
-          if (i < _gridItems.length) {
-            _gridItems[i]['text'] = bookNames[i];
-          } else {
-            _gridItems.add({
-              'image': 'assets/default_image.png', 
-              'text': bookNames[i],
-              'gradient': LinearGradient(
-                colors: [Colors.cyan, Colors.indigo],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-            });
-          }
+        final gradients = [
+          LinearGradient(
+            colors: [Colors.cyan, Colors.indigo],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+          LinearGradient(
+            colors: [Color(0xFFDA90FF), Color(0xFF861FBA)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+          LinearGradient(
+            colors: [Color(0xFFFF999B), Color(0xFFA62426)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+          LinearGradient(
+            colors: [Color(0xFFFFE09D), Color(0xFFE9A004)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+          LinearGradient(
+            colors: [Color(0xFFFF96FF), Color(0xFFAD07AD)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+          LinearGradient(
+            colors: [Color(0xFF89D4FF), Color(0xFF1976D2)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+          LinearGradient(
+            colors: [Color(0xFF8B8BC4), Color(0xFF8B8BC4)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ];
+
+        for (int i = 0; i < bookResponse.data.length; i++) {
+          final book = bookResponse.data[i];
+          final imagePath = book.booksImage ?? '';
+          final imageUrl = imagePath.startsWith('/')
+              ? 'https://picturoenglish.com/admin${imagePath}'
+              : 'https://picturoenglish.com/admin/$imagePath';
+
+          _gridItems.add({
+            'id': book.id,
+            'image': imageUrl,
+            'text': book.booksName,
+            'gradient': gradients[i % gradients.length],
+            'isFromApi': true,
+            'isComingSoon': book.isComingSoon,
+            'page': book.isComingSoon
+                ? null
+                : TopicsScreen(
+                    title: book.booksName,
+                    topicId: book.id,
+                  ),
+          });
         }
 
-        // Add the last item (LSRW Concept) back to the list
-        // _gridItems.add({
-        //   'image': '',
-        //   'text': 'The essential language process',
-        //   'gradient': Color(0xff8b8b8b80),
-        // });
+        _isBooksLoading = false;
+        _pages[0] = HomeContent(gridItems: _gridItems);
       });
     } catch (e) {
-      print("Error fetching books: $e");
+      print("❌ Error fetching books: $e");
+      setState(() => _isBooksLoading = false);
     }
+  }
+
+  void _setDefaultGridItems() {
+    setState(() {
+      _gridItems = [
+        {
+          'image': 'assets/verbs.png',
+          'text': 'Verb',
+          'gradient': LinearGradient(
+            colors: [Colors.cyan, Colors.indigo],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+          'page': TopicsScreen(title: 'Verbs', topicId: 1),
+          'isFromApi': false,
+        },
+        {
+          'image': 'assets/adverb.png',
+          'text': 'Adverb',
+          'gradient': LinearGradient(
+            colors: [Color(0xFFDA90FF), Color(0xFF861FBA)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+          'page': TopicsScreen(title: 'Adverbs', topicId: 2),
+          'isFromApi': false,
+        },
+        {
+          'image': 'assets/waiting.png',
+          'text': 'Coming Soon',
+          'gradient': LinearGradient(
+            colors: [Color(0xFF8B8BC4), Color(0xFF8B8BC4)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+          'isFromApi': false,
+        },
+      ];
+    });
   }
 
   Future<bool> onWillPop() async {
@@ -409,205 +445,220 @@ class _HomepageState extends State<Homepage> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     // ignore: deprecated_member_use
     return Consumer<ConnectivityService>(
-       builder: (context, connectivityService, child) {
-         final bool isOnline = connectivityService.isOnline;
+        builder: (context, connectivityService, child) {
+      final bool isOnline = connectivityService.isOnline;
 
-        return MultiBlocProvider(
-          providers: [
-            BlocProvider(
-              create: (context) => NotificationCubit(),
-            )
-          ],
-          child: BlocBuilder<BottomNavigatorIndexCubit, BottomNavigatorIndexState>(
-            builder: (context, bottomNavState) {
-              if (bottomNavState is BottomNavigatorIndexInitial) {
-                return StreamBuilder<PhoneState>(
-                    stream:
-                        PhoneState.stream, // assuming this is a Stream<PhoneState>
-                    builder: (context, snapshot) {
-                      final state = snapshot.data;
-        
-                      if (snapshot.connectionState == ConnectionState.active &&
-                          state != null) {
-                        // Perform logic based on new PhoneState
-                        if (state.status == PhoneStateStatus.CALL_STARTED) {
-                          // Example: Start a timer
-                          context.read<CallSocketHandleCubit>().onNativeCallStart();
-                          // context.read<CallTimerCubit>().startTimer();
-                        } else if (state.status == PhoneStateStatus.CALL_ENDED) {
-                          context.read<CallSocketHandleCubit>().onNativeCallEnd();
-                        }
+      return MultiBlocProvider(
+        providers: [
+          BlocProvider(
+            create: (context) => NotificationCubit(),
+          )
+        ],
+        child:
+            BlocBuilder<BottomNavigatorIndexCubit, BottomNavigatorIndexState>(
+          builder: (context, bottomNavState) {
+            if (bottomNavState is BottomNavigatorIndexInitial) {
+              return StreamBuilder<PhoneState>(
+                  stream: PhoneState
+                      .stream, // assuming this is a Stream<PhoneState>
+                  builder: (context, snapshot) {
+                    final state = snapshot.data;
+
+                    if (snapshot.connectionState == ConnectionState.active &&
+                        state != null) {
+                      // Perform logic based on new PhoneState
+                      if (state.status == PhoneStateStatus.CALL_STARTED) {
+                        // Example: Start a timer
+                        context
+                            .read<CallSocketHandleCubit>()
+                            .onNativeCallStart();
+                        // context.read<CallTimerCubit>().startTimer();
+                      } else if (state.status == PhoneStateStatus.CALL_ENDED) {
+                        context.read<CallSocketHandleCubit>().onNativeCallEnd();
                       }
-                      return WillPopScope(
-                        onWillPop: onWillPop,
-                        child: Scaffold(
-                          backgroundColor: Color(0xFFE0F7FF),
-                          body: _pages[bottomNavState.selectedIndex],
-                          bottomNavigationBar: BottomNavigationBar(
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.white,
-          currentIndex: bottomNavState.selectedIndex,
-          onTap: (index) {
-        context.read<BottomNavigatorIndexCubit>().onChageIndex(index);
-          },
-          items: List.generate(4, (index) {
-        return BottomNavigationBarItem(
-          icon: index == 3
-              ? Consumer<RequestsProvider>(
-                  builder: (context, requestsProvider, _) {
-                    int count = requestsProvider.requestsCount;
-                    return Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        Image.asset(
-                          bottomNavState.selectedIndex == index
-                              ? _navIconsSelected[index]
-                              : _navIcons[index],
-                          width: 23,
-                          height: 28,
-                          color: bottomNavState.selectedIndex == index
-                              ? Color(0xFF49329A).withValues(alpha: .8)
-                              : Colors.grey.shade500,
+                    }
+                    return WillPopScope(
+                      onWillPop: onWillPop,
+                      child: Scaffold(
+                        backgroundColor: Color(0xFFE0F7FF),
+                        body: _pages[bottomNavState.selectedIndex],
+                        bottomNavigationBar: BottomNavigationBar(
+                          type: BottomNavigationBarType.fixed,
+                          backgroundColor: Colors.white,
+                          currentIndex: bottomNavState.selectedIndex,
+                          onTap: (index) {
+                            context
+                                .read<BottomNavigatorIndexCubit>()
+                                .onChageIndex(index);
+                          },
+                          items: List.generate(4, (index) {
+                            return BottomNavigationBarItem(
+                              icon: index == 3
+                                  ? Consumer<RequestsProvider>(
+                                      builder: (context, requestsProvider, _) {
+                                        int count =
+                                            requestsProvider.requestsCount;
+                                        return Stack(
+                                          clipBehavior: Clip.none,
+                                          children: [
+                                            Image.asset(
+                                              bottomNavState.selectedIndex ==
+                                                      index
+                                                  ? _navIconsSelected[index]
+                                                  : _navIcons[index],
+                                              width: 23,
+                                              height: 28,
+                                              color: bottomNavState
+                                                          .selectedIndex ==
+                                                      index
+                                                  ? Color(0xFF49329A)
+                                                      .withValues(alpha: .8)
+                                                  : Colors.grey.shade500,
+                                            ),
+                                            if (count > 0)
+                                              Positioned(
+                                                right: -6,
+                                                top: -4,
+                                                child: Container(
+                                                  padding: EdgeInsets.all(4),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.red,
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                  constraints: BoxConstraints(
+                                                      minWidth: 18,
+                                                      minHeight: 18),
+                                                  child: Center(
+                                                    child: Text(
+                                                      '$count',
+                                                      style: TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 10,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
+                                        );
+                                      },
+                                    )
+                                  // : index == 1
+                                  //   ? Consumer<UnreadCountProvider>(
+                                  //       builder: (context, unreadCountProvider, _) {
+                                  //         int unread = unreadCountProvider.totalUnreadCount;
+                                  //         return Stack(
+                                  //           clipBehavior: Clip.none,
+                                  //           children: [
+                                  //             Image.asset(
+                                  //             bottomNavState.selectedIndex == index
+                                  //                 ? _navIconsSelected[index]
+                                  //                 : _navIcons[index],
+                                  //             width: 23,
+                                  //             height: 28,
+                                  //             color: bottomNavState.selectedIndex == index
+                                  //                 ? Color(0xFF49329A).withValues(alpha: .8)
+                                  //                 : Colors.grey.shade500,
+                                  //           ),
+                                  //             if (unread > 0)
+                                  //               Positioned(
+                                  //                 right: -6,
+                                  //                 top: -4,
+                                  //                 child: Container(
+                                  //                   padding: EdgeInsets.all(4),
+                                  //                   decoration: BoxDecoration(
+                                  //                     color: Colors.green,
+                                  //                     shape: BoxShape.circle,
+                                  //                   ),
+                                  //                   constraints:
+                                  //                       BoxConstraints(minWidth: 18, minHeight: 18),
+                                  //                   child: Center(
+                                  //                     child: Text(
+                                  //                       '$unread',
+                                  //                       style: TextStyle(
+                                  //                         color: Colors.white,
+                                  //                         fontSize: 10,
+                                  //                         fontWeight: FontWeight.bold,
+                                  //                       ),
+                                  //                     ),
+                                  //                   ),
+                                  //                 ),
+                                  //               ),
+                                  //           ],
+                                  //         );
+                                  //       },
+                                  //     )
+                                  : Image.asset(
+                                      bottomNavState.selectedIndex == index
+                                          ? _navIconsSelected[index]
+                                          : _navIcons[index],
+                                      width: 23,
+                                      height: 28,
+                                      color:
+                                          bottomNavState.selectedIndex == index
+                                              ? Color(0xFF49329A)
+                                                  .withValues(alpha: .8)
+                                              : Colors.grey.shade500,
+                                    ),
+                              label: _navLabels[index],
+                            );
+                          }),
+                          selectedItemColor: Color(0xFF49329A),
+                          selectedLabelStyle:
+                              TextStyle(fontWeight: FontWeight.w800),
+                          unselectedFontSize: 13,
+                          unselectedLabelStyle: TextStyle(
+                              color: Colors.black,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700),
+                          unselectedItemColor: Colors.grey,
                         ),
-                        if (count > 0)
-                          Positioned(
-                            right: -6,
-                            top: -4,
-                            child: Container(
-                              padding: EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: Colors.red,
-                                shape: BoxShape.circle,
-                              ),
-                              constraints: BoxConstraints(minWidth: 18, minHeight: 18),
-                              child: Center(
-                                child: Text(
-                                  '$count',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
+                        floatingActionButton:
+                            (bottomNavState.selectedIndex == 0 && isOnline)
+                                ? ClipOval(
+                                    child: Material(
+                                      color: Color(0xFF49329A),
+                                      child: InkWell(
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                                builder: (context) =>
+                                                    ChatBotScreen()),
+                                          );
+                                        },
+                                        child: Container(
+                                          width: 45,
+                                          height: 45,
+                                          alignment: Alignment.center,
+                                          child: Image.asset(
+                                            'assets/fluent_bot-28-filled.png',
+                                            width: 28,
+                                            height: 28,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                : null,
+                        floatingActionButtonLocation: isOnline
+                            ? FloatingActionButtonLocation.endFloat
+                            : null,
+                      ),
                     );
-                  },
-                ) 
-              // : index == 1
-              //   ? Consumer<UnreadCountProvider>(
-              //       builder: (context, unreadCountProvider, _) {
-              //         int unread = unreadCountProvider.totalUnreadCount;
-              //         return Stack(
-              //           clipBehavior: Clip.none,
-              //           children: [
-              //             Image.asset(
-              //             bottomNavState.selectedIndex == index
-              //                 ? _navIconsSelected[index]
-              //                 : _navIcons[index],
-              //             width: 23,
-              //             height: 28,
-              //             color: bottomNavState.selectedIndex == index
-              //                 ? Color(0xFF49329A).withValues(alpha: .8)
-              //                 : Colors.grey.shade500,
-              //           ),
-              //             if (unread > 0)
-              //               Positioned(
-              //                 right: -6,
-              //                 top: -4,
-              //                 child: Container(
-              //                   padding: EdgeInsets.all(4),
-              //                   decoration: BoxDecoration(
-              //                     color: Colors.green,
-              //                     shape: BoxShape.circle,
-              //                   ),
-              //                   constraints:
-              //                       BoxConstraints(minWidth: 18, minHeight: 18),
-              //                   child: Center(
-              //                     child: Text(
-              //                       '$unread',
-              //                       style: TextStyle(
-              //                         color: Colors.white,
-              //                         fontSize: 10,
-              //                         fontWeight: FontWeight.bold,
-              //                       ),
-              //                     ),
-              //                   ),
-              //                 ),
-              //               ),
-              //           ],
-              //         );
-              //       },
-              //     ) 
-             : Image.asset(
-                          bottomNavState.selectedIndex == index
-                              ? _navIconsSelected[index]
-                              : _navIcons[index],
-                          width: 23,
-                          height: 28,
-                          color: bottomNavState.selectedIndex == index
-                              ? Color(0xFF49329A).withValues(alpha: .8)
-                              : Colors.grey.shade500,
-                        ),
-          label: _navLabels[index],
-        );
-                            }),
-                            selectedItemColor: Color(0xFF49329A),
-                            selectedLabelStyle:
-                                TextStyle(fontWeight: FontWeight.w800),
-                            unselectedFontSize: 13,
-                            unselectedLabelStyle: TextStyle(
-                                color: Colors.black,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700),
-                            unselectedItemColor: Colors.grey,
-                          ),
-                         floatingActionButton: (bottomNavState.selectedIndex == 0 && isOnline)
-    ? ClipOval(
-        child: Material(
-          color: Color(0xFF49329A),
-          child: InkWell(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => ChatBotScreen()),
-              );
-            },
-            child: Container(
-              width: 45,
-              height: 45,
-              alignment: Alignment.center,
-              child: Image.asset(
-                'assets/fluent_bot-28-filled.png',
-                width: 28,
-                height: 28,
-              ),
-            ),
-          ),
+                  });
+            } else {
+              return Scaffold();
+            }
+          },
         ),
-      )
-    : null,
-floatingActionButtonLocation: isOnline
-    ? FloatingActionButtonLocation.endFloat
-    : null,
-
-                        ),
-                      );
-                    });
-              } else {
-                return Scaffold();
-              }
-            },
-          ),
-        );
-      }
-    );
+      );
+    });
   }
 }
 
-// Define the different content widgets for each page
 class HomeContent extends StatefulWidget {
   final List<Map<String, dynamic>> gridItems;
 
@@ -629,6 +680,82 @@ class _HomeContentState extends State<HomeContent> {
     await ChatSocket.connectSocket();
   }
 
+  Widget _buildBookImage(
+      String imageUrl, bool isFromApi, String bookTitle, int bookId) {
+    if (bookTitle == 'Coming Soon') {
+      return Center(
+        child: Icon(
+          Icons.lock,
+          size: 30,
+          color: Colors.white,
+        ),
+      );
+    }
+
+    if (isFromApi && imageUrl.startsWith('http')) {
+      print("🖼️ Loading network image for $bookTitle: $imageUrl");
+      return Image.network(
+        imageUrl,
+        key: ValueKey('img_$bookId'),
+        height: 55,
+        width: 55,
+        fit: BoxFit.cover,
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) {
+            print("✅ Image loaded for $bookTitle");
+            return child;
+          }
+          return Center(
+            child: SizedBox(
+              width: 25,
+              height: 25,
+              child: CircularProgressIndicator(
+                value: loadingProgress.expectedTotalBytes != null
+                    ? loadingProgress.cumulativeBytesLoaded /
+                        loadingProgress.expectedTotalBytes!
+                    : null,
+                color: Colors.white,
+                strokeWidth: 2,
+              ),
+            ),
+          );
+        },
+        errorBuilder: (context, error, stackTrace) {
+          print("❌ Error loading image for $bookTitle ($imageUrl): $error");
+          return Container(
+            color: Colors.white.withOpacity(0.3),
+            child: Icon(
+              Icons.image_not_supported,
+              color: Colors.white,
+              size: 30,
+            ),
+          );
+        },
+      );
+    } else {
+      return Image.asset(
+        imageUrl,
+        key: ValueKey('asset_$bookId'),
+        height: 55,
+        width: 55,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            color: Colors.white.withOpacity(0.3),
+            child: Icon(
+              Icons.book,
+              color: Colors.white,
+              size: 30,
+            ),
+          );
+        },
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     DateTime? lastPressed;
@@ -647,11 +774,11 @@ class _HomeContentState extends State<HomeContent> {
     }
 
     return Consumer<ConnectivityService>(
-    builder: (context, connectivityService, child) {
+        builder: (context, connectivityService, child) {
       final bool isOnline = connectivityService.isOnline;
-      
-        return Stack(
-          children: [
+
+      return Stack(
+        children: [
           WillPopScope(
             onWillPop: onWillPop,
             child: Scaffold(
@@ -661,8 +788,7 @@ class _HomeContentState extends State<HomeContent> {
                 isFromHomePage: true,
               ),
               body: FutureBuilder(
-                future: Future.value(
-                    widget.gridItems), 
+                future: Future.value(widget.gridItems),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return Center(child: CircularProgressIndicator());
@@ -671,6 +797,11 @@ class _HomeContentState extends State<HomeContent> {
                   } else {
                     List<Map<String, dynamic>> items =
                         snapshot.data as List<Map<String, dynamic>>;
+
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const HomeSkeletonLoader();
+                    }
+
                     return Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
@@ -702,104 +833,92 @@ class _HomeContentState extends State<HomeContent> {
                           ),
                           Expanded(
                             child: ListView.builder(
-                              padding: EdgeInsets.only(left: 24, right: 24, top: 5),
+                              padding:
+                                  EdgeInsets.only(left: 24, right: 24, top: 5),
                               itemCount: items.length,
                               itemBuilder: (context, index) {
                                 var gridItem = items[index];
+                                final isFromApi =
+                                    gridItem['isFromApi'] ?? false;
+                                final imageUrl = gridItem['image'] ?? '';
+                                final bookId = gridItem['id'] ?? index;
+                                final bookTitle = gridItem['text'] ?? '';
+
                                 return GestureDetector(
+                                  key: ValueKey('book_$bookId'),
                                   onTap: () {
-                                    if (gridItem['text'] ==
-                                        'Coming Soon') {
+                                    if (bookTitle == 'Coming Soon') {
                                       return;
                                     }
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (context) => gridItem['page']),
-                                    );
+                                    if (gridItem['page'] != null) {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (context) =>
+                                                gridItem['page']),
+                                      );
+                                    }
                                   },
-                                  child: Stack(
-                                    alignment: Alignment.center,
-                                    children: [
-                                      Container(
-                                        margin: EdgeInsets.symmetric(vertical: 10),
-                                        decoration: BoxDecoration(
-                                          gradient:gridItem['gradient'],
-                                          
-                                          borderRadius: BorderRadius.circular(20),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color:
-                                                  Colors.black.withValues(alpha: 0.2),
-                                              spreadRadius: 1,
-                                              blurRadius: 6,
-                                              offset: Offset(0, 3),
-                                            ),
-                                          ],
+                                  child: Container(
+                                    margin: EdgeInsets.symmetric(vertical: 10),
+                                    decoration: BoxDecoration(
+                                      gradient: gridItem['gradient'],
+                                      borderRadius: BorderRadius.circular(20),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.2),
+                                          spreadRadius: 1,
+                                          blurRadius: 6,
+                                          offset: Offset(0, 3),
                                         ),
-                                        child: Row(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.center,
-                                          children: [
-                                            Padding(
-                                              padding: const EdgeInsets.only(
-                                                  left: 18, top: 8, bottom: 8),
-                                              child: Container(
-                                                height: 55,
-                                                width: 55,
-                                                alignment: Alignment.bottomCenter,
-                                                decoration:BoxDecoration(
-                                                        image: DecorationImage(
-                                                          image: AssetImage(
-                                                              gridItem['image']),
-                                                          fit: BoxFit.cover,
-                                                        ),
-                                                      ),
-                                                child: (gridItem['text'] ==
-                                                        'Coming Soon')
-                                                    ? Center(
-                                                        child: Icon(
-                                                        Icons.lock,
-                                                        size: 30,
-                                                        color: Colors.white,
-                                                      ))
-                                                    : null,
+                                      ],
+                                    ),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
+                                      children: [
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                              left: 18, top: 8, bottom: 8),
+                                          child: Container(
+                                            height: 55,
+                                            width: 55,
+                                            alignment: Alignment.center,
+                                            child: ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              child: _buildBookImage(
+                                                imageUrl,
+                                                isFromApi,
+                                                bookTitle,
+                                                bookId,
                                               ),
                                             ),
-                                            SizedBox(width: 15),
-                                            Expanded(
-                                              child: Text(
-                                                "${capitalizeFirstLetter(gridItem['text'])}",
-                                                style: TextStyle(
-                                                  fontSize: 18,
-                                                  fontFamily: AppConstants.commonFont,
-                                                  fontWeight: (gridItem['text'] ==
-                                                          'Coming Soon')
+                                          ),
+                                        ),
+                                        SizedBox(width: 15),
+                                        Expanded(
+                                          child: Text(
+                                            capitalizeFirstLetter(bookTitle),
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontFamily:
+                                                  AppConstants.commonFont,
+                                              fontWeight:
+                                                  (bookTitle == 'Coming Soon')
                                                       ? FontWeight.w500
                                                       : FontWeight.w900,
-                                                  color: Colors.white,
-                                                ),
-                                              ),
+                                              color: Colors.white,
                                             ),
-                                          ],
+                                          ),
                                         ),
-                                      ),
-                                      // if (gridItem['text'] ==
-                                      //     'Coming Soon')
-                                      //   Positioned(
-                                      //     child: Icon(
-                                      //       Icons.lock,
-                                      //       color: Colors.white,
-                                      //       size: 40,
-                                      //     ),
-                                      //   ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 );
                               },
                             ),
                           ),
-                          
                         ],
                       ),
                     );
@@ -809,9 +928,59 @@ class _HomeContentState extends State<HomeContent> {
             ),
           ),
           if (!isOnline) const OfflineOverlay(),
-          ],
-        );
-      }
+        ],
+      );
+    });
+  }
+}
+
+class HomeSkeletonLoader extends StatelessWidget {
+  const HomeSkeletonLoader({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade300,
+      highlightColor: Colors.grey.shade100,
+      child: ListView.builder(
+        padding: const EdgeInsets.only(left: 24, right: 24, top: 10),
+        itemCount: 6,
+        itemBuilder: (context, index) {
+          return Container(
+            margin: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            height: 75,
+            child: Row(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 18),
+                  child: Container(
+                    height: 55,
+                    width: 55,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade400,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 15),
+                Expanded(
+                  child: Container(
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade400,
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 }

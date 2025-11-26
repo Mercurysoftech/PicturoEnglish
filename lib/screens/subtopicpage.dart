@@ -12,44 +12,45 @@ import '../main.dart';
 import '../responses/questions_response.dart';
 import '../utils/common_app_bar.dart';
 
-
 class SubtopicPage extends StatefulWidget {
   final String? title;
   final int? topicId;
   final int? bookId;
   final int? paramsTopicId;
 
-  const SubtopicPage({super.key, this.paramsTopicId,this.title, this.topicId, this.bookId});
+  const SubtopicPage(
+      {super.key, this.paramsTopicId, this.title, this.topicId, this.bookId});
 
   @override
   State<SubtopicPage> createState() => _SubtopicPageState();
 }
 
 class _SubtopicPageState extends State<SubtopicPage> {
-
   @override
   void initState() {
     super.initState();
     context.read<SubtopicCubit>().fetchQuestions(widget.topicId!);
-    context.read<ProgressCubit>().fetchProgress(isFromTopic: true,
-      bookId: widget.bookId ?? 0,
-      topicId: widget.topicId ?? 0,
-    );
+    context.read<ProgressCubit>().fetchProgress(
+          isFromTopic: true,
+          bookId: widget.bookId ?? 0,
+          topicId: widget.topicId ?? 0,
+        );
   }
+
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
-
-      onWillPop: () async{
-        context.read<TopicCubit>().fetchTopics(widget.bookId??0);
+      onWillPop: () async {
+        context.read<TopicCubit>().fetchTopics(widget.bookId ?? 0);
         return true;
       },
       child: Scaffold(
         backgroundColor: Colors.white,
-        appBar: CommonAppBar(onBackButtonTap: (){
-          Navigator.pop(context);
-          context.read<TopicCubit>().fetchTopics(widget.bookId??0);
-        },
+        appBar: CommonAppBar(
+          onBackButtonTap: () {
+            Navigator.pop(context);
+            context.read<TopicCubit>().fetchTopics(widget.bookId ?? 0);
+          },
           title: widget.title ?? '',
           isBackbutton: true,
         ),
@@ -65,7 +66,7 @@ class _SubtopicPageState extends State<SubtopicPage> {
               child: BlocBuilder<SubtopicCubit, SubtopicState>(
                 builder: (context, state) {
                   if (state is SubtopicLoading) {
-                    return const Center(child: CircularProgressIndicator());
+                    return _buildLoadingContent();
                   } else if (state is SubtopicError) {
                     return Center(child: Text(state.message));
                   } else if (state is SubtopicLoaded) {
@@ -78,7 +79,8 @@ class _SubtopicPageState extends State<SubtopicPage> {
                       padding: const EdgeInsets.symmetric(horizontal: 8.0),
                       child: Scrollbar(
                         child: ListView.builder(
-                          key: PageStorageKey('subtopic_list_${widget.topicId}'),
+                          key:
+                              PageStorageKey('subtopic_list_${widget.topicId}'),
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                           itemCount: state.questions.length,
                           itemBuilder: (context, index) {
@@ -113,7 +115,8 @@ class _SubtopicPageState extends State<SubtopicPage> {
         leading: Padding(
           padding: const EdgeInsets.only(top: 15.0, left: 24.0),
           child: IconButton(
-            icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 26),
+            icon:
+                const Icon(Icons.arrow_back_ios, color: Colors.white, size: 26),
             onPressed: () => Navigator.pop(context),
           ),
         ),
@@ -140,19 +143,106 @@ class _SubtopicPageState extends State<SubtopicPage> {
     );
   }
 
+  Widget _buildLoadingContent() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Animated progress indicator with pulse effect
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(40),
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0xFF49329A).withOpacity(0.3),
+                    blurRadius: 10,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: Stack(
+                children: [
+                  Center(
+                    child: CircularProgressIndicator(
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(Color(0xFF49329A)),
+                      strokeWidth: 8,
+                    ),
+                  ),
+                  Center(
+                    child: Icon(
+                      Icons.menu_book,
+                      color: Color(0xFF49329A),
+                      size: 30,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            SizedBox(height: 30),
+
+            // Loading text with better styling
+            Column(
+              children: [
+                Text(
+                  'Please Wait',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Color(0xFF49329A),
+                    fontWeight: FontWeight.bold,
+                    fontFamily: AppConstants.commonFont,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'It may take some time to get contents',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                    fontFamily: AppConstants.commonFont,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 5),
+                Text(
+                  'Loading contents...',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[500],
+                    fontStyle: FontStyle.italic,
+                    fontFamily: AppConstants.commonFont,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildError(String message, BuildContext context) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(message, style: const TextStyle(fontSize: 16, color: Colors.red)),
+          Text(message,
+              style: const TextStyle(fontSize: 16, color: Colors.red)),
           const SizedBox(height: 20),
           ElevatedButton(
-            onPressed: () => context.read<SubtopicCubit>().fetchQuestions(widget.topicId!),
+            onPressed: () =>
+                context.read<SubtopicCubit>().fetchQuestions(widget.topicId!),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF49329A),
               padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
             ),
             child: const Text('Retry', style: TextStyle(color: Colors.white)),
           )
@@ -161,19 +251,25 @@ class _SubtopicPageState extends State<SubtopicPage> {
     );
   }
 
-  Widget optionTile(BuildContext context, int number, Question question, int topicId, int bookId) {
+  Widget optionTile(BuildContext context, int number, Question question,
+      int topicId, int bookId) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
+      onTap: () async {
+        await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) => LearnWordsPage(
               topicId: topicId,
               bookId: bookId.toString(),
               questionId: question.id ?? 0,
+              quesImage: question.qusImage ?? '',
             ),
           ),
         );
+
+        context
+            .read<SubtopicCubit>()
+            .markQuestionAsRead(context, question.id ?? 0, topicId, bookId);
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
@@ -191,7 +287,9 @@ class _SubtopicPageState extends State<SubtopicPage> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: (question.read ?? false) ? Colors.green : const Color(0xFF49329A),
+                  color: (question.read ?? false)
+                      ? Colors.green
+                      : const Color(0xFF49329A),
                   width: 2,
                 ),
               ),
@@ -202,7 +300,9 @@ class _SubtopicPageState extends State<SubtopicPage> {
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   fontFamily: AppConstants.commonFont,
-                  color: (question.read ?? false) ? Colors.green : const Color(0xFF49329A),
+                  color: (question.read ?? false)
+                      ? Colors.green
+                      : const Color(0xFF49329A),
                 ),
               ),
             ),

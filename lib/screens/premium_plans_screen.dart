@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../cubits/premium_cubit/premium_plans_cubit.dart';
@@ -54,90 +56,63 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
     }
   }
 
-  // Filter plans based on isChatBot or isCall
   List<PlanModel> _filterPlans(List<PlanModel> allPlans) {
     if (_showAllPlans) {
       return allPlans.where((plan) => plan.name != "refferal_amount").toList();
     }
 
     if (widget.isChatBot) {
-      // Show only chatbot-related plans (plans with chatbot features)
       return allPlans.where((plan) {
         return plan.name != "refferal_amount" &&
-            (plan.chatbotPromptLimit != null &&
-                int.tryParse(plan.chatbotPromptLimit ?? '0') != null &&
-                int.parse(plan.chatbotPromptLimit ?? '0') > 0);
+            plan.type == "chatbot";
       }).toList();
     } else if (widget.isCall) {
-      // Show only call-related plans (plans with call features)
       return allPlans.where((plan) {
         return plan.name != "refferal_amount" &&
-            ((plan.callLimitPerDay ?? 0) > 0 || plan.isUnlimitedCall == 1);
+            plan.type == "voice_call";
       }).toList();
     } else {
-      // Show all plans except referral_amount
       return allPlans.where((plan) => plan.name != "refferal_amount").toList();
     }
   }
 
+  // Helper methods to identify specific plans
+  bool _isFreePlan(PlanModel plan) {
+    return plan.price == "0.00" || plan.price == "0";
+  }
+
   bool _is300RsPlan(PlanModel plan) {
-    return plan.price?.contains('300') == true ||
-        plan.price?.contains('₹300') == true ||
-        plan.price?.contains('300') == true;
-  }
-
-  bool _is250RsPlan(PlanModel plan) {
-    return plan.price?.contains('250') == true ||
-        plan.price?.contains('₹250') == true ||
-        plan.price?.contains('250') == true;
-  }
-
-  bool _is15RsBotPlan(PlanModel plan) {
-    final price = plan.price?.toLowerCase() ?? '';
-    final type = plan.type?.toLowerCase() ?? '';
-    final name = plan.name?.toLowerCase() ?? '';
-
-    final is15Rs = price.contains('15') ||
-        price.contains('₹15') ||
-        price.contains('15') ||
-        (plan.price != null &&
-            double.tryParse(plan.price!.replaceAll('₹', '').trim()) == 15);
-
-    final isBotPlan = type.contains('chatbot') ||
-        type.contains('chat') ||
-        name.contains('chatbot') ||
-        name.contains('chat') ||
-        (plan.chatbotPromptLimit != null &&
-            plan.chatbotPromptLimit!.isNotEmpty) ||
-        plan.isUnlimitedChat == 1;
-
-    return is15Rs && isBotPlan;
+    return plan.price == "300.00" && plan.type == "voice_call";
   }
 
   bool _is15RsCallPlan(PlanModel plan) {
-    final price = plan.price?.toLowerCase() ?? '';
-    final type = plan.type?.toLowerCase() ?? '';
-    final name = plan.name?.toLowerCase() ?? '';
+    return plan.price == "15.00" && plan.type == "voice_call" && plan.isUnlimitedCall == 1;
+  }
 
-    final is15Rs = price.contains('15') ||
-        price.contains('₹15') ||
-        price.contains('15') ||
-        (plan.price != null &&
-            double.tryParse(plan.price!.replaceAll('₹', '').trim()) == 15);
+  bool _is15RsBotPlan(PlanModel plan) {
+    return plan.price == "15.00" && plan.type == "chatbot" && plan.chatbotPromptLimit == "33";
+  }
 
-    final isCallPlan = type.contains('voice_call') ||
-        type.contains('call') ||
-        name.contains('call') ||
-        (plan.callLimitPerDay != null && plan.callLimitPerDay! > 0) ||
-        plan.isUnlimitedCall == 1;
+  bool _is250RsBotPlan(PlanModel plan) {
+    return plan.price == "250.00" && plan.type == "chatbot" && plan.isUnlimitedChat == 1;
+  }
 
-    return is15Rs && isCallPlan;
+  // Parse description which is a JSON string
+  List<String> _parseDescription(PlanModel plan) {
+    try {
+      if (plan.description?.isNotEmpty == true && plan.description!.startsWith('[')) {
+        final List<dynamic> descList = json.decode(plan.description!);
+        return descList.map((e) => e.toString()).toList();
+      }
+    } catch (e) {
+      print("Error parsing description: $e");
+    }
+    return [];
   }
 
   bool _hasMorePlans(List<PlanModel> allPlans) {
     final filteredCount = _filterPlans(allPlans).length;
-    final allCount =
-        allPlans.where((plan) => plan.name != "refferal_amount").length;
+    final allCount = allPlans.where((plan) => plan.name != "refferal_amount").length;
     return filteredCount < allCount;
   }
 
@@ -203,107 +178,9 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
                   const SizedBox(height: 12),
 
                   if (activePlans.isNotEmpty)
-                    ListView.builder(
-                      physics: const NeverScrollableScrollPhysics(),
-                      shrinkWrap: true,
-                      itemCount: activePlans.length,
-                      itemBuilder: (context, index) {
-                        return _buildCurrentPlanCard(activePlans[index]);
-                      },
-                    )
+                    ...activePlans.map((plan) => _buildCurrentPlanCard(plan)).toList()
                   else
-                    // _noPlanCard(),
-                    Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(15),
-                        color: Colors.grey.shade700,
-                      ),
-                      margin: EdgeInsets.only(bottom: 10),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                                    Container(
-                                      width: double.infinity,
-                                      padding: const EdgeInsets.all(8),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: const Text(
-                                                  '💎 Free Call Plan',
-                                                  style: TextStyle(
-                                                    fontSize: 15,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Colors.white,
-                                                    fontFamily:
-                                                        'Poppins Regular',
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 10),
-                                          Text(
-                                            '💰 ₹0.00 / Lifetime',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color:
-                                                  Colors.white.withOpacity(0.9),
-                                              fontFamily: 'Poppins Regular',
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            '✅ Daily Live Conversation Practice: 10 minutes/day',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color:
-                                                  Colors.white.withOpacity(0.9),
-                                              fontFamily: 'Poppins Regular',
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            '✅ All Learning Modules: Fully accessible',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color:
-                                                  Colors.white.withOpacity(0.9),
-                                              fontFamily: 'Poppins Regular',
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            '✅ Games: Fully accessible',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color:
-                                                  Colors.white.withOpacity(0.9),
-                                              fontFamily: 'Poppins Regular',
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            '✅ Chat with Co-learners: Fully accessible',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color:
-                                                  Colors.white.withOpacity(0.9),
-                                              fontFamily: 'Poppins Regular',
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                          ],
-                        ),
-                      ),
-                    ),
+                    _buildFreePlanCard(),
 
                   // Choose Plan Header
                   _sectionHeader("Choose Plan"),
@@ -318,23 +195,14 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
                       itemCount: filteredPlans.length +
                           (hasMorePlans && !_showAllPlans ? 1 : 0),
                       itemBuilder: (context, index) {
-                        // Check if this is the View More button
-                        if (hasMorePlans &&
-                            !_showAllPlans &&
-                            index == filteredPlans.length) {
+                        if (hasMorePlans && !_showAllPlans && index == filteredPlans.length) {
                           return _buildViewMoreButton();
                         }
 
                         final plan = filteredPlans[index];
                         final isSelected = _selectedIndex == index;
-                        final is300RsPlan = _is300RsPlan(plan);
-                        final is250RsBotPlan = _is250RsPlan(plan);
-                        final is15RsBotPlan = _is15RsBotPlan(plan);
-                        final is15RsCallPlan = _is15RsCallPlan(plan);
-
-                        // Pick gradient based on index
-                        final gradientColors =
-                            cardGradients[index % cardGradients.length];
+                        final gradientColors = cardGradients[index % cardGradients.length];
+                        final descriptionItems = _parseDescription(plan);
 
                         return GestureDetector(
                           onTap: () {
@@ -372,473 +240,70 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // Row(
-                                  //   children: [
-                                  //     Icon(
-                                  //       Icons.workspace_premium,
-                                  //       color: isSelected
-                                  //           ? Colors.amber
-                                  //           : Colors.white,
-                                  //     ),
-                                  //     const SizedBox(width: 8),
-                                  //     Text(
-                                  //       plan.name ?? '',
-                                  //       style: const TextStyle(
-                                  //         fontSize: 18,
-                                  //         fontWeight: FontWeight.w700,
-                                  //         fontFamily: 'Poppins Regular',
-                                  //         color: Colors.white,
-                                  //       ),
-                                  //     ),
-                                  //     // if (is300RsPlan) ...[
-                                  //     //   const SizedBox(width: 8),
-                                  //     //   Container(
-                                  //     //     padding: const EdgeInsets.symmetric(
-                                  //     //         horizontal: 8, vertical: 2),
-                                  //     //     decoration: BoxDecoration(
-                                  //     //       color: Colors.amber,
-                                  //     //       borderRadius:
-                                  //     //           BorderRadius.circular(12),
-                                  //     //     ),
-                                  //     //     child: const Text(
-                                  //     //       'Popular',
-                                  //     //       style: TextStyle(
-                                  //     //         fontSize: 12,
-                                  //     //         fontWeight: FontWeight.bold,
-                                  //     //         color: Colors.black,
-                                  //     //         fontFamily: 'Poppins Regular',
-                                  //     //       ),
-                                  //     //     ),
-                                  //     //   ),
-                                  //     // ],
-                                  //   ],
-                                  // ),
-                                  // const SizedBox(height: 6),
-                                  // Text(
-                                  //   "${plan.price} ${(plan.validityDays?.isEmpty ?? false) ? "" : "(${plan.validityDays} Days)"}",
-                                  //   style: const TextStyle(
-                                  //     fontSize: 16,
-                                  //     fontFamily: 'Poppins Regular',
-                                  //     fontWeight: FontWeight.w600,
-                                  //     color: Colors.tealAccent,
-                                  //   ),
-                                  // ),
-                                  if (is15RsCallPlan) ...[
-                                    Container(
-                                      width: double.infinity,
-                                      padding: const EdgeInsets.all(8),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: const Text(
-                                                  '🚀 Extra Live Conversation Practice (1 Day)',
-                                                  style: TextStyle(
-                                                    fontSize: 15,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Colors.amber,
-                                                    fontFamily:
-                                                        'Poppins Regular',
-                                                  ),
+                                  // Plan header with name and price
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          plan.name ?? '',
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w700,
+                                            fontFamily: 'Poppins Regular',
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                      // Text(
+                                      //   '${plan.priceIcon ?? '💰'} ₹${plan.price}',
+                                      //   style: const TextStyle(
+                                      //     fontSize: 16,
+                                      //     fontWeight: FontWeight.w600,
+                                      //     fontFamily: 'Poppins Regular',
+                                      //     color: Colors.tealAccent,
+                                      //   ),
+                                      // ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  
+                                  // Validity
+                                  Text(
+                                    plan.priceAndValid ?? '${plan.validityDays} days',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.white.withOpacity(0.8),
+                                      fontFamily: 'Poppins Regular',
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+
+                                  // Description items
+                                  if (descriptionItems.isNotEmpty)
+                                    ...descriptionItems.map((item) => 
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(vertical: 2),
+                                        child: Row(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            const Text('• ', style: TextStyle(color: Colors.white)),
+                                            Expanded(
+                                              child: Text(
+                                                item,
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color: Colors.white.withOpacity(0.9),
+                                                  fontFamily: 'Poppins Regular',
                                                 ),
                                               ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 10),
-                                          Text(
-                                            '💰 ₹15.00 / 1 Day',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color:
-                                                  Colors.white.withOpacity(0.9),
-                                              fontFamily: 'Poppins Regular',
                                             ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            '✅ Unlimited Live Conversation Practice: Unlocked for 24 hours',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color:
-                                                  Colors.white.withOpacity(0.9),
-                                              fontFamily: 'Poppins Regular',
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            '✅ All Learning Modules: Limited access',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color:
-                                                  Colors.white.withOpacity(0.9),
-                                              fontFamily: 'Poppins Regular',
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            '✅ Games: Limited access',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color:
-                                                  Colors.white.withOpacity(0.9),
-                                              fontFamily: 'Poppins Regular',
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            '✅ Chat with Co-learners: Fully accessible',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color:
-                                                  Colors.white.withOpacity(0.9),
-                                              fontFamily: 'Poppins Regular',
-                                            ),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                  if (!is300RsPlan && !is250RsBotPlan && !is15RsBotPlan && !is15RsCallPlan) ...[
-                                    Container(
-                                      width: double.infinity,
-                                      padding: const EdgeInsets.all(8),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: const Text(
-                                                  '💎 Free Call Plan',
-                                                  style: TextStyle(
-                                                    fontSize: 15,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Colors.amber,
-                                                    fontFamily:
-                                                        'Poppins Regular',
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 10),
-                                          Text(
-                                            '💰 ₹0.00 / Lifetime',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color:
-                                                  Colors.white.withOpacity(0.9),
-                                              fontFamily: 'Poppins Regular',
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            '✅ Daily Live Conversation Practice: 10 minutes/day',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color:
-                                                  Colors.white.withOpacity(0.9),
-                                              fontFamily: 'Poppins Regular',
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            '✅ All Learning Modules: Fully accessible',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color:
-                                                  Colors.white.withOpacity(0.9),
-                                              fontFamily: 'Poppins Regular',
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            '✅ Games: Fully accessible',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color:
-                                                  Colors.white.withOpacity(0.9),
-                                              fontFamily: 'Poppins Regular',
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            '✅ Chat with Co-learners: Fully accessible',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color:
-                                                  Colors.white.withOpacity(0.9),
-                                              fontFamily: 'Poppins Regular',
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                  if (is300RsPlan) ...[
-                                    Container(
-                                      width: double.infinity,
-                                      padding: const EdgeInsets.all(8),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: const Text(
-                                                  '🌟 Premium Plan: Unlimited Learning Access with Live Conversation Practice (3 Months)',
-                                                  style: TextStyle(
-                                                    fontSize: 15,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Colors.amber,
-                                                    fontFamily:
-                                                        'Poppins Regular',
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 10),
-                                          Text(
-                                            '💰 ₹300 • Valid for 90 Days',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color:
-                                                  Colors.white.withOpacity(0.9),
-                                              fontFamily: 'Poppins Regular',
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            '✅ Daily Live Conversation Practice: 1 hour/day',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color:
-                                                  Colors.white.withOpacity(0.9),
-                                              fontFamily: 'Poppins Regular',
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            '✅ All Learning Modules: Fully accessible',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color:
-                                                  Colors.white.withOpacity(0.9),
-                                              fontFamily: 'Poppins Regular',
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            '✅ Games: Fully accessible',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color:
-                                                  Colors.white.withOpacity(0.9),
-                                              fontFamily: 'Poppins Regular',
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            '✅ Chat with Co-learners: Fully accessible',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color:
-                                                  Colors.white.withOpacity(0.9),
-                                              fontFamily: 'Poppins Regular',
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                  if (is250RsBotPlan) ...[
-                                    Container(
-                                      width: double.infinity,
-                                      padding: const EdgeInsets.all(8),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: const Text(
-                                                  'Chatbot (Monthly Pack)',
-                                                  style: TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Colors.amber,
-                                                    fontFamily:
-                                                        'Poppins Regular',
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 10),
-                                          Text(
-                                            '💰 ₹250.00 / 1 Month',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color:
-                                                  Colors.white.withOpacity(0.9),
-                                              fontFamily: 'Poppins Regular',
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            '🔓 Unlimited Chat Access',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color:
-                                                  Colors.white.withOpacity(0.9),
-                                              fontFamily: 'Poppins Regular',
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            '🤖 24/7 Chatbot Availability',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color:
-                                                  Colors.white.withOpacity(0.9),
-                                              fontFamily: 'Poppins Regular',
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            '🎯 Your Perfect English Partner',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color:
-                                                  Colors.white.withOpacity(0.9),
-                                              fontFamily: 'Poppins Regular',
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            '🕒 Valid for 30 days',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color:
-                                                  Colors.white.withOpacity(0.9),
-                                              fontFamily: 'Poppins Regular',
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                  if (is15RsBotPlan) ...[
-                                    Container(
-                                      width: double.infinity,
-                                      padding: const EdgeInsets.all(8),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: const Text(
-                                                  'Chatbot (Day Pack)',
-                                                  style: TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Colors.amber,
-                                                    fontFamily:
-                                                        'Poppins Regular',
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 10),
-                                          Text(
-                                            '💰 ₹15.00 / 1 Day',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color:
-                                                  Colors.white.withOpacity(0.9),
-                                              fontFamily: 'Poppins Regular',
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            '🔢 33 Chat Tokens Available',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color:
-                                                  Colors.white.withOpacity(0.9),
-                                              fontFamily: 'Poppins Regular',
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            '🤖 24/7 Chatbot Access',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color:
-                                                  Colors.white.withOpacity(0.9),
-                                              fontFamily: 'Poppins Regular',
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            '🎯 Your Perfect English Partner',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color:
-                                                  Colors.white.withOpacity(0.9),
-                                              fontFamily: 'Poppins Regular',
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            '🕒 Valid for 24 hours',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color:
-                                                  Colors.white.withOpacity(0.9),
-                                              fontFamily: 'Poppins Regular',
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                  // const Divider(
-                                  //     height: 20, color: Colors.white24),
-                                  // if (plan.callLimitPerDay != null &&
-                                  //     plan.callLimitPerDay! > 0)
-                                  //   _buildInfoRow(
-                                  //       "Call limit per day",
-                                  //       "${plan.callLimitPerDay.toString()} Mins",
-                                  //       Colors.white70),
-                                  // if (plan.chatbotPromptLimit != null &&
-                                  //     plan.chatbotPromptLimit != '0' &&
-                                  //     plan.chatbotPromptLimit != '')
-                                  //   _buildInfoRow(
-                                  //       "Chatbot prompt limit",
-                                  //       '${plan.chatbotPromptLimit} Prompts' ??
-                                  //           '',
-                                  //       Colors.white70),
-                                  // // Only show unlimited call if it's "Yes"
-                                  // if (plan.isUnlimitedCall == 1)
-                                  //   _buildInfoRow("Unlimited Call", "Yes",
-                                  //       Colors.white70),
-                                  // // Only show unlimited chat if it's "Yes"
-                                  // if (plan.isUnlimitedChat == 1)
-                                  //   _buildInfoRow("Unlimited Chat", "Yes",
-                                  //       Colors.white70),
-                                  // _buildInfoRow("Created at",
-                                  //     plan.createdAt ?? '', Colors.white54),
+                                    ).toList()
+                                  else
+                                    _buildDefaultPlanDetails(plan),
                                 ],
                               ),
                             ),
@@ -860,6 +325,139 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
           }
           return const SizedBox();
         },
+      ),
+    );
+  }
+
+  Widget _buildDefaultPlanDetails(PlanModel plan) {
+    final List<Widget> details = [];
+
+    if (plan.type == "voice_call") {
+      if (plan.isUnlimitedCall == 1) {
+        details.add(_buildDetailRow('✅ Unlimited Live Conversation Practice'));
+      } else if (plan.callLimitPerDay != null && plan.callLimitPerDay! > 0) {
+        details.add(_buildDetailRow('✅ Daily Live Conversation Practice: ${plan.callLimitPerDay} minutes/day'));
+      }
+    } else if (plan.type == "chatbot") {
+      if (plan.isUnlimitedChat == 1) {
+        details.add(_buildDetailRow('✅ Unlimited Chat Access'));
+      } else if (plan.chatbotPromptLimit != null && plan.chatbotPromptLimit!.isNotEmpty) {
+        details.add(_buildDetailRow('✅ ${plan.chatbotPromptLimit} Chat Prompts'));
+      }
+    }
+
+    details.addAll([
+      _buildDetailRow('✅ All Learning Modules: ${_isFreePlan(plan) ? 'Limited access' : 'Fully accessible'}'),
+      _buildDetailRow('✅ Games: ${_isFreePlan(plan) ? 'Limited access' : 'Fully accessible'}'),
+      _buildDetailRow('✅ Chat with Co-learners: Fully accessible'),
+    ]);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: details,
+    );
+  }
+
+  Widget _buildDetailRow(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.white.withOpacity(0.9),
+                fontFamily: 'Poppins Regular',
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFreePlanCard() {
+    return Container(
+      margin: EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(15),
+        gradient: LinearGradient(
+          colors: [Color(0xFF616161), Color(0xFF9E9E9E)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.workspace_premium, color: Colors.amber),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Free Plan',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      fontFamily: 'Poppins Regular',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 12),
+            Text(
+              '💰 ₹0.00 / Lifetime',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.white.withOpacity(0.9),
+                fontFamily: 'Poppins Regular',
+              ),
+            ),
+            SizedBox(height: 12),
+            _buildFreeFeatureRow(
+                '✅ Daily Live Conversation Practice: 10 minutes/day'),
+            _buildFreeFeatureRow('✅ All Learning Modules: Limited access'),
+            _buildFreeFeatureRow('✅ Games: Limited access'),
+            _buildFreeFeatureRow('✅ Chat with Co-learners: Fully accessible'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFreeFeatureRow(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.white.withOpacity(0.9),
+                fontFamily: 'Poppins Regular',
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1066,8 +664,8 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
                     "Validity Days", plan?.validityDays?.toString() ?? "-"),
                 // Only show call limit if it's not null and greater than 0
                 if (plan?.callLimitPerDay != null && plan!.callLimitPerDay! > 0)
-                  _buildFeatureRow(
-                      "Call Limit/Day", plan.callLimitPerDay.toString()),
+                  _buildFeatureRow("Call Limit/Day",
+                      '${plan.callLimitPerDay.toString()} Minutes'),
                 // Only show unlimited call if it's "Yes"
                 if (plan?.isUnlimitedCall == true)
                   _buildFeatureRow("Unlimited Call", "Yes"),

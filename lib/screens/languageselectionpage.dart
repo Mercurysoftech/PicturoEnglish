@@ -16,13 +16,13 @@ class LanguageSelectionApp extends StatefulWidget {
 
 class _LanguageSelectionAppState extends State<LanguageSelectionApp> {
   String? selectedLanguage;
-  final double _scale = 1.0; // This controls the scaling effect
-  List<LanguageData> languages = []; // Store fetched languages
+  final double _scale = 1.0; 
+  List<LanguageData> languages = []; 
 
   @override
   void initState() {
     super.initState();
-    fetchAndDisplayLanguages(); // Fetch languages on screen load
+    fetchAndDisplayLanguages(); 
   }
 
   Future<void> fetchAndDisplayLanguages() async {
@@ -41,7 +41,7 @@ class _LanguageSelectionAppState extends State<LanguageSelectionApp> {
 
       setState(() {
         languages =
-            filteredLanguages; // Update the state with filtered languages
+            filteredLanguages; 
       });
     } catch (e) {
       print("Error fetching languages: $e");
@@ -91,7 +91,6 @@ class _LanguageSelectionAppState extends State<LanguageSelectionApp> {
                           setState(() {
                             selectedLanguage = language.language;
                           });
-                          // Save the selected language to SharedPreferences
                           SharedPreferences prefs =
                               await SharedPreferences.getInstance();
                           await prefs.setString(

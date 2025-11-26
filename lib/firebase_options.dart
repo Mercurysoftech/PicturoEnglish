@@ -42,7 +42,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyBb6LsAihWTucNM5g0KC2kdPh_ygbLL5xI',
-    appId: '1:414535387061:android:af0a6e651b6a5c4b0b3bfc',
+    appId: '1:414535387061:android:c7159d870413b6090b3bfc',
     messagingSenderId: '414535387061',
     projectId: 'picturoenglish-1012d',
     storageBucket: 'picturoenglish-1012d.firebasestorage.app',
@@ -50,11 +50,11 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyAZRBl8DbQHLoMzkLVJmSsrfIrO98cHu6Y',
-    appId: '1:414535387061:ios:d6583d66f993bef00b3bfc',
+    appId: '1:414535387061:ios:f086d6d029c8e3e10b3bfc',
     messagingSenderId: '414535387061',
     projectId: 'picturoenglish-1012d',
     storageBucket: 'picturoenglish-1012d.firebasestorage.app',
-    iosBundleId: 'com.example.picturoApp',
+    iosBundleId: 'com.english.picturoApp',
   );
 
   static const FirebaseOptions web = FirebaseOptions(

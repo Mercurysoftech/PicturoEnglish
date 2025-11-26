@@ -92,6 +92,7 @@ dependencies:
   google_mlkit_translation: ^0.13.0
   translator_plus: ^1.0.1
   url_launcher: ^6.3.2
+  flutter_cache_manager: ^3.4.1
   #telephony: ^0.2.0
   
 

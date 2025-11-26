@@ -13,7 +13,7 @@ class RequestsPage extends StatefulWidget {
 }
 
 class _RequestsPageState extends State<RequestsPage> {
-  List<Requests> allUsers = []; // Changed from `List<Map<String, dynamic>>`
+  List<Requests> allUsers = [];
   List<Requests> friends = [];
   bool isLoading = true;
   String errorMessage = '';
@@ -109,7 +109,7 @@ class _RequestsPageState extends State<RequestsPage> {
         child: Row(
           children: [
             CircleAvatar(
-              backgroundImage: AssetImage('assets/avatar2.png'), 
+              backgroundImage: AssetImage('assets/avatar2.png'),
               radius: 25,
             ),
             SizedBox(width: 10),
@@ -172,59 +172,64 @@ class _RequestsPageState extends State<RequestsPage> {
   }
 
   void _handleAccept(Requests user) async {
-  try {
-    final apiService = await ApiService.create();
-    final response = await apiService.acceptChatRequest(requestId: user.sender_id);
+    try {
+      final apiService = await ApiService.create();
+      final response =
+          await apiService.acceptChatRequest(requestId: user.sender_id);
 
-    if (response.containsValue("success")) {
-      setState(() {
-        allUsers.removeWhere((u) => u.id == user.id);
-      });
+      if (response.containsValue("success")) {
+        setState(() {
+          allUsers.removeWhere((u) => u.id == user.id);
+        });
 
-      final requestsProvider = Provider.of<RequestsProvider>(context, listen: false);
-      requestsProvider.setRequestsCount(allUsers.length);
+        final requestsProvider =
+            Provider.of<RequestsProvider>(context, listen: false);
+        requestsProvider.setRequestsCount(allUsers.length);
 
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Request accepted successfully")),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(response["error"] ?? "Failed to accept request")),
+        );
+      }
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Request accepted successfully")),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response["error"] ?? "Failed to accept request")),
-      );
-    }
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("An error occurred: ${e.toString()}")),
-    );
-  }
-}
-
-void _handleDecline(Requests user) async {
-  try {
-    final apiService = await ApiService.create();
-    final response = await apiService.declineChatRequest(requestId: user.sender_id);
-
-    if (response.containsValue("success")) {
-      setState(() {
-        allUsers.removeWhere((u) => u.id == user.id);
-      });
-
-      final requestsProvider = Provider.of<RequestsProvider>(context, listen: false);
-      requestsProvider.setRequestsCount(allUsers.length);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Request declined successfully")),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response["error"] ?? "Failed to decline request")),
+        SnackBar(content: Text("An error occurred: ${e.toString()}")),
       );
     }
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("An error occurred: ${e.toString()}")),
-    );
   }
-}
 
+  void _handleDecline(Requests user) async {
+    try {
+      final apiService = await ApiService.create();
+      final response =
+          await apiService.declineChatRequest(requestId: user.sender_id);
+
+      if (response.containsValue("success")) {
+        setState(() {
+          allUsers.removeWhere((u) => u.id == user.id);
+        });
+
+        final requestsProvider =
+            Provider.of<RequestsProvider>(context, listen: false);
+        requestsProvider.setRequestsCount(allUsers.length);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Request declined successfully")),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(response["error"] ?? "Failed to decline request")),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("An error occurred: ${e.toString()}")),
+      );
+    }
+  }
 }

@@ -25,6 +25,8 @@ class TopicCubit extends Cubit<TopicState> {
           };
         }).toList();
 
+        print('Topics: $topics');  
+
 
         emit(TopicLoaded(topics));
       }else{

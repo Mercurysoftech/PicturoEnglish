@@ -19,10 +19,10 @@ class ProgressCubit extends Cubit<ProgressState> {
     required int topicId,
     required bool isFromTopic,
   }) async {
-
     emit(ProgressLoading());
 
-    final url = Uri.parse("https://picturoenglish.com/api/getprogress_percentage.php");
+    final url =
+        Uri.parse("https://picturoenglish.com/api/getprogress_percentage.php");
     final body = {
       "book_id": bookId,
       "topic_id": topicId,
@@ -46,11 +46,17 @@ class ProgressCubit extends Cubit<ProgressState> {
         if (data['success'] == true) {
           final int totalQuestions = data['total_questions'];
           final int readQuestions = data['read_questions'];
-          double progress = totalQuestions > 0 ? readQuestions / totalQuestions : 0.0;
+          double progress =
+              totalQuestions > 0 ? readQuestions / totalQuestions : 0.0;
 
-           if(progress==1&&isFromTopic){
-             Fluttertoast.showToast(msg: "Content was Completed Successfully",backgroundColor: Colors.green);
-           }
+          log("Progress: $progress");
+          log("Total Questions: $totalQuestions, Read Questions: $readQuestions");
+
+          if (progress == 1 && isFromTopic) {
+            Fluttertoast.showToast(
+                msg: "Content was Completed Successfully",
+                backgroundColor: Colors.green);
+          }
           emit(ProgressLoaded(progress));
         } else {
           emit(ProgressFailed("Failed to fetch progress"));

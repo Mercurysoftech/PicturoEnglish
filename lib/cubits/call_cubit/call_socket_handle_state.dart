@@ -71,7 +71,7 @@ final class CallAccepted extends CallSocketHandleState {
 
 class CallErrorState extends CallSocketHandleState {
   final String message;
-  CallErrorState(this.message);
+  const CallErrorState(this.message);
 
   @override
   List<Object?> get props => [message, ...super.props];

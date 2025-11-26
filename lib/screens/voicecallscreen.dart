@@ -1,14 +1,16 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:picturo_app/classes/helper/call_info_storage_helper.dart';
 import 'package:picturo_app/classes/services/native_foreground_service.dart';
 import 'package:picturo_app/cubits/call_cubit/call_socket_handle_cubit.dart';
 import 'package:picturo_app/providers/audiosettingsprovider.dart';
 import 'package:picturo_app/screens/homepage.dart';
-import 'package:phone_state/phone_state.dart'; // ADD THIS
+import 'package:phone_state/phone_state.dart';
 
 import '../cubits/call_cubit/call_duration_handler/call_duration_handle_cubit.dart';
 
@@ -41,43 +43,94 @@ class _VoiceCallScreenState extends State<VoiceCallScreen>
   Timer? _durationUpdateTimer;
   final NativeForegroundService _foregroundService = NativeForegroundService();
 
-  // NEW: Phone state tracking
+    
   StreamSubscription<PhoneState>? _phoneStateSubscription;
   bool _wasAutoMutedBySystemCall = false;
   bool _wasMutedBeforeSystemCall = false;
   bool _hasShownLowTimeAlert = false;
+  String _displayCallerName = '';
+  bool _hasStartedTimer = false;   
+  bool _isCallActive = false;   
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _loadCallerInfo();
 
     if (!context.read<CallSocketHandleCubit>().isLiveCallActive) {
-      context.read<CallSocketHandleCubit>().resetCubit();
+        
       context.read<CallTimerCubit>().resetTimer();
-      context.read<CallSocketHandleCubit>().acceptCall(widget.callerId);
+
+        
+      if (!widget.isIncoming) {
+        context.read<CallSocketHandleCubit>().resetCubit();
+      }
+      CallInfoStorage.saveCallInfo(
+        callerId: widget.callerId,
+        callerName: widget.callerName,
+        isIncoming: widget.isIncoming,
+      );
+
+      context
+          .read<CallSocketHandleCubit>()
+          .acceptCall(widget.callerId, callerName: widget.callerName);
+    } else {
+      _isCallActive = true;
+      _startTimerIfNeeded();
     }
 
-    context.read<CallTimerCubit>().startTimer();
+    _initPhoneStateListener();
+  }
 
-    _startDurationUpdateTimer();
-    _initPhoneStateListener(); // NEW: Initialize phone state listener
+    
+  void _startTimerIfNeeded() {
+    if (!_hasStartedTimer && _isCallActive) {
+      _hasStartedTimer = true;
+      context.read<CallTimerCubit>().startTimer();
+      _startDurationUpdateTimer();
+      log('✅ Timer started for callee');
+    }
+  }
+
+  Future<void> _loadCallerInfo() async {
+    if (widget.callerName.isNotEmpty &&
+        widget.callerName.toLowerCase() != 'unknown') {
+      setState(() {
+        _displayCallerName = widget.callerName;
+      });
+      return;
+    }
+
+    final callInfo = await CallInfoStorage.getCallInfo();
+    if (callInfo != null && mounted) {
+      setState(() {
+        _displayCallerName = callInfo['callerName'];
+      });
+      log('✅ Loaded caller name from storage: $_displayCallerName');
+    } else {
+      setState(() {
+        _displayCallerName =
+            widget.callerName.isNotEmpty ? widget.callerName : 'Unknown';
+      });
+    }
   }
 
   @override
   void dispose() {
     _durationUpdateTimer?.cancel();
-    _phoneStateSubscription?.cancel(); // NEW: Cancel phone state listener
+    _phoneStateSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
 
     if (!context.read<CallSocketHandleCubit>().isLiveCallActive) {
       context.read<CallSocketHandleCubit>().handleCallNotConnected();
+      CallInfoStorage.clearCallInfo();
     }
 
     super.dispose();
   }
 
-  // NEW: Initialize phone state listener
+    
   void _initPhoneStateListener() async {
     try {
       _phoneStateSubscription = PhoneState.stream.listen((PhoneState status) {
@@ -85,22 +138,20 @@ class _VoiceCallScreenState extends State<VoiceCallScreen>
         _handlePhoneStateChange(status);
       }, onError: (error) {
         print("⚠️ Phone state error: $error");
-        // Permission might not be granted or feature not available
       });
     } catch (e) {
       print("⚠️ Failed to initialize phone state listener: $e");
-      // Handle permission or initialization errors
     }
   }
 
   void _showLowTimeAlertDialog(LowTimeAlert alert) {
-    if (_hasShownLowTimeAlert) return; // Prevent multiple dialogs
+    if (_hasShownLowTimeAlert) return;
 
     _hasShownLowTimeAlert = true;
 
     showDialog(
       context: context,
-      barrierDismissible: false, // User must tap button to close
+      barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
           backgroundColor: Colors.orange[50],
@@ -135,78 +186,55 @@ class _VoiceCallScreenState extends State<VoiceCallScreen>
         );
       },
     ).then((_) {
-      // Reset the flag when dialog is closed
       _hasShownLowTimeAlert = false;
     });
   }
 
-  // NEW: Handle system call state changes
   void _handlePhoneStateChange(PhoneState phoneState) {
     final callCubit = context.read<CallSocketHandleCubit>();
     final audioSettings = context.read<AudioSettingsProvider>();
 
     switch (phoneState.status) {
       case PhoneStateStatus.CALL_INCOMING:
-        // System call is just ringing - don't do anything yet
         print("📞 System call ringing - waiting for answer");
         break;
 
       case PhoneStateStatus.CALL_STARTED:
-        // System call CONNECTED - now mute everything
         print("📞 System call CONNECTED - muting both sides");
 
-        // Store current mute state before auto-muting
         _wasMutedBeforeSystemCall = audioSettings.isMuted;
         _wasAutoMutedBySystemCall = true;
 
-        // 1. Mute your microphone (so they don't hear you)
         if (!audioSettings.isMuted) {
           audioSettings.setMute(true);
           callCubit.muteACall(true);
         }
 
-        // 2. Mute remote audio (so you don't hear them)
         _muteRemoteAudio(true);
-
-        // 3. DON'T send hold signal - keep connection alive
-        // We're just muting audio, not putting call on hold
-
-        // 4. Pause call timer (optional - since no one is talking)
-        context.read<CallTimerCubit>().pauseTimer();
         break;
 
       case PhoneStateStatus.CALL_ENDED:
-        // System call ended
         print("📞 System call ended - restoring WebRTC audio");
 
         if (_wasAutoMutedBySystemCall) {
-          // Unmute your microphone if it wasn't manually muted before
           if (!_wasMutedBeforeSystemCall) {
             audioSettings.setMute(false);
             callCubit.muteACall(false);
           }
 
-          // Unmute remote audio
           _muteRemoteAudio(false);
-
           _wasAutoMutedBySystemCall = false;
         }
-
-        // Resume call timer
-        context.read<CallTimerCubit>().resumeTimer();
         break;
 
       case PhoneStateStatus.NOTHING:
-        // No system call activity
         break;
     }
   }
 
-  // NEW: Method to mute/unmute remote audio
   void _muteRemoteAudio(bool mute) {
     final callCubit = context.read<CallSocketHandleCubit>();
 
-    // Mute all remote renderers
     callCubit.remoteRenderers.forEach((key, renderer) {
       if (renderer.srcObject != null) {
         final audioTracks = renderer.srcObject!.getAudioTracks();
@@ -220,6 +248,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen>
   }
 
   void _startDurationUpdateTimer() {
+    _durationUpdateTimer?.cancel();   
     _durationUpdateTimer = Timer.periodic(Duration(seconds: 1), (timer) {
       final timerState = context.read<CallTimerCubit>().state;
       final duration = formatDuration(timerState.duration);
@@ -231,14 +260,11 @@ class _VoiceCallScreenState extends State<VoiceCallScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     switch (state) {
       case AppLifecycleState.paused:
-        // App went to background
         break;
       case AppLifecycleState.resumed:
-        // App came to foreground
         break;
       case AppLifecycleState.detached:
       case AppLifecycleState.inactive:
-        // Clean up when app is being closed
         _durationUpdateTimer?.cancel();
         break;
       default:
@@ -257,8 +283,6 @@ class _VoiceCallScreenState extends State<VoiceCallScreen>
   void _toggleMute() {
     final audioSettings = context.read<AudioSettingsProvider>();
     audioSettings.toggleMute();
-
-    // also update WebRTC mute/unmute:
     context.read<CallSocketHandleCubit>().muteACall(audioSettings.isMuted);
   }
 
@@ -274,14 +298,24 @@ class _VoiceCallScreenState extends State<VoiceCallScreen>
 
     return Scaffold(
       backgroundColor: Colors.black,
-      body: BlocBuilder<CallSocketHandleCubit, CallSocketHandleState>(
-        builder: (context, state) {
+      body: BlocConsumer<CallSocketHandleCubit, CallSocketHandleState>(
+        listener: (context, state) {
+            
+          if (state is CallAccepted) {
+            final callCubit = context.read<CallSocketHandleCubit>();
+            if (callCubit.isLiveCallActive && !_isCallActive) {
+              _isCallActive = true;
+              _startTimerIfNeeded();
+              log('✅ Call accepted, timer started');
+            }
+          }
+
           if (state.lowTimeAlert != null && !_hasShownLowTimeAlert) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               _showLowTimeAlertDialog(state.lowTimeAlert!);
             });
           }
-          
+
           if (state is CallErrorState) {
             Fluttertoast.showToast(
               msg: state.message,
@@ -289,30 +323,37 @@ class _VoiceCallScreenState extends State<VoiceCallScreen>
               toastLength: Toast.LENGTH_LONG,
             );
           }
+
+            
           if (state is CallRejected) {
-            context.read<CallTimerCubit>().stopTimer(
-                  receiverId: widget.callerId.toString(),
-                  callType: "audio",
-                  status: "completed",
-                );
+            final callCubit = context.read<CallSocketHandleCubit>();
+            if (!callCubit.isLiveCallActive && _isCallActive) {
+              _isCallActive = false;
+              context.read<CallTimerCubit>().stopTimer(
+                    receiverId: widget.callerId.toString(),
+                    callType: "audio",
+                    status: "completed",
+                  );
 
-            Future.microtask(() {
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => const Homepage()),
-                (route) => false,
-              );
-              context.read<CallSocketHandleCubit>().resetCubit();
-            });
-          } else if (state is CallOnHold) {
-            context.read<CallTimerCubit>().pauseTimer();
-          } else if (state is CallResumed) {
-            context.read<CallTimerCubit>().resumeTimer();
+              Future.microtask(() {
+                if (mounted) {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (_) => const Homepage()),
+                    (route) => false,
+                  );
+                  context.read<CallSocketHandleCubit>().resetCubit();
+                }
+              });
+            } else {
+              log("🟢 Ignored CallRejected because call is still active");
+            }
           }
-
+        },
+        builder: (context, state) {
           return Stack(
             children: [
-              // Background
+                
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -326,12 +367,12 @@ class _VoiceCallScreenState extends State<VoiceCallScreen>
                 ),
               ),
 
-              // Main content
+                
               Column(
                 children: [
                   SizedBox(height: 60),
 
-                  // Caller info
+                    
                   Column(
                     children: [
                       CircleAvatar(
@@ -340,7 +381,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen>
                       ),
                       SizedBox(height: 20),
                       Text(
-                        widget.callerName,
+                        _displayCallerName,
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 28,
@@ -351,7 +392,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen>
                       BlocBuilder<CallTimerCubit, CallTimerState>(
                         builder: (context, timerState) {
                           return Text(
-                                formatDuration(timerState.duration),
+                            formatDuration(timerState.duration),
                             style: TextStyle(fontSize: 16, color: Colors.white),
                           );
                         },
@@ -367,7 +408,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen>
                 ],
               ),
 
-              // Close button
+                
               Positioned(
                 top: 40,
                 left: 20,

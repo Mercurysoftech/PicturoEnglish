@@ -17,6 +17,7 @@ import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_navigation/src/root/get_material_app.dart';
 import 'package:picturo_app/classes/helper/bot_calls_refresh.dart';
+import 'package:picturo_app/classes/helper/call_info_storage_helper.dart';
 import 'package:picturo_app/classes/services/connectivity_service.dart';
 import 'package:picturo_app/classes/services/notification_service.dart';
 import 'package:picturo_app/classes/services/typing_state_manager.dart';
@@ -89,14 +90,18 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       final receiverId =
           int.tryParse(message.data['receiver_id']?.toString() ?? "0") ?? 0;
 
-      // Set up CallKit event listener for background call handling
+      await CallInfoStorage.saveCallInfo(
+        callerId: callerId,
+        callerName: callerName,
+        isIncoming: true,
+      );
+
       FlutterCallkitIncoming.onEvent.listen((event) async {
         log("📞 Background CallKit event: ${event?.event}");
 
         if (event?.event == Event.actionCallDecline) {
           log("❌ Background call declined via CallKit");
 
-          // Make API call to reject the call
           try {
             final apiService = await ApiService.create();
             final result = await apiService.rejectCall(callerId, receiverId);
@@ -110,7 +115,6 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
             log("❌ Error making background reject call API: $e");
           }
 
-          // End the call
           await FlutterCallkitIncoming.endAllCalls();
         }
       });
@@ -130,15 +134,14 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     } else if (message.data['type'] == 'refer') {
       log("📞 Background referral notification received");
 
-      // Show a local notification with payload so we can catch it later
       await flutterLocalNotificationsPlugin.show(
         0,
         "Referral Bonus 🎁",
         "Tap to view your premium plans!",
         const NotificationDetails(
           android: AndroidNotificationDetails(
-            'refer_channel', // channel id
-            'Referral Notifications', // channel name
+            'refer_channel',
+            'Referral Notifications',
             importance: Importance.high,
             priority: Priority.high,
           ),
@@ -168,12 +171,28 @@ class MyHttpOverrides extends HttpOverrides {
 
 Future<void> setupFlutterNotifications() async {
   const AndroidInitializationSettings initializationSettingsAndroid =
-      AndroidInitializationSettings('@mipmap/ic_launcher'); // your app icon
+      AndroidInitializationSettings('@mipmap/ic_launcher');
 
-  const InitializationSettings initializationSettings =
-      InitializationSettings(android: initializationSettingsAndroid);
+  const DarwinInitializationSettings initializationSettingsIOS =
+      DarwinInitializationSettings(
+    requestAlertPermission: true,
+    requestBadgePermission: true,
+    requestSoundPermission: true,
+  );
 
-  await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+  const InitializationSettings initializationSettings = InitializationSettings(
+    android: initializationSettingsAndroid,
+    iOS: initializationSettingsIOS,
+  );
+
+  await flutterLocalNotificationsPlugin.initialize(
+    initializationSettings,
+    onDidReceiveNotificationResponse: (NotificationResponse response) async {
+      if (response.payload != null) {
+        log('🔔 Notification tapped with payload: ${response.payload}');
+      }
+    },
+  );
 }
 
 Future<void> _handleCallOnError() async {
@@ -216,19 +235,16 @@ void main() async {
     log('🚨 FLUTTER ERROR: ${details.exception}');
     log('Stack trace: ${details.stack}');
 
-    // Try to end call on flutter error
     _handleCallOnError();
   };
 
-  // Platform-level error handling
   PlatformDispatcher.instance.onError = (error, stack) {
     log('🚨 PLATFORM ERROR: $error');
     log('Stack trace: $stack');
 
-    // Try to end call on platform error
     _handleCallOnError();
 
-    return true; // Prevent app from crashing
+    return true;
   };
 
   await setupFlutterNotifications();
@@ -252,6 +268,14 @@ void main() async {
       log("✅ Call accepted via CallKit");
       final data = event?.body ?? {};
       final target = int.parse(data["extra"]['userId'] ?? "0");
+      final callerName = data['nameCaller']?.toString() ?? "Unknown";
+
+      await CallInfoStorage.saveCallInfo(
+        callerId: target,
+        callerName: callerName,
+        isIncoming: false,
+      );
+
       final cubit = NavigationService.instance.navigationKey.currentContext
           ?.read<CallSocketHandleCubit>();
 
@@ -264,6 +288,9 @@ void main() async {
         log("⚠️ Call already active - ignoring duplicate");
         return;
       }
+
+      cubit.targetUserId = target;
+      cubit.callerName = callerName;
 
       Navigator.push(
         NavigationService.instance.navigationKey.currentContext!,
@@ -337,7 +364,12 @@ void main() async {
         ChangeNotifierProvider(
             create: (_) => UnreadCountProvider()..totalUnreadCount),
         BlocProvider(
-            create: (context) => CallSocketHandleCubit()..initCallSocket()),
+          create: (context) {
+            final cubit = CallSocketHandleCubit();
+            cubit.initCallSocket(); // no await, but executed after constructor
+            return cubit;
+          },
+        ),
         BlocProvider(create: (context) => CallControlsCubit()),
         BlocProvider(create: (context) => DragLearnCubit()),
         BlocProvider(create: (context) => SubtopicCubit()),
@@ -417,7 +449,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      // Check for intents when app comes to foreground
       _handleInitialIntent();
     }
   }
@@ -445,10 +476,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     }
   }
 
-
   Future<void> _handleInitialIntent() async {
     try {
-      // First check getInitialIntent
       final intentData = await _callChannel.invokeMethod('getInitialIntent');
       if (intentData != null && intentData is Map) {
         final openCallScreen = intentData['open_call_screen'] == true;
@@ -476,7 +505,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           log("📞 Navigating from pending call data: $callerName, $callerId");
           _navigateToVoiceCallScreen(callerId, callerName, isVideoCall);
         }
-
       }
     } catch (e) {
       log('Error handling initial intent: $e');
@@ -484,7 +512,13 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   }
 
   void _navigateToVoiceCallScreen(
-      int callerId, String callerName, bool isVideoCall) {
+      int callerId, String callerName, bool isVideoCall) async {
+    await CallInfoStorage.saveCallInfo(
+      callerId: callerId,
+      callerName: callerName,
+      isIncoming: false,
+    );
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final context = NavigationService.instance.navigationKey.currentContext;
       if (context != null &&

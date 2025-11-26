@@ -102,7 +102,7 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
           ),
         ),
         backgroundColor: Colors.black.withOpacity(0.8),
-        duration: Duration(days: 1), // Very long duration to keep it visible
+        duration: Duration(days: 1), 
         behavior: SnackBarBehavior.floating,
         margin: EdgeInsets.all(20),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -166,7 +166,6 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
     final headers = {
       "Authorization": "Bearer $token",
       'Content-Type': 'application/json',
-      // Add any other headers like Authorization if needed
     };
 
     final body = jsonEncode({
@@ -323,7 +322,6 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
           body: SafeArea(
             child: Stack(
               children: [
-                // ---------- Gradient background ----------
                 Container(
                   width: double.infinity,
                   height: double.infinity,
@@ -335,23 +333,19 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
                     ),
                   ),
                 ),
-
-                // ---------- Confetti BG only when game completed ----------
                 if (!nextLevelIsPlayable)
                   Lottie.asset(
-                    'assets/lottie/confetti on transparent background.json', // background celebration
+                    'assets/lottie/confetti on transparent background.json', 
                     width: double.infinity,
                     height: double.infinity,
                     fit: BoxFit.cover,
                     repeat: true,
                   ),
 
-                // ---------- Foreground content ----------
                 Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Choose Winner or Trophy
                       Lottie.asset(
                         nextLevelIsPlayable
                             ? 'assets/lottie/Winner.json'
@@ -405,8 +399,8 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
                               Navigator.pop(
                                   context); // Go back to previous screen
                             },
-                            child: const Text(
-                              "OK",
+                            child: Text(
+                             nextLevelIsPlayable ? "Not Now" : "OK",
                               style: TextStyle(
                                 color: Color(0xFF5E3FA0),
                                 fontWeight: FontWeight.bold,
@@ -634,10 +628,10 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
                   // ),
                   ImageWordMatchGrid(
                     words: words,
-                    imagesWithMeanings: imagesWithMeanings, // Updated parameter
+                    imagesWithMeanings: imagesWithMeanings, 
                     placedImages: placedImages,
                     availableImagesWithMeanings:
-                        availableImagesWithMeanings, // Updated parameter
+                        availableImagesWithMeanings, 
                     incorrectDrop: incorrectDrop,
                     itemSize: itemSize,
                     onAccept: (imagePath, wordIndex, word) async {
@@ -650,7 +644,6 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
                         isRead: true,
                       );
 
-                      // Find the index in the original images list
                       int imageIndex = imagesWithMeanings
                           .indexWhere((img) => img.imagePath == imagePath);
                       if (wordIndex == imageIndex) {
@@ -707,7 +700,7 @@ class _DragAndLearnAppState extends State<DragAndLearnApp> {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      "Drag and place the picture into the correct container  &  Hold your finger on the picture and watch the magic word appear!",
+                      "Drag and place the picture into the correct container &  Hold your finger on the picture and watch the magic word appear!",
                       textAlign: TextAlign.center,
                       style: TextStyle(
                           fontFamily: AppConstants.commonFont,
@@ -845,10 +838,11 @@ class ImageWordMatchGrid extends StatelessWidget {
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(12),
                           child: AspectRatio(
-                            aspectRatio: 1, 
+                            aspectRatio: 1,
                             child: Image.network(
                               "https://picturoenglish.com/admin/${placedImages[word]!}",
                               fit: BoxFit.cover,
+                              alignment: Alignment.center,
                               width: double.infinity,
                               height: double.infinity,
                               loadingBuilder:
@@ -926,9 +920,11 @@ class __DraggableWithTooltipState extends State<_DraggableWithTooltip> {
             width: widget.itemSize,
             height: widget.itemSize,
             child: CachedNetworkImageWidget(
-                imageUrl:
-                    "https://picturoenglish.com/admin/${widget.imagePath ?? ''}",
-                fit: BoxFit.cover),
+              imageUrl:
+                  "https://picturoenglish.com/admin/${widget.imagePath ?? ''}",
+              fit: BoxFit.cover,
+              alignment: Alignment.center,
+            ),
           ),
         ),
         childWhenDragging: Container(
@@ -952,7 +948,8 @@ class __DraggableWithTooltipState extends State<_DraggableWithTooltip> {
                 CachedNetworkImageWidget(
                     imageUrl:
                         "https://picturoenglish.com/admin/${widget.imagePath ?? ''}",
-                    fit: BoxFit.cover),
+                    fit: BoxFit.cover,
+                    alignment: Alignment.center,),
                 if (_isPressed)
                   Container(
                     color: Colors.black.withOpacity(0.3),

@@ -3,13 +3,12 @@ class QuestionsResponse {
   String? message;
   List<Question>? questions;
 
-  QuestionsResponse({required this.status, this.message,
-    this.questions});
+  QuestionsResponse({required this.status, this.message, this.questions});
 
   factory QuestionsResponse.fromJson(Map<String, dynamic> json) {
     return QuestionsResponse(
       status: json['status'],
-       message: json['message'],
+      message: json['message'],
       questions: json['status'] == 'success'
           ? (json['questions'] as List)
               .map((e) => Question.fromJson(e))
@@ -37,6 +36,27 @@ class Question {
     required this.qusImage,
     required this.read,
   });
+
+  // ⭐ ADD THIS METHOD
+  Question copyWith({
+    int? id,
+    int? topicId,
+    String? question,
+    String? meaning,
+    String? example,
+    String? qusImage,
+    bool? read,
+  }) {
+    return Question(
+      id: id ?? this.id,
+      topicId: topicId ?? this.topicId,
+      question: question ?? this.question,
+      meaning: meaning ?? this.meaning,
+      example: example ?? this.example,
+      qusImage: qusImage ?? this.qusImage,
+      read: read ?? this.read,
+    );
+  }
 
   factory Question.fromJson(Map<String, dynamic> json) {
     return Question(

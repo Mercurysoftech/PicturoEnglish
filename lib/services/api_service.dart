@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'dart:developer' as dev;
 import 'dart:math';
@@ -34,7 +35,7 @@ class ApiService {
   ApiService._internal() {
     _dio = Dio(BaseOptions(
       baseUrl: baseUrl,
-      connectTimeout: const Duration(seconds: 15), // Set timeout
+      connectTimeout: const Duration(seconds: 15),
       receiveTimeout: const Duration(seconds: 10),
       headers: {
         "Content-Type": "application/json",
@@ -50,13 +51,26 @@ class ApiService {
 
   Future<String> getDeviceId() async {
     final deviceInfo = DeviceInfoPlugin();
-    final androidInfo = await deviceInfo.androidInfo;
-    return androidInfo.id; // or androidId or model based on need
+
+    try {
+      if (Platform.isAndroid) {
+        final androidInfo = await deviceInfo.androidInfo;
+        return androidInfo.id ?? "unknown_android_id";
+      } else if (Platform.isIOS) {
+        final iosInfo = await deviceInfo.iosInfo;
+        return iosInfo.identifierForVendor ?? "unknown_ios_id";
+      } else {
+        return "unsupported_platform";
+      }
+    } catch (e) {
+      print("⚠️ Device ID fetch error: $e");
+      return "device_id_unavailable";
+    }
   }
 
   Future<Map<String, dynamic>> login(
       String email, String password, BuildContext context) async {
-    final String endpoint = "login.php"; // API endpoint
+    final String endpoint = "login.php"; 
 
     // try {
 
@@ -66,8 +80,6 @@ class ApiService {
       data: jsonEncode(
           {"email": email, "password": password, "device_id": deviceId}),
     );
-// Debugging
-
     if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
       final Map<String, dynamic> data = response.data;
 
@@ -496,17 +508,15 @@ class ApiService {
   }
 
   Future<BookResponse> fetchBooks() async {
-    final String endpoint = "books.php"; // Replace with your actual endpoint
+    final String endpoint = "books.php";
 
     try {
-      // Fetch the saved auth token
       String? token = await getAuthToken();
 
       if (token == null || token.isEmpty) {
         throw Exception("Authorization token is missing. Please log in.");
       }
 
-      // Make the GET request with the auth token
       Response response = await _dio.get(
         endpoint,
         options: Options(headers: {
@@ -516,7 +526,7 @@ class ApiService {
       );
 
       // Debugging: Print the raw API response
-
+      print('Books Response: ${response.data}');
       // Check if the response status code is 200 (OK)
       if (response.statusCode == 200) {
         // Validate the response data
@@ -1549,18 +1559,17 @@ class ApiService {
         };
       }
 
-      // Make the POST request
       Response response = await _dio.post(
-        "logout.php", // Replace with your actual API endpoint
+        "logout.php",
         options: Options(
           headers: {
-            "Authorization": "Bearer $token", // Add the Bearer token
+            "Authorization": "Bearer $token",
             "Content-Type": "application/json",
           },
         ),
       );
 
-      print("API Response: ${response.data}"); // Debugging
+      print("API Response: ${response.data}");
 
       if (response.statusCode == 200 &&
           response.data['success'] == true &&
@@ -1581,22 +1590,20 @@ class ApiService {
   }
 
   Future<MessagesResponse> fetchMessages({required int receiverId}) async {
-    final String endpoint =
-        "chathistory.php"; // Replace with your actual endpoint
+    final String endpoint = "chathistory.php";
 
     try {
-      // Fetch the saved auth token
       String? token = await getAuthToken();
 
       if (token == null || token.isEmpty) {
         throw Exception("Authorization token is missing. Please log in.");
       }
+      print('"Authorization": "Bearer $token"');
 
-      // Make the POST request with receiver_id in the body
       Response response = await _dio.post(
         endpoint,
         data: {
-          'receiver_id': receiverId, // Include receiver_id in request body
+          'receiver_id': receiverId,
         },
         options: Options(
           headers: {
@@ -1605,8 +1612,6 @@ class ApiService {
           },
         ),
       );
-
-      // Debugging: Print the raw API response
 
       // log("Raw API 999999999999 Response: ${response.data}");
 
@@ -1929,7 +1934,7 @@ class ApiService {
       }
 
       Response response = await _dio.get(
-        "get_plan_info.php", 
+        "get_plan_info.php",
         queryParameters: {"user_id": userId},
         options: Options(
           headers: {
@@ -1939,7 +1944,7 @@ class ApiService {
         ),
       );
 
-      print("API Response: ${response.data}"); 
+      print("API Response: ${response.data}");
 
       if (response.statusCode == 200) {
         return PlanInfoResponse.fromJson(response.data);

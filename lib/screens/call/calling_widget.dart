@@ -185,7 +185,6 @@ class _CallingScreenState extends State<CallingScreen> {
               }
             });
           } else if (state is CallErrorState) {
-            // Handle call error state
             _showErrorToastAndExit(state.message);
           }
         },

@@ -104,50 +104,55 @@ class PushNotificationService {
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
+    const DarwinInitializationSettings initializationSettingsIOS =
+        DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+    );
+
     const InitializationSettings initializationSettings =
         InitializationSettings(
       android: initializationSettingsAndroid,
+      iOS: initializationSettingsIOS,
     );
 
-    await flutterLocalNotificationsPlugin.initialize(initializationSettings,
-        onDidReceiveNotificationResponse:
-            (NotificationResponse response) async {
+    await flutterLocalNotificationsPlugin.initialize(
+      initializationSettings,
+      onDidReceiveNotificationResponse: (NotificationResponse response) async {
+        if (response.payload != null) {
+          try {
+            final Map<String, dynamic> data =
+                jsonDecode(response.payload ?? '{}');
+            log("🔔 Notification tapped: $data");
 
-      Map<String, dynamic> data = jsonDecode(response.payload ?? '{}');
-      log("djfnvkjdfnkdfv ${data}");
-
-      Future.delayed(const Duration(milliseconds: 500), () {
-        Get.to(() => ChatScreen(
-              avatarWidget: buildUserAvatar(data['sender_profile'] == "null"
-                  ? 0
-                  : int.parse(data['sender_profile'] ?? '0')),
-              userName: data['username'] ?? (data['sender_username'] ?? 'N/A'),
-              userId: int.parse(data['sender_id'] ?? '0'),
-              profilePicId: data['sender_profile'] == "null"
-                  ? 0
-                  : int.parse(data['sender_profile'] ?? '0'),
-            ));
-      });
-      await flutterLocalNotificationsPlugin.cancel(response.id ?? 0);
-    });
-
-    await flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(channel);
+            Future.delayed(const Duration(milliseconds: 500), () {
+              Get.to(() => ChatScreen(
+                    avatarWidget: buildUserAvatar(
+                        data['sender_profile'] == "null"
+                            ? 0
+                            : int.parse(data['sender_profile'] ?? '0')),
+                    userName:
+                        data['username'] ?? (data['sender_username'] ?? 'N/A'),
+                    userId: int.parse(data['sender_id'] ?? '0'),
+                    profilePicId: data['sender_profile'] == "null"
+                        ? 0
+                        : int.parse(data['sender_profile'] ?? '0'),
+                  ));
+            });
+            await flutterLocalNotificationsPlugin.cancel(response.id ?? 0);
+          } catch (e) {
+            log("⚠️ Error navigating from notification: $e");
+          }
+        }
+      },
+    );
 
     await FirebaseMessaging.instance.requestPermission(
       alert: true,
       badge: true,
       sound: true,
     );
-
-//    FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
-//   print("📲 Foreground Data: ${message.data}");
-//   showNotification(message);
-// });
-
-
 
     FirebaseMessaging.instance.getInitialMessage().then((message) {
       if (message != null) {
@@ -156,12 +161,6 @@ class PushNotificationService {
         _handleMessage(message);
       }
     });
-
-    // FirebaseMessaging.onMessageOpenedApp.listen((message) {
-    //   log("📱 App opened from background with notification");
-    //   _logFullPayload(message.data, "Background");
-    //   _handleMessage(message);
-    // });
   }
 
   static void _logFullPayload(Map<String, dynamic> payload, String source) {
@@ -175,14 +174,14 @@ ${const JsonEncoder.withIndent('  ').convert(payload)}
 """);
   }
 
-  static void showNotification(RemoteMessage message){
+  static void showNotification(RemoteMessage message) {
     RemoteNotification? notification = message.notification;
     AndroidNotification? android = message.notification?.android;
     if (notification != null) {
       flutterLocalNotificationsPlugin.show(
-        payload:jsonEncode( {
-          "sender_id":"${message.data['sender_id']}",
-          "username":"${message.data['username']}"
+        payload: jsonEncode({
+          "sender_id": "${message.data['sender_id']}",
+          "username": "${message.data['username']}"
         }),
         notification.hashCode,
         notification.title,
@@ -197,9 +196,7 @@ ${const JsonEncoder.withIndent('  ').convert(payload)}
         ),
       );
     }
-
   }
-
 
   static void _handleMessage(RemoteMessage message) {
     log("🔄 Handling notification message");
@@ -212,14 +209,12 @@ ${const JsonEncoder.withIndent('  ').convert(payload)}
 
     final data = message.data;
 
-    // Handle call notifications
     if (data['type'] == 'incoming_call') {
       log("📞 Handling incoming call notification");
       _handleIncomingCallNotification(data);
       return;
     }
 
-    // Handle chat notifications
     log("💬 Handling chat notification");
     final senderName = data['username'] ?? "Unknown";
     final profilePicId = int.tryParse(data['avatar_id'] ?? "0") ?? 0;
@@ -232,7 +227,8 @@ ${const JsonEncoder.withIndent('  ').convert(payload)}
 - Avatar ID: $profilePicId
 """);
 
-    Navigator.of(NavigationService.instance.navigationKey.currentContext!).pushAndRemoveUntil(
+    Navigator.of(NavigationService.instance.navigationKey.currentContext!)
+        .pushAndRemoveUntil(
       MaterialPageRoute(
         builder: (context) => ChatScreen(
           avatarWidget: buildUserAvatar(profilePicId),
@@ -248,43 +244,44 @@ ${const JsonEncoder.withIndent('  ').convert(payload)}
   }
 
   static void _handleIncomingCallNotification(Map<String, dynamic> data) {
-  log("📞 Processing incoming call notification");
+    log("📞 Processing incoming call notification");
 
-  try {
-    final cubit = NavigationService.instance.navigationKey.currentContext?.read<CallSocketHandleCubit>();
-    if (cubit == null) {
-      log("⚠️ Call cubit not available in context");
-      return;
-    }
+    try {
+      final cubit = NavigationService.instance.navigationKey.currentContext
+          ?.read<CallSocketHandleCubit>();
+      if (cubit == null) {
+        log("⚠️ Call cubit not available in context");
+        return;
+      }
 
-    if (cubit.isLiveCallActive) {
-      log("⚠️ Call already active - ignoring duplicate notification");
-      return;
-    }
+      if (cubit.isLiveCallActive) {
+        log("⚠️ Call already active - ignoring duplicate notification");
+        return;
+      }
 
-    // Safely parse caller ID with fallback to 0
-    final callerId = int.tryParse(data['caller_id']?.toString() ?? "0") ?? 0;
-    final callerName = data['caller_username']?.toString() ?? "Unknown";
+      final callerId = int.tryParse(data['caller_id']?.toString() ?? "0") ?? 0;
+      final callerName = data['caller_username']?.toString() ?? "Unknown";
 
-    log("""
+      log("""
 📞 Incoming Call Details:
 - Caller ID: $callerId
 - Caller Name: $callerName
 - Current User ID: ${NavigationService.instance.navigationKey.currentContext?.read<UserProvider>().userId}
 """);
 
-    Navigator.of(NavigationService.instance.navigationKey.currentContext!).pushAndRemoveUntil(
-      MaterialPageRoute(
-        builder: (context) => CallAcceptScreen(
-          callerName: callerName,
-          avatarUrl: 0,
-          callerId: callerId,
+      Navigator.of(NavigationService.instance.navigationKey.currentContext!)
+          .pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (context) => CallAcceptScreen(
+            callerName: callerName,
+            avatarUrl: 0,
+            callerId: callerId,
+          ),
         ),
-      ),
-      (route) => false,
-    );
-  } catch (e) {
-    log("⚠️ Error handling incoming call notification: $e");
+        (route) => false,
+      );
+    } catch (e) {
+      log("⚠️ Error handling incoming call notification: $e");
+    }
   }
-}
 }

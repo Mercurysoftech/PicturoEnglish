@@ -60,11 +60,12 @@ class _ChatBotScreenState extends State<ChatBotScreen>
   @override
   void initState() {
     super.initState();
-    _translator = GoogleTranslatorService('AIzaSyDn1WqfWC2gG6zck-kAPs2kswqdugsC2yI');
+    _translator =
+        GoogleTranslatorService('AIzaSyDn1WqfWC2gG6zck-kAPs2kswqdugsC2yI');
     _initializeApiService();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _showWelcomeMessage();
-      _loadInitialPlanInfo();
+      _loadUserPlanInfo();
     });
 
     _messageController.addListener(() {
@@ -124,6 +125,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         print('Plan info details:');
         print(
             '  - estimatedConversationsLeft: ${planInfo.estimatedConversationsLeft}');
+        print('  - tokensRemaining: ${planInfo.tokensRemaining}');
         print('  - planType: ${planInfo.planType}');
         print('  - planActive: ${planInfo.planActive}');
 
@@ -131,13 +133,12 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         _updatePlanInfo(unifiedPlanInfo);
       } else {
         print('No plan info found in response - user has no active plan');
-        // User has no plan, set to 0 conversations
         _updatePlanInfoForNoPlan();
       }
     } catch (e) {
       print('Error fetching plan info: $e');
-      // On error, assume no plan instead of defaulting to 10
-      _updatePlanInfoForNoPlan();
+      // Don't update state on error to preserve current values
+      print('Preserving current plan info due to error');
     }
   }
 
@@ -167,22 +168,72 @@ class _ChatBotScreenState extends State<ChatBotScreen>
     });
   }
 
-  // Change the _updatePlanInfo method signature
   void _updatePlanInfo(UnifiedPlanInfo planInfo) {
     setState(() {
+      // Use the actual values from API
       _remainingConversations = planInfo.estimatedConversationsLeft;
-      _planType = planInfo.planType.toLowerCase();
+      _planType = planInfo.planType;
       _planActive = planInfo.planActive;
 
-      _hasEnoughPrompts =
-          _remainingConversations > 0 || (_planActive && _planType != 'free');
+      print('Raw Plan Info:');
+      print('  - Plan Type: ${planInfo.planType}');
+      print('  - Plan Active: ${planInfo.planActive}');
+      print(
+          '  - Estimated Conversations Left: ${planInfo.estimatedConversationsLeft}');
 
-      print('Plan Updated:');
+      // Check if plan is 3M ₹250 for unlimited prompts
+      final isUnlimitedPlan =
+          planInfo.planType.toLowerCase().contains('3m ₹250');
+
+      print('  - Is Unlimited Plan: $isUnlimitedPlan');
+
+      if (_planActive && isUnlimitedPlan) {
+        // For unlimited active plan
+        _hasEnoughPrompts = true;
+        _remainingConversations =
+            99999; // Use a high number to represent unlimited
+        print('  - Setting as UNLIMITED plan');
+      } else if (_planActive) {
+        // For other active premium plans
+        _hasEnoughPrompts = _remainingConversations > 0;
+        print('  - Setting as LIMITED premium plan');
+      } else {
+        // For inactive or free plans
+        _hasEnoughPrompts = _remainingConversations > 0;
+        print('  - Setting as INACTIVE/FREE plan');
+      }
+
+      print('Final State:');
       print('  - Remaining Conversations: $_remainingConversations');
       print('  - Plan Type: $_planType');
       print('  - Plan Active: $_planActive');
       print('  - Has Enough Prompts: $_hasEnoughPrompts');
     });
+  }
+
+  Future<void> _loadUserPlanInfo() async {
+    try {
+      setState(() {
+        _isLoadingPlanInfo = true;
+      });
+
+      final prefs = await SharedPreferences.getInstance();
+      final currentUserId = prefs.getString('user_id');
+
+      if (currentUserId != null && currentUserId.isNotEmpty) {
+        await _fetchPlanInfo(currentUserId);
+      } else {
+        print('No user ID found, using default state');
+        _updatePlanInfoForNoPlan();
+      }
+    } catch (e) {
+      print('Error in _loadUserPlanInfo: $e');
+      // Don't reset to no plan on error - keep current state
+    } finally {
+      setState(() {
+        _isLoadingPlanInfo = false;
+      });
+    }
   }
 
   void _showNoRemainingPromptsDialog(BuildContext context) async {
@@ -383,22 +434,20 @@ class _ChatBotScreenState extends State<ChatBotScreen>
   Future _sendMessage({required String scenario}) async {
     final message = _messageController.text.trim();
 
-    // Remove the early return - just show dialog but don't block sending
+    if (!_planActive) {
+      _showNoRemainingPromptsDialog(context);
+      return;
+    }
+
     if (!_hasEnoughPrompts) {
       _showNoRemainingPromptsDialog(context);
       return;
-      // Don't return here - let the message send anyway
     }
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String userLanguage = prefs.getString('selectedLanguage') ?? "";
     userLanguage = _validateLanguageCode(userLanguage);
-    print('User Selected Language: $userLanguage');
-
-    // Fix: Handle user_id properly - it might be stored as String
     final currentUserId = prefs.getString('user_id');
-
-    print('User ID from SharedPreferences: $currentUserId');
 
     setState(() {
       _messages.add({
@@ -420,30 +469,15 @@ class _ChatBotScreenState extends State<ChatBotScreen>
           )
           .timeout(const Duration(seconds: 30));
 
-      // Update plan info from chatbot response if available
-      if (response.planInfo != null) {
-        final unifiedPlanInfo =
-            UnifiedPlanInfo.fromPlanInfo(response.planInfo!);
-        _updatePlanInfo(unifiedPlanInfo);
-      } else {
-        // If plan info is not in chatbot response, fetch it separately
-        if (currentUserId != null && currentUserId.isNotEmpty) {
-          final userId = currentUserId;
-          if (userId != null) {
-            await _fetchPlanInfo(userId);
-          } else {
-            print('Invalid user ID format: $currentUserId');
-          }
-        } else {
-          print('No user ID found in SharedPreferences');
-        }
+      // Always refresh plan info after sending a message
+      if (currentUserId != null && currentUserId.isNotEmpty) {
+        await _fetchPlanInfo(currentUserId);
       }
 
       String botMessage = response.response.isNotEmpty
           ? response.response
           : "I didn't get that. Could you try again?";
 
-      // Use Google Translator for all translations
       if (userLanguage != 'en') {
         try {
           final translated = await _translator.translate(
@@ -453,7 +487,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
           botMessage = translated;
         } catch (e) {
           print("Google Translation error: $e");
-          // Fallback to original message if translation fails
         }
       }
 
@@ -504,7 +537,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
     _scrollToBottom();
   }
 
-  // New method to refresh plan info
   Future<void> _refreshPlanInfo() async {
     try {
       setState(() {
@@ -512,7 +544,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
       });
 
       final prefs = await SharedPreferences.getInstance();
-      // Use the same approach as in _sendMessage
       final currentUserId = prefs.getString('user_id');
 
       print('Refreshing plan info for user: $currentUserId');
@@ -610,12 +641,19 @@ class _ChatBotScreenState extends State<ChatBotScreen>
   }
 
   String _getPromptText() {
-    if (_planActive && _planType != 'free') {
+    final isUnlimitedPlan = _planType.toLowerCase().contains('3m ₹250');
+
+    print(
+        'getPromptText - Plan Type: $_planType, Unlimited: $isUnlimitedPlan, Active: $_planActive');
+
+    if (_planActive && isUnlimitedPlan) {
       return 'Unlimited prompts';
+    } else if (_planActive) {
+      return '$_remainingConversations prompts remaining';
     } else if (_remainingConversations > 0) {
-      return '$_remainingConversations prompts left';
+      return '$_remainingConversations free prompts left';
     } else {
-      return 'No prompts left';
+      return 'No prompts available';
     }
   }
 
@@ -641,57 +679,86 @@ class _ChatBotScreenState extends State<ChatBotScreen>
             child: Row(
               children: [
                 Stack(
+                  clipBehavior: Clip.none,
                   alignment: Alignment.center,
                   children: [
                     Image.asset('assets/ai_avatar.png', scale: 10),
-                    if (_remainingConversations > 0)
-                      Positioned(
-                        top: 0,
-                        right: 0,
-                        child: Container(
-                          padding:
-                              EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          constraints: BoxConstraints(
-                            minWidth: 20,
-                            minHeight: 20,
-                          ),
-                          child: Text(
-                            '$_remainingConversations',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Poppins Regular',
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
-                    if (_isLoadingPlanInfo)
-                      Positioned(
-                        top: 0,
-                        right: 0,
-                        child: Container(
-                          padding: EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Colors.orange,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: SizedBox(
-                            width: 12,
-                            height: 12,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          ),
-                        ),
-                      ),
+                    // if (_planActive &&
+                    //     _planType.toLowerCase().contains('3m ₹250'))
+                    //   Positioned(
+                    //     top: -5,
+                    //     right: -35,
+                    //     child: Container(
+                    //       padding:
+                    //           EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    //       decoration: BoxDecoration(
+                    //         color: Colors.red,
+                    //         borderRadius: BorderRadius.circular(10),
+                    //       ),
+                    //       constraints: BoxConstraints(
+                    //         minWidth: 20,
+                    //         minHeight: 20,
+                    //       ),
+                    //       child: Text(
+                    //         'Unlimited',
+                    //         style: TextStyle(
+                    //           color: Colors.white,
+                    //           fontSize: 10,
+                    //           fontWeight: FontWeight.bold,
+                    //           fontFamily: 'Poppins Regular',
+                    //         ),
+                    //         textAlign: TextAlign.center,
+                    //       ),
+                    //     ),
+                    //   )
+                    // else if (_remainingConversations > 0 && _planActive)
+                    //   Positioned(
+                    //     top: 0,
+                    //     right: 0,
+                    //     child: Container(
+                    //       padding:
+                    //           EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    //       decoration: BoxDecoration(
+                    //         color: Colors.red,
+                    //         borderRadius: BorderRadius.circular(10),
+                    //       ),
+                    //       constraints: BoxConstraints(
+                    //         minWidth: 20,
+                    //         minHeight: 20,
+                    //       ),
+                    //       child: Text(
+                    //         '$_remainingConversations',
+                    //         style: TextStyle(
+                    //           color: Colors.white,
+                    //           fontSize: 10,
+                    //           fontWeight: FontWeight.bold,
+                    //           fontFamily: 'Poppins Regular',
+                    //         ),
+                    //         textAlign: TextAlign.center,
+                    //       ),
+                    //     ),
+                    //   ),
+                    // if (_isLoadingPlanInfo)
+                    //   Positioned(
+                    //     top: 0,
+                    //     right: 0,
+                    //     child: Container(
+                    //       padding: EdgeInsets.all(4),
+                    //       decoration: BoxDecoration(
+                    //         color: Colors.orange,
+                    //         borderRadius: BorderRadius.circular(10),
+                    //       ),
+                    //       child: SizedBox(
+                    //         width: 12,
+                    //         height: 12,
+                    //         child: CircularProgressIndicator(
+                    //           strokeWidth: 2,
+                    //           valueColor:
+                    //               AlwaysStoppedAnimation<Color>(Colors.white),
+                    //         ),
+                    //       ),
+                    //     ),
+                    //   ),
                   ],
                 ),
                 const SizedBox(width: 10),
@@ -706,6 +773,16 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                           fontWeight: FontWeight.bold,
                           fontFamily: 'Poppins Regular',
                           fontSize: 18),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _getPromptText(),
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 12,
+                        fontFamily: 'Poppins Regular',
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ],
                 ),

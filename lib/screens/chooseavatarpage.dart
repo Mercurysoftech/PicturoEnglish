@@ -1,8 +1,12 @@
+import 'dart:io';
+
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:picturo_app/responses/avatar_response.dart';
 import 'package:picturo_app/services/api_service.dart';
 import 'package:picturo_app/services/avatarcacheservice.dart';
+import 'package:picturo_app/services/local_image_cache_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shimmer/shimmer.dart';
 
@@ -20,9 +24,11 @@ class _AvatarSelectionScreenState extends State<AvatarSelectionScreen> {
   bool _isLoading = true;
   String _errorMessage = '';
   final String baseUrl = "https://picturoenglish.com/admin/";
-  bool _isSaving = false; // Track saving state
+  bool _isSaving = false;
   String? currentUserId;
   final AvatarCacheService _avatarCache = AvatarCacheService();
+  List<File?> cachedFiles = [];
+  Map<int, File> _imageCache = {}; // Cache for loaded images
 
   @override
   void initState() {
@@ -30,17 +36,17 @@ class _AvatarSelectionScreenState extends State<AvatarSelectionScreen> {
     fetchAvatarsAndUpdateImages();
   }
 
-   Future<void> fetchAvatarsAndUpdateImages() async {
+  Future<void> fetchAvatarsAndUpdateImages() async {
     try {
       final response = await _avatarCache.getAvatars();
 
-      List<String> avatarUrls = response.data
-          .map((avatar) => baseUrl + avatar.avatarUrl)
-          .toList();
-      
-      List<int> ids = response.data
-          .map((avatar) => avatar.id)
-          .toList();
+      List<String> avatarUrls =
+          response.data.map((avatar) => baseUrl + avatar.avatarUrl).toList();
+
+      List<int> ids = response.data.map((avatar) => avatar.id).toList();
+
+      // Pre-cache all images
+      await _preCacheAllImages(avatarUrls, ids);
 
       setState(() {
         avatarImages = avatarUrls;
@@ -59,58 +65,68 @@ class _AvatarSelectionScreenState extends State<AvatarSelectionScreen> {
     }
   }
 
-  Future<void> _saveSelectedAvatar() async {
-  if (selectedAvatarIndex == -1) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Please select an avatar")),
-    );
-    return;
+  Future<void> _preCacheAllImages(List<String> urls, List<int> ids) async {
+    for (int i = 0; i < urls.length; i++) {
+      try {
+        final file = await LocalImageCacheService.getImageFile(urls[i]);
+        _imageCache[ids[i]] = file;
+      } catch (e) {
+        print("Error caching image ${urls[i]}: $e");
+      }
+    }
   }
 
-  setState(() {
-    _isSaving = true;
-  });
-
-  try {
-    // Get the actual avatar ID from the stored list
-    int avatarId = avatarIds[selectedAvatarIndex];
-    final apiService = await ApiService.create();
-
-    final prefs = await SharedPreferences.getInstance();
-  currentUserId = prefs.getString('user_id');
-
-    print('UserId: $currentUserId');
-    print('AvatarId: $avatarId');
-
-    final result = await apiService.updateAvatar(
-      userId: currentUserId!,
-      avatarId: avatarId,
-    );
+  Future<void> _saveSelectedAvatar() async {
+    if (selectedAvatarIndex == -1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Please select an avatar")),
+      );
+      return;
+    }
 
     setState(() {
-      _isSaving = false;
+      _isSaving = true;
     });
 
-    if (result['success'] == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Avatar updated successfully!")),
+    try {
+      int avatarId = avatarIds[selectedAvatarIndex];
+      final apiService = await ApiService.create();
+
+      final prefs = await SharedPreferences.getInstance();
+      currentUserId = prefs.getString('user_id');
+
+      print('UserId: $currentUserId');
+      print('AvatarId: $avatarId');
+
+      final result = await apiService.updateAvatar(
+        userId: currentUserId!,
+        avatarId: avatarId,
       );
-      Navigator.pop(context, avatarId); // Return success to previous screen
-    } else {
+
+      setState(() {
+        _isSaving = false;
+      });
+
+      if (result['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Avatar updated successfully!")),
+        );
+        Navigator.pop(context, avatarId);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result['error'] ?? "Failed to update avatar")),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isSaving = false;
+      });
+      print("Error exception: ${e.toString()}");
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result['error'] ?? "Failed to update avatar")),
+        SnackBar(content: Text("Error: ${e.toString()}")),
       );
     }
-  } catch (e) {
-    setState(() {
-      _isSaving = false;
-    });
-    print("Error exception: ${e.toString()}"); 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Error: ${e.toString()}")),
-    );
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -171,24 +187,20 @@ class _AvatarSelectionScreenState extends State<AvatarSelectionScreen> {
               child: CircleAvatar(
                 radius: 60,
                 backgroundColor: Colors.white,
-                child: _isLoading
-                    ? Shimmer.fromColors(
-                        baseColor: Colors.grey[300]!,
-                        highlightColor: Colors.grey[100]!,
-                        child: Container(
-                          width: double.infinity,
-                          height: double.infinity,
-                          color: Colors.white,
-                        ),
+                child: selectedAvatarIndex >= 0 &&
+                        selectedAvatarIndex < avatarIds.length &&
+                        _imageCache.containsKey(avatarIds[selectedAvatarIndex])
+                    ? CircleAvatar(
+                        radius: 55,
+                        backgroundImage: FileImage(
+                            _imageCache[avatarIds[selectedAvatarIndex]]!),
                       )
-                    : avatarImages.isEmpty
-                        ? Icon(Icons.person, size: 50, color: Colors.grey)
-                        : CircleAvatar(
-                            radius: 55,
-                            backgroundImage: CachedNetworkImageProvider(
-                              avatarImages[selectedAvatarIndex],
-                            ),
-                          ),
+                    : CircleAvatar(
+                        radius: 55,
+                        backgroundColor: Colors.grey[200],
+                        child: Icon(CupertinoIcons.person,
+                            size: 50, color: Colors.grey),
+                      ),
               ),
             ),
             SizedBox(height: 20),
@@ -216,28 +228,67 @@ class _AvatarSelectionScreenState extends State<AvatarSelectionScreen> {
                           ? Center(child: Text("No avatars available"))
                           : GridView.builder(
                               padding: EdgeInsets.symmetric(horizontal: 20),
-                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              gridDelegate:
+                                  SliverGridDelegateWithFixedCrossAxisCount(
                                 crossAxisCount: 4,
                                 crossAxisSpacing: 15,
                                 mainAxisSpacing: 15,
                               ),
                               itemCount: avatarImages.length,
                               itemBuilder: (context, index) {
+                                final avatarId = avatarIds[index];
+                                final isCached =
+                                    _imageCache.containsKey(avatarId);
+
                                 return GestureDetector(
                                   onTap: () {
                                     setState(() {
                                       selectedAvatarIndex = index;
                                     });
                                   },
-                                  child: CircleAvatar(
-                                    backgroundColor: selectedAvatarIndex == index
-                                        ? Color(0xFF49329A)
-                                        : Colors.transparent,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: selectedAvatarIndex == index
+                                            ? Color(0xFF49329A)
+                                            : Colors.transparent,
+                                        width: 3,
+                                      ),
+                                    ),
                                     child: CircleAvatar(
                                       radius: 36,
-                                      backgroundImage: CachedNetworkImageProvider(
-                                        avatarImages[index],
-                                      ),
+                                      backgroundColor: Colors.grey[200],
+                                      child: isCached
+                                          ? CircleAvatar(
+                                              radius: 34,
+                                              backgroundImage: FileImage(
+                                                  _imageCache[avatarId]!),
+                                            )
+                                          : FutureBuilder<File>(
+                                              future: LocalImageCacheService
+                                                  .getImageFile(
+                                                      avatarImages[index]),
+                                              builder: (context, snapshot) {
+                                                if (snapshot.connectionState ==
+                                                    ConnectionState.waiting) {
+                                                  return Container(
+                                                    color: Colors.grey[200],
+                                                  );
+                                                } else if (snapshot.hasError) {
+                                                  return Icon(Icons.error,
+                                                      color: Colors.red);
+                                                } else {
+                                                  _imageCache[avatarId] =
+                                                      snapshot.data!;
+                                                  return CircleAvatar(
+                                                    radius: 34,
+                                                    backgroundImage: FileImage(
+                                                        snapshot.data!),
+                                                  );
+                                                }
+                                              },
+                                            ),
                                     ),
                                   ),
                                 );
@@ -248,7 +299,6 @@ class _AvatarSelectionScreenState extends State<AvatarSelectionScreen> {
               padding: EdgeInsets.symmetric(horizontal: 20, vertical: 20),
               child: Row(
                 children: [
-                  // Cancel Button
                   Expanded(
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
@@ -274,7 +324,6 @@ class _AvatarSelectionScreenState extends State<AvatarSelectionScreen> {
                     ),
                   ),
                   SizedBox(width: 16),
-                  // Save Button
                   Expanded(
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
@@ -315,7 +364,7 @@ class _AvatarSelectionScreenState extends State<AvatarSelectionScreen> {
         crossAxisSpacing: 15,
         mainAxisSpacing: 15,
       ),
-      itemCount: 8, // Show 8 shimmer placeholders
+      itemCount: 8,
       itemBuilder: (context, index) {
         return Shimmer.fromColors(
           baseColor: Colors.grey[300]!,

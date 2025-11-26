@@ -30,7 +30,7 @@ class DLGameTopicsPage extends StatefulWidget {
 }
 
 class _DLGameTopicsPageState extends State<DLGameTopicsPage> {
-  int? selectedIndex; // Track the selected item
+  int? selectedIndex;
 
 
 
@@ -43,7 +43,6 @@ class _DLGameTopicsPageState extends State<DLGameTopicsPage> {
 
   @override
   Widget build(BuildContext context) {
-    // ignore: deprecated_member_use
     return Scaffold(
       backgroundColor: Color(0xFFE0F7FF),
       appBar: CommonAppBar(title:widget.title,isBackbutton: true,),
@@ -181,7 +180,7 @@ class TopicCard extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: CachedNetworkImageWidget(
-              imageUrl: "https://picturoenglish.com/admin/$image",
+              imageUrl: "https://cdn.jsdelivr.net/gh/Mercurysoftech/PicturoEnglish@main/images_app/$image",
               height: 70,
               width: 70,
               fit: BoxFit.cover,

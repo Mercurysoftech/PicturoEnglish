@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:picturo_app/providers/bankaccountprovider.dart';
 import 'package:picturo_app/responses/bank_account_details.dart';
 import 'package:picturo_app/screens/accountdetailsshow.dart';
@@ -9,7 +10,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
 
-import '../utils/common_file.dart'; // Import Dio for API calls
+import '../utils/common_file.dart';
 
 class WithdrawlAmountPage extends StatefulWidget {
   const WithdrawlAmountPage({super.key});
@@ -28,9 +29,7 @@ class _WithdrawlAmountPageState extends State<WithdrawlAmountPage> {
   TextEditingController amountController = TextEditingController();
   bool _isLoading = false;
   String? storedData;
-  late ApiService _apiService; // Declare ApiService instance
-  
-
+  late ApiService _apiService;
 
   @override
   void initState() {
@@ -38,14 +37,26 @@ class _WithdrawlAmountPageState extends State<WithdrawlAmountPage> {
     initializeApiService();
   }
 
-   Future<void> initializeApiService() async {
-    _apiService = await ApiService.create(); // Await the Future
+  Future<void> initializeApiService() async {
+    _apiService = await ApiService.create(); 
   }
 
   Future<void> _submitWithdrawal() async {
+    final enteredAmount = double.tryParse(amountController.text.trim()) ?? 0;
     if (amountController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter an amount')),
+      );
+      return;
+    }
+    if (enteredAmount < 500) {
+      Fluttertoast.showToast(
+        msg: "Minimum withdrawal amount is ₹500",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0,
       );
       return;
     }
@@ -55,22 +66,20 @@ class _WithdrawlAmountPageState extends State<WithdrawlAmountPage> {
     try {
       final result = await _apiService.sendWithdrawalRequest(
         amount: amountController.text,
-        paymentMethod: 'bank_transfer', // or your payment method
+        paymentMethod: 'bank_transfer', 
       );
 
       if (!mounted) return;
 
       if (result.containsKey('status') == result.containsValue('success')) {
-        // Success case
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(result['message'] ?? 'Withdrawal request submitted'),
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.pop(context); // Or navigate to another screen
+        Navigator.pop(context); 
       } else {
-        // Error case
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(result['message'] ?? 'Failed to submit request'),
@@ -98,20 +107,21 @@ class _WithdrawlAmountPageState extends State<WithdrawlAmountPage> {
     return Scaffold(
       backgroundColor: Color(0xFFE7EAFF),
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(80), // Increased app bar height
+        preferredSize: Size.fromHeight(80), 
         child: AppBar(
           backgroundColor: Color(0xFF49329A),
           leading: Padding(
-            padding: const EdgeInsets.only(top: 15.0, left: 24.0), // Adjust top padding
+            padding: const EdgeInsets.only(
+                top: 15.0, left: 24.0), 
             child: IconButton(
               icon: Icon(Icons.arrow_back_ios, color: Colors.white, size: 26),
               onPressed: () {
-               Navigator.pop(context);
+                Navigator.pop(context);
               },
             ),
           ),
           title: Padding(
-            padding: const EdgeInsets.only(top: 15.0), // Adjust top padding
+            padding: const EdgeInsets.only(top: 15.0), 
             child: Row(
               children: [
                 Text(
@@ -141,7 +151,8 @@ class _WithdrawlAmountPageState extends State<WithdrawlAmountPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Enter Amount', style: TextStyle(fontFamily: 'Poppins Regular')),
+                Text('Enter Amount',
+                    style: TextStyle(fontFamily: 'Poppins Regular')),
                 SizedBox(height: 4),
                 TextField(
                   controller: amountController,
@@ -153,12 +164,19 @@ class _WithdrawlAmountPageState extends State<WithdrawlAmountPage> {
                     filled: true,
                   ),
                 ),
+                SizedBox(
+                  height: 10,
+                ),
+                Text('Minimum Withdrawal Amount: ₹500',
+                    style: TextStyle(
+                        fontFamily: 'Poppins Regular',
+                        color: Colors.redAccent)),
                 SizedBox(height: 40),
                 SizedBox(
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                      onPressed: _isLoading ? null : _submitWithdrawal,
+                    onPressed: _isLoading ? null : _submitWithdrawal,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Color(0xFF49329A),
                       shape: RoundedRectangleBorder(
@@ -167,7 +185,9 @@ class _WithdrawlAmountPageState extends State<WithdrawlAmountPage> {
                     ),
                     child: Text(
                       "Withdraw",
-                      style: TextStyle(color: Colors.white, fontFamily: AppConstants.commonFont),
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontFamily: AppConstants.commonFont),
                     ),
                   ),
                 ),
@@ -179,4 +199,3 @@ class _WithdrawlAmountPageState extends State<WithdrawlAmountPage> {
     );
   }
 }
-

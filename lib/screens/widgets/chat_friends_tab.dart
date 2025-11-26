@@ -29,7 +29,7 @@ class _ChatFriendsTabState extends State<ChatFriendsTab> {
     if(state is GetFriendsListLoaded){
       List<Friends> friends=state.friends;
       return RefreshIndicator(
-        onRefresh: _fetchAllUsers, // Allow pull-to-refresh
+        onRefresh: _fetchAllUsers,
         child: Scrollbar(
           child: ListView(
             padding: const EdgeInsets.fromLTRB(15, 0, 15, 15),
@@ -146,7 +146,7 @@ final shouldRefresh = await Navigator.push(
   }
 
   String formatTo12Hour(String dateTimeStr) {
-    final dateTime = DateTime.parse(dateTimeStr); // parses ISO string
+    final dateTime = DateTime.parse(dateTimeStr);
     final formatter = DateFormat('h:mm a'); 
     return formatter.format(dateTime);
   }
@@ -160,14 +160,12 @@ Widget _buildUserAvatar(int avatarId) {
   }
 
   if (_avatarCache.containsKey(avatarId)) {
-    // ✅ Instant load if cached
     return CircleAvatar(
       radius: 25,
       backgroundImage: NetworkImage(_avatarCache[avatarId]!),
     );
   }
 
-  // Fetch once if not cached
   return FutureBuilder<String>(
     future: _getAvatarUrl(avatarId),
     builder: (context, snapshot) {

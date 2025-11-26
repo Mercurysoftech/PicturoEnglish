@@ -35,19 +35,19 @@ class _DragandLearnTopicScreenState extends State<DragandLearnTopicScreen> {
     {
       'title': 'Adjectives',
       'description': 'Words that describe nouns',
-      'color': Color(0xFFEA4335), // Red
+      'color': Color(0xFFEA4335), 
       'icon': Icons.format_color_fill,
     },
     {
       'title': 'Phrasal Verbs',
       'description': 'Verb + preposition combinations',
-      'color': Color(0xFFFBBC05), // Yellow
+      'color': Color(0xFFFBBC05),
       'icon': Icons.call_split,
     },
     {
       'title': 'Idioms',
       'description': 'Expressions with figurative meanings',
-      'color': Color(0xFF673AB7), // Purple
+      'color': Color(0xFF673AB7), 
       'icon': Icons.lightbulb_outline,
     },
   ];
