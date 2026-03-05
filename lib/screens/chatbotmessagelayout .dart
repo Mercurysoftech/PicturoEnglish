@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:translator/translator.dart';
+import 'package:picturo_app/config/api_key_config.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:picturo_app/services/google_translator_service.dart';
 
 class ChatBotMessageLayout extends StatefulWidget {
   final bool isMeChatting;
@@ -10,6 +12,7 @@ class ChatBotMessageLayout extends StatefulWidget {
   final bool isMuted;
   final bool isError;
   final Function(String message) onMuteToggle;
+  final String userSelectedLanguage;
 
   const ChatBotMessageLayout({
     super.key,
@@ -20,6 +23,7 @@ class ChatBotMessageLayout extends StatefulWidget {
     required this.isMuted,
     this.isError = false,
     required this.onMuteToggle,
+    required this.userSelectedLanguage,
   });
 
   @override
@@ -30,9 +34,11 @@ class _ChatBotMessageLayoutState extends State<ChatBotMessageLayout> {
   String selectedLanguageCode = "en"; // default to English
   String translatedMessage = "";
   bool isTranslating = false;
-  final String welcomeMessage = "Welcome to Picturo! I'm your AI English learning buddy. Let's begin!";
+  bool hasTranslationError = false;
+  final String welcomeMessage =
+      "Welcome to Picturo! I'm your AI English learning buddy. Let's begin!";
 
-  final translator = GoogleTranslator();
+  late GoogleTranslatorService _translator;
 
   Map<String, String> languageMap = {
     "en": "English",
@@ -45,43 +51,141 @@ class _ChatBotMessageLayoutState extends State<ChatBotMessageLayout> {
   @override
   void initState() {
     super.initState();
-    // Translate if not English
-    if (selectedLanguageCode != "en") {
-      _translateMessage();
+    _translator = GoogleTranslatorService('AIzaSyDhACYhZTQesXx4bkerzQ-QrGSRfYVEXk0');
+
+    selectedLanguageCode = _validateLanguageCode(widget.userSelectedLanguage);
+  }
+
+  String _validateLanguageCode(String code) {
+    // Normalize the code
+    final normalizedCode = code.toLowerCase().trim();
+
+    final Map<String, String> codeMapping = {
+      'tamil': 'ta',
+      'tam': 'ta',
+      'malayalam': 'ml',
+      'mal': 'ml',
+      'telugu': 'te',
+      'tel': 'te',
+      'hindi': 'hi',
+      'hin': 'hi',
+      'english': 'en',
+      'eng': 'en',
+    };
+
+    // Check if it's already a valid code
+    if (languageMap.containsKey(normalizedCode)) {
+      return normalizedCode;
     }
+
+    // Check mapping
+    if (codeMapping.containsKey(normalizedCode)) {
+      return codeMapping[normalizedCode]!;
+    }
+
+    // Default to English for unsupported languages
+    print('Unsupported language code: $code, defaulting to English');
+    return "en";
   }
 
   Future<void> _translateMessage() async {
+    if (widget.messageBody.isEmpty) {
+      setState(() {
+        translatedMessage = "No text to translate";
+        isTranslating = false;
+      });
+      return;
+    }
+
+    // Don't translate if already in English or if it's the welcome message
+    if (selectedLanguageCode == "en" || widget.messageBody == welcomeMessage) {
+      setState(() {
+        translatedMessage = widget.messageBody;
+        isTranslating = false;
+      });
+      return;
+    }
+
     setState(() {
       isTranslating = true;
+      hasTranslationError = false;
+      translatedMessage = "";
     });
 
     try {
-      var translation = await translator.translate(
-        widget.messageBody,
-        to: selectedLanguageCode,
+      print('=== Translation Debug Info ===');
+      print('Target language: $selectedLanguageCode');
+      print('Language name: ${_getLanguageName(selectedLanguageCode)}');
+      print('Original text: ${widget.messageBody}');
+      print('Text length: ${widget.messageBody.length}');
+
+      // Validate API key
+      if (ApiConfig.googleTranslateApiKey.isEmpty) {
+        throw Exception('Google Translate API key is not configured');
+      }
+
+      // Validate language support
+      if (!languageMap.containsKey(selectedLanguageCode)) {
+        throw Exception(
+            'Language $selectedLanguageCode is not supported. Available: ${languageMap.keys.join(', ')}');
+      }
+
+      // Use Google Translator Service
+      final translation = await _translator.translate(
+        text: widget.messageBody,
+        targetLanguage: selectedLanguageCode,
       );
+
+      print('Translation successful: $translation');
+
+      if (translation.isEmpty) {
+        throw Exception('Received empty translation');
+      }
+
       setState(() {
-        translatedMessage = translation.text;
+        translatedMessage = translation;
         isTranslating = false;
       });
     } catch (e) {
+      print('=== Translation Error Details ===');
+      print('Error: $e');
+      print('Error type: ${e.runtimeType}');
+
       setState(() {
-        translatedMessage = "Translation failed";
+        translatedMessage =
+            "Translation failed: ${e.toString().replaceFirst('Exception: ', '')}";
         isTranslating = false;
+        hasTranslationError = true;
       });
     }
   }
 
   void _onLanguageSelected(String code) {
+    final validatedCode = _validateLanguageCode(code);
+
+    if (validatedCode == selectedLanguageCode && translatedMessage.isNotEmpty) {
+      return;
+    }
+
     setState(() {
-      selectedLanguageCode = code;
+      selectedLanguageCode = validatedCode;
       translatedMessage = "";
+      hasTranslationError = false;
     });
 
-    if (code != "en") {
+    // Only translate if not English and not welcome message
+    if (validatedCode != "en" && widget.messageBody != welcomeMessage) {
       _translateMessage();
+    } else if (validatedCode == "en") {
+      // If English is selected, show original message
+      setState(() {
+        translatedMessage = widget.messageBody;
+      });
     }
+  }
+
+  String _getLanguageName(String code) {
+    return languageMap[code] ?? "English";
   }
 
   @override
@@ -109,37 +213,37 @@ class _ChatBotMessageLayoutState extends State<ChatBotMessageLayout> {
                   decoration: BoxDecoration(
                     borderRadius: widget.isMeChatting
                         ? const BorderRadius.only(
-                      topLeft: Radius.circular(12),
-                      bottomLeft: Radius.circular(12),
-                      bottomRight: Radius.circular(12),
-                    )
+                            topLeft: Radius.circular(12),
+                            bottomLeft: Radius.circular(12),
+                            bottomRight: Radius.circular(12),
+                          )
                         : const BorderRadius.only(
-                      topRight: Radius.circular(12),
-                      bottomLeft: Radius.circular(12),
-                      bottomRight: Radius.circular(12),
-                    ),
+                            topRight: Radius.circular(12),
+                            bottomLeft: Radius.circular(12),
+                            bottomRight: Radius.circular(12),
+                          ),
                     color: widget.isError
                         ? Colors.red.withOpacity(0.1)
                         : widget.isMeChatting
-                        ? const Color(0xFF49329A)
-                        : null,
+                            ? const Color(0xFF49329A)
+                            : null,
                     gradient: widget.isError || widget.isMeChatting
                         ? null
                         : const LinearGradient(
-                      colors: [
-                        Color(0xFFEAE4FF),
-                        Color(0xFFE0F7FF),
-                        Color(0xFFFEF0D3),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+                            colors: [
+                              Color(0xFFEAE4FF),
+                              Color(0xFFE0F7FF),
+                              Color(0xFFFEF0D3),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
                     border: Border.all(
                       color: widget.isError
                           ? Colors.red
                           : widget.isMeChatting
-                          ? Colors.transparent
-                          : const Color(0xFFC9BAFF),
+                              ? Colors.transparent
+                              : const Color(0xFFC9BAFF),
                       width: 1.0,
                     ),
                   ),
@@ -163,17 +267,42 @@ class _ChatBotMessageLayoutState extends State<ChatBotMessageLayout> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Divider(color: Colors.grey),
-                            Text(
-                              "Translation",
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.grey[700]),
+                            Row(
+                              children: [
+                                Text(
+                                  "Translation (${_getLanguageName(selectedLanguageCode)})",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
+                                if (hasTranslationError)
+                                  Icon(
+                                    Icons.error,
+                                    color: Colors.red,
+                                    size: 14,
+                                  ),
+                              ],
                             ),
                             const SizedBox(height: 6),
                             if (isTranslating)
-                              const Text("Translating...",
-                                  style: TextStyle(fontSize: 14))
+                              Row(
+                                children: [
+                                  SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    "Translating...",
+                                    style: TextStyle(fontSize: 14),
+                                  ),
+                                ],
+                              )
                             else
                               Stack(
                                 children: [
@@ -187,22 +316,25 @@ class _ChatBotMessageLayoutState extends State<ChatBotMessageLayout> {
                                           : const Color(0xFF0D082C),
                                     ),
                                   ),
-                                  Positioned(
-                                    bottom: 0,
-                                    right: 0,
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        widget.onMuteToggle(translatedMessage);
-                                      },
-                                      child: Icon(
-                                        widget.isMuted
-                                            ? Icons.volume_off
-                                            : Icons.volume_up,
-                                        size: 18,
-                                        color: Colors.grey[600],
+                                  if (!hasTranslationError &&
+                                      translatedMessage.isNotEmpty)
+                                    Positioned(
+                                      bottom: 0,
+                                      right: 0,
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          widget
+                                              .onMuteToggle(translatedMessage);
+                                        },
+                                        child: Icon(
+                                          widget.isMuted
+                                              ? Icons.volume_off
+                                              : Icons.volume_up,
+                                          size: 18,
+                                          color: Colors.grey[600],
+                                        ),
                                       ),
                                     ),
-                                  ),
                                 ],
                               ),
                           ],
@@ -257,8 +389,8 @@ class _ChatBotMessageLayoutState extends State<ChatBotMessageLayout> {
                     onTap: () async {
                       _showLanguageDialog(context);
                     },
-                    child:
-                    Icon(Icons.language, size: 18, color: Colors.grey[600]),
+                    child: Icon(Icons.translate,
+                        size: 18, color: Colors.grey[600]),
                   ),
                 ],
               ),
@@ -269,29 +401,50 @@ class _ChatBotMessageLayoutState extends State<ChatBotMessageLayout> {
   }
 
   void _showLanguageDialog(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    final userLang = prefs.getString('selectedLanguage') ?? "en";
+    final validatedLang = _validateLanguageCode(userLang);
+    final userLangName = _getLanguageName(validatedLang);
+
     final selected = await showDialog<String>(
       context: context,
       builder: (context) {
         return Dialog(
           shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           backgroundColor: Colors.white,
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  "Choose Language",
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                Text(
+                  "Translate to $userLangName?",
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Poppins'),
+                  textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 20),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: languageMap.entries
-                      .map((entry) => _languageOption(entry.value, entry.key))
-                      .toList(),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text("Cancel",
+                          style: TextStyle(fontFamily: 'Poppins')),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(context, validatedLang),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF49329A),
+                      ),
+                      child: Text("Translate",
+                          style: TextStyle(
+                              fontFamily: 'Poppins', color: Colors.white)),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -303,38 +456,5 @@ class _ChatBotMessageLayoutState extends State<ChatBotMessageLayout> {
     if (selected != null) {
       _onLanguageSelected(selected);
     }
-  }
-
-  Widget _languageOption(String label, String code) {
-    return InkWell(
-      onTap: () {
-        Navigator.pop(context, code);
-      },
-      borderRadius: BorderRadius.circular(15),
-      child: Container(
-        width: 120,
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: const Color(0xFF49329A),
-          borderRadius: BorderRadius.circular(15),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.15),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            )
-          ],
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }

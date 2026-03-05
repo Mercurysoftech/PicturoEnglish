@@ -1,6 +1,7 @@
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:picturo_app/screens/myprofilepage.dart';
 
 
@@ -27,6 +28,16 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage> {
     super.initState();
     fetchTransactions();
   }
+
+  String formatDateTime(String dateTimeString){
+    final dateTime = DateTime.parse(dateTimeString);
+    return DateFormat('dd MMM yyyy, h:mm a').format(dateTime);
+  }
+
+  String formatMonthYear(String dateTimeString) {
+  final dateTime = DateTime.parse(dateTimeString);
+  return DateFormat('MMMM yyyy').format(dateTime);
+}
 
   List<WithdrawalTransaction> transactions = [];
 
@@ -107,57 +118,81 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage> {
             : ListView.builder(
           itemCount: transactions.length,
           itemBuilder: (context, index) {
-            final tx = transactions[index];
-            final dateOnly = tx.requestedAt.split(" ").first;
+  final tx = transactions[index];
 
-            return Column(
+  final currentMonth = formatMonthYear(tx.requestedAt);
+
+  String? previousMonth;
+  if (index > 0) {
+    previousMonth =
+        formatMonthYear(transactions[index - 1].requestedAt);
+  }
+
+  final showMonthHeader =
+      index == 0 || currentMonth != previousMonth;
+
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      if (showMonthHeader) ...[
+        const SizedBox(height: 16),
+        Text(
+          currentMonth,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            fontFamily: AppConstants.commonFont,
+          ),
+        ),
+        const SizedBox(height: 8),
+      ],
+
+      Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: Colors.red.shade100,
+              child: const Icon(Icons.remove, color: Colors.red),
+            ),
+            const SizedBox(width: 12),
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (index == 0 || transactions[index - 1].requestedAt.split(" ").first != dateOnly) ...[
-                  const SizedBox(height: 10),
-                  Text(
-                    dateOnly,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: AppConstants.commonFont),
+                const Text(
+                  'Withdrew amount',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    fontFamily: 'Poppins Regular',
                   ),
-                  const Text(
-                    '2025',
-                    style: TextStyle(fontSize: 12, color: Colors.grey, fontFamily: AppConstants.commonFont),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        backgroundColor: Colors.red.shade100,
-                        child: const Icon(Icons.remove, color: Colors.red),
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Withdrew amount',
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, fontFamily: 'Poppins Regular'),
-                          ),
-                          Text(
-                            tx.requestedAt,
-                            style: const TextStyle(fontSize: 12, color: Colors.grey, fontFamily: 'Poppins Regular'),
-                          ),
-                        ],
-                      ),
-                      const Spacer(),
-                      Text(
-                        '₹${tx.amount}',
-                        style: const TextStyle(fontSize: 16, color: Colors.red, fontFamily: 'Poppins Regular'),
-                      ),
-                    ],
+                ),
+                Text(
+                  formatDateTime(tx.requestedAt),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey,
+                    fontFamily: 'Poppins Regular',
                   ),
                 ),
               ],
-            );
-          },
+            ),
+            const Spacer(),
+            Text(
+              '₹${tx.amount}',
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.red,
+                fontFamily: 'Poppins Regular',
+              ),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
+}
+
         ),
       ),
     );

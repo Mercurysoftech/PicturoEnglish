@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'dart:developer' as dev;
 import 'dart:math';
@@ -11,6 +12,7 @@ import 'package:picturo_app/responses/avatar_response.dart';
 import 'package:picturo_app/responses/bank_account_details.dart';
 import 'package:picturo_app/responses/books_response.dart';
 import 'package:picturo_app/responses/chat_requests_response.dart';
+import 'package:picturo_app/responses/chatbot_plainfo_response.dart';
 import 'package:picturo_app/responses/friends_response.dart';
 import 'package:picturo_app/responses/games_response.dart';
 import 'package:picturo_app/responses/language_response.dart';
@@ -23,7 +25,7 @@ import 'package:picturo_app/responses/view_bank_response.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  static const String baseUrl = "https://picturoenglish.com/api/"; // Replace with your API URL
+  static const String baseUrl = "https://picturoenglish.com/api/";
   static const String smsApiUrl = "http://site.ping4sms.com/api/";
   late SharedPreferences _prefs;
   late Dio _dio;
@@ -33,95 +35,131 @@ class ApiService {
   ApiService._internal() {
     _dio = Dio(BaseOptions(
       baseUrl: baseUrl,
-      connectTimeout: const Duration(seconds: 15), // Set timeout
+      connectTimeout: const Duration(seconds: 15),
       receiveTimeout: const Duration(seconds: 10),
       headers: {
         "Content-Type": "application/json",
         "accept": "*/*",
       },
-
     ));
   }
-  
 
   static Future<ApiService> create() async {
     _instance._prefs = await SharedPreferences.getInstance();
     return _instance;
   }
+
   Future<String> getDeviceId() async {
     final deviceInfo = DeviceInfoPlugin();
-    final androidInfo = await deviceInfo.androidInfo;
-    return androidInfo.id; // or androidId or model based on need
+
+    try {
+      if (Platform.isAndroid) {
+        final androidInfo = await deviceInfo.androidInfo;
+        return androidInfo.id ?? "unknown_android_id";
+      } else if (Platform.isIOS) {
+        final iosInfo = await deviceInfo.iosInfo;
+        return iosInfo.identifierForVendor ?? "unknown_ios_id";
+      } else {
+        return "unsupported_platform";
+      }
+    } catch (e) {
+      print("⚠️ Device ID fetch error: $e");
+      return "device_id_unavailable";
+    }
   }
-  Future<Map<String, dynamic>> login(
-  String email, String password, BuildContext context) async {
-  final String endpoint = "login.php"; // API endpoint
 
-  // try {
+ Future<Map<String, dynamic>> login(
+    String email, String password, BuildContext context) async {
 
-  String? deviceId= await getDeviceId();
+  final String endpoint = "login.php";
+
+  try {
+    String? deviceId = await getDeviceId();
+
     Response response = await _dio.post(
       endpoint,
-      data: jsonEncode({"email": email, "password": password,"device_id":deviceId}),
+      data: {
+        "email": email,
+        "password": password,
+        "device_id": deviceId,
+      },
     );
-// Debugging
 
     if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
-      final Map<String, dynamic> data = response.data;
+      final data = response.data;
 
-      // Check if the response contains both token and user_id
-      if (!data.containsKey("token") || !data.containsKey("user_id")) {
-        return {"error": "$data"};
+      // ❌ Login failed
+      if (data["status"] == false) {
+        return {
+          "success": false,
+          "error": data["message"] ?? "Invalid email or password"
+        };
       }
 
-      // Save the token and user_id to SharedPreferences
-      await _prefs.setString("auth_token", data["token"] ?? "");
-      await _prefs.setString("user_id", data["user_id"]?.toString() ?? ""); // Ensure user_id is a string
+      // ❌ Missing required fields
+      if (!data.containsKey("token") || !data.containsKey("user_id")) {
+        return {
+          "success": false,
+          "error": "Invalid server response. Please try again."
+        };
+      }
 
-      // Print the token and user_id to the console
-      print("Token: ${data["token"]}");
-      print("User ID: ${data["user_id"]}");
+      final String userId = data["user_id"].toString();
+
+      await _prefs.setString("auth_token", data["token"]);
+      await _prefs.setString("user_id", userId);
 
       return {
-        "token": data["token"] ?? "",
-        "userid": data["user_id"]?.toString() ?? "", // Ensure user_id is a string
         "success": true,
+        "token": data["token"],
+        "userid": userId,
       };
-    } else {
-      return {"error": response.data["message"] ?? "Something went wrong"};
     }
-  // } on DioException catch (e) {
-  //   return {"error": e.response?.data["message"] ?? "Network error"};
-  // }
+
+    return {
+      "success": false,
+      "error": "Something went wrong. Please try again."
+    };
+
+  } on DioException catch (e) {
+    return {
+      "success": false,
+      "error": e.response?.data["message"] ?? "Network error"
+    };
+  } catch (e) {
+    return {
+      "success": false,
+      "error": "Unexpected error occurred"
+    };
+  }
 }
+
 
   Future<bool> hitForOTP(String phoneNo) async {
     final random = Random();
     final sixDigitNumber = 1000 + random.nextInt(9000);
 
-    String otp=sixDigitNumber.toString();
+    String otp = sixDigitNumber.toString();
     String? mobileNum = phoneNo;
     // try {
-    final uri = Uri.parse("http://site.ping4sms.com/api/smsapi?key=11ac642b5cd66a65bb0e636a0441619c&route=2&sender=MERSOF&number=$mobileNum&sms="
+    final uri = Uri.parse(
+        "http://site.ping4sms.com/api/smsapi?key=11ac642b5cd66a65bb0e636a0441619c&route=2&sender=MERSOF&number=$mobileNum&sms="
         "Your Login Verification code: $otp Don't share this code with others -MERCURY&templateid=1607100000000339284");
     var response = await http.post(
       uri,
     );
 
-
     if (response.statusCode == 200) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('otp_verify', otp);
+      print('Phone OTP: $otp');
       Fluttertoast.showToast(
         msg: "OTP Send SuccessFully",
       );
       return true;
-
     } else {
       Fluttertoast.showToast(
-          msg: "OTP Send Failed",
-          backgroundColor: Colors.red
-      );
+          msg: "OTP Send Failed", backgroundColor: Colors.red);
       return false;
     }
     // } catch (e) {
@@ -129,160 +167,182 @@ class ApiService {
     // }
   }
 
+  Future<Map<String, dynamic>> signup(String username, String email,
+      String mobile, String password, BuildContext context) async {
+    final String endpoint = "register.php"; // API endpoint
 
-Future<Map<String, dynamic>> signup(
-  String username, String email, String mobile, String password, BuildContext context) async
-{
-  final String endpoint = "register.php"; // API endpoint
+    try {
+      Response response = await _dio.post(
+        endpoint,
+        data: jsonEncode({
+          "username": username,
+          "email": email,
+          "mobile": mobile,
+          "password": password
+        }),
+      );
 
-  try {
-    Response response = await _dio.post(
-      endpoint,
-      data: jsonEncode({
-        "username": username,
-        "email": email,
-        "mobile": mobile,
-        "password": password
-      }),
-    );
+      if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
+        final Map<String, dynamic> data = response.data;
 
-
-
-    if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
-      final Map<String, dynamic> data = response.data;
-
-      if (data["status"] == "success") {
-        // Handle successful signup
-        return {
-          "status": data["status"],
-          "message": data["message"],
-          "referral_code": data["referral_code"],
-          "token":data["token"],
-          "user_id":data["user_id"],
-          "success": true,
-        };
-      } else if (data["status"] == "error") {
-        // Handle error response
-        return {
-          "error": data["message"] ?? "Invalid input data.",
-          "success": false,
-        };
+        if (data["status"] == "success") {
+          // Handle successful signup
+          return {
+            "status": data["status"],
+            "message": data["message"],
+            "referral_code": data["referral_code"],
+            "token": data["token"],
+            "user_id": data["user_id"],
+            "success": true,
+          };
+        } else if (data["status"] == "error") {
+          // Handle error response
+          return {
+            "error": data["message"] ?? "Invalid input data.",
+            "success": false,
+          };
+        } else {
+          // Handle unexpected response
+          return {
+            "error": "Unexpected response from the server.",
+            "success": false
+          };
+        }
       } else {
-        // Handle unexpected response
-        return {"error": "Unexpected response from the server.", "success": false};
+        // Handle non-200 status code
+        return {
+          "error": response.data["message"] ?? "Something went wrong",
+          "success": false
+        };
       }
-    } else {
-      // Handle non-200 status code
-      return {"error": response.data["message"] ?? "Something went wrong", "success": false};
+    } on DioException catch (e) {
+      // Handle network or server errors
+      return {
+        "error": e.response?.data["message"] ?? "Network error",
+        "success": false
+      };
     }
-  } on DioException catch (e) {
-    // Handle network or server errors
-    return {"error": e.response?.data["message"] ?? "Network error", "success": false};
   }
-}
-Future<Map<String, dynamic>> setPersonalDetails(
-  String gender, String age, String speakingLevel, String location, String reason,String speakingLanguage,String qualification, BuildContext context) async {
-  final String endpoint = "gender.php"; // API endpoint
 
-  try {
-    // Retrieve the saved auth token
-    String? token = await getAuthToken();
+  Future<Map<String, dynamic>> setPersonalDetails(
+      String gender,
+      String age,
+      String speakingLevel,
+      String location,
+      String reason,
+      String speakingLanguage,
+      String qualification,
+      BuildContext context) async {
+    final String endpoint = "gender.php"; // API endpoint
 
-    if (token == null || token.isEmpty) {
-      return {"error": "Authorization token is missing. Please log in.", "success": false};
-    }
+    try {
+      // Retrieve the saved auth token
+      String? token = await getAuthToken();
 
-    // Make the POST request with the Bearer token
-    print("sdjcnslkdcsldc ${{
-      "gender": gender,
-      "age": age,
-      "speaking_level": speakingLevel,
-      "location": location,
-      "reason": reason,
-      "speaking_language":speakingLanguage,
-      "qualification":qualification
-    }}");
-    Response response = await _dio.post(
-      endpoint,
-      data: jsonEncode({
+      if (token == null || token.isEmpty) {
+        return {
+          "error": "Authorization token is missing. Please log in.",
+          "success": false
+        };
+      }
+
+      // Make the POST request with the Bearer token
+      print("sdjcnslkdcsldc ${{
         "gender": gender,
         "age": age,
         "speaking_level": speakingLevel,
         "location": location,
         "reason": reason,
-        "speaking_language":speakingLanguage,
-        "qualification":qualification
-      }),
-      options: Options(
-        headers: {
-          "Authorization": "Bearer $token", // Add the Bearer token to the headers
-        },
-      ),
-    );
+        "speaking_language": speakingLanguage,
+        "qualification": qualification
+      }}");
+      Response response = await _dio.post(
+        endpoint,
+        data: jsonEncode({
+          "gender": gender,
+          "age": age,
+          "speaking_level": speakingLevel,
+          "location": location,
+          "reason": reason,
+          "speaking_language": speakingLanguage,
+          "qualification": qualification
+        }),
+        options: Options(
+          headers: {
+            "Authorization":
+                "Bearer $token", // Add the Bearer token to the headers
+          },
+        ),
+      );
 
-    print("Raw API Response Personal Detailssss : ${response.data}"); // Debugging
+      print(
+          "Raw API Response Personal Detailssss : ${response.data}"); // Debugging
 
-    if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
-      final Map<String, dynamic> data = response.data;
+      if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
+        final Map<String, dynamic> data = response.data;
 
-
-      if (data["status"] == true) {
-        // Handle successful update
-        if(data['message'].toString().contains("updated successfully")){
-          return {
-            "status": data["status"],
-            "message": data["message"],
-            "success": true,
-          };
-        }else{
+        if (data["status"] == true) {
+          // Handle successful update
+          if (data['message'].toString().contains("updated successfully")) {
+            return {
+              "status": data["status"],
+              "message": data["message"],
+              "success": true,
+            };
+          } else {
+            return {
+              "error": data["message"] ?? "Invalid input data.",
+              "success": false,
+            };
+          }
+        } else {
+          // Handle error response
           return {
             "error": data["message"] ?? "Invalid input data.",
             "success": false,
           };
         }
-
       } else {
-        // Handle error response
+        // Handle non-200 status code
         return {
-          "error": data["message"] ?? "Invalid input data.",
-          "success": false,
+          "error": response.data["message"] ?? "Something went wrong",
+          "success": false
         };
       }
-
-    } else {
-      // Handle non-200 status code
-      return {"error": response.data["message"] ?? "Something went wrong", "success": false};
+    } on DioException catch (e) {
+      // Handle network or server errors
+      return {
+        "error": e.response?.data["message"] ?? "Network error",
+        "success": false
+      };
     }
-  } on DioException catch (e) {
-
-    // Handle network or server errors
-    return {"error": e.response?.data["message"] ?? "Network error", "success": false};
-  }
-}
-Future<bool> setUserNativeLanguage(String language)async{
-  String? token = await getAuthToken();
-
-  // Send POST request to update the language
-  final response = await _dio.post(
-    "update_language.php",
-    options:Options(headers:  {
-      "Authorization": "Bearer $token",
-      "Content-Type": "application/json"}),
-    data:json.encode(
-        {"speaking_language": language.toLowerCase()}),
-  );
-
-  if (response.statusCode == 200) {
-    Fluttertoast.showToast(msg: "Language updated successfully");
-    print('Language updated successfully: ${response.data}');
-    return true;
-  } else {
-    Fluttertoast.showToast(msg: "Failed to update language",backgroundColor: Colors.red);
-    print('Failed to update language: ${response.statusCode}');
-    return false;
   }
 
-}
+  Future<bool> setUserNativeLanguage(String language) async {
+    String? token = await getAuthToken();
+
+    // Send POST request to update the language
+    final response = await _dio.post(
+      "update_language.php",
+      options: Options(headers: {
+        "Authorization": "Bearer $token",
+        "Content-Type": "application/json"
+      }),
+      data: json.encode({"speaking_language": language.toLowerCase()}),
+    );
+
+    if (response.statusCode == 200) {
+      Fluttertoast.showToast(msg: "Language updated successfully");
+      print('Language updated successfully: ${response.data}');
+      return true;
+    } else {
+      Fluttertoast.showToast(
+          msg: "Failed to update language", backgroundColor: Colors.red);
+      print('Failed to update language: ${response.statusCode}');
+      return false;
+    }
+  }
+
   Future<bool> removeBankAccount(String accountNumber) async {
     String? token = await getAuthToken(); // Optional if API requires token
 
@@ -291,7 +351,8 @@ Future<bool> setUserNativeLanguage(String language)async{
         "remove_account.php",
         options: Options(
           headers: {
-            "Authorization": "Bearer $token", // Remove this line if not required
+            "Authorization":
+                "Bearer $token", // Remove this line if not required
             "Content-Type": "application/json",
           },
         ),
@@ -301,23 +362,25 @@ Future<bool> setUserNativeLanguage(String language)async{
       );
 
       if (response.statusCode == 200) {
-        Fluttertoast.showToast(msg: "Account removed successfully",backgroundColor: Colors.green);
+        Fluttertoast.showToast(
+            msg: "Account removed successfully", backgroundColor: Colors.green);
         print('Account removed successfully: ${response.data}');
         return true;
       } else {
-        Fluttertoast.showToast(msg: "Failed to remove account", backgroundColor: Colors.red);
+        Fluttertoast.showToast(
+            msg: "Failed to remove account", backgroundColor: Colors.red);
         print('Failed to remove account: ${response.statusCode}');
         return false;
       }
     } catch (e) {
-      Fluttertoast.showToast(msg: "Error removing account", backgroundColor: Colors.red);
+      Fluttertoast.showToast(
+          msg: "Error removing account", backgroundColor: Colors.red);
       print('Error: $e');
       return false;
     }
   }
 
-
-Future<Map<String, dynamic>> postBankAccount({
+  Future<Map<String, dynamic>> postBankAccount({
   required String accountNumber,
   required String confrimAccountNumber,
   required String accountHolderName,
@@ -328,7 +391,11 @@ Future<Map<String, dynamic>> postBankAccount({
     String? token = await getAuthToken();
 
     if (token == null || token.isEmpty) {
-      return {"error": "Authorization token is missing. Please log in.", "success": false};
+      return {
+        "error": "Authorization token is missing. Please log in.",
+        "success": false,
+        "status": "error"
+      };
     }
 
     // Create the request body
@@ -341,42 +408,8 @@ Future<Map<String, dynamic>> postBankAccount({
 
     // Make the POST request
     Response response = await _dio.post(
-      "bankaccount.php",  // Replace with your actual API endpoint
+      "bankaccount.php", // Replace with your actual API endpoint
       data: jsonEncode(params),
-      options: Options(
-        headers: {
-          "Authorization": "Bearer $token", // Add the Bearer token
-          "Content-Type": "application/json",
-        },
-      ),
-    );
-
-    print("API Response: ${response.data}"); // Debugging
-
-    if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
-      return response.data;
-    } else {
-      return {"error": response.data["message"] ?? "Something went wrong", "success": false};
-    }
-  } on DioException catch (e) {
-    return {"error": e.response?.data["message"] ?? "Network error", "success": false};
-  }
-}
-Future<ViewBankAccountResponse> fetchBankAccount({
-  required String userId,
-}) async {
-  try {
-    // Retrieve the saved auth token
-    String? token = await getAuthToken();
-
-    if (token == null || token.isEmpty) {
-      throw Exception("Authorization token is missing. Please log in.");
-    }
-
-    // Make the GET request (since you're using queryParameters)
-    Response response = await _dio.get(
-      "bankdetails.php",  // Your API endpoint
-      queryParameters: {"user_id": userId},
       options: Options(
         headers: {
           "Authorization": "Bearer $token",
@@ -386,20 +419,112 @@ Future<ViewBankAccountResponse> fetchBankAccount({
     );
 
     print("API Response: ${response.data}"); // Debugging
+    print("API Status Code: ${response.statusCode}"); // Debugging
 
     if (response.statusCode == 200) {
-      // Parse the response into your model
-      return ViewBankAccountResponse.fromJson(response.data);
-    } else {
-      throw Exception(response.data["message"] ?? "Failed to fetch bank details");
+      // Always return the response data with added status
+      if (response.data is Map<String, dynamic>) {
+        Map<String, dynamic> data = response.data;
+        // Ensure the response has a status field
+        if (!data.containsKey("status")) {
+          data["status"] = "success"; // Add status if not present
+        }
+        if (!data.containsKey("success")) {
+          data["success"] = true; // Add success if not present
+        }
+        return data;
+      } else if (response.data is String) {
+        // Handle string responses
+        return {
+          "message": response.data,
+          "status": "success",
+          "success": true
+        };
+      }
     }
+    
+    // Handle non-200 responses
+    return {
+      "error": response.data["message"] ?? "Something went wrong",
+      "success": false,
+      "status": "error"
+    };
   } on DioException catch (e) {
-    throw Exception(e.response?.data["message"] ?? "Network error: ${e.message}");
+    print("Dio Error: ${e.message}");
+    print("Dio Response: ${e.response?.data}");
+    print("Dio Status Code: ${e.response?.statusCode}");
+    
+    // Check if there's a response from server
+    if (e.response != null && e.response!.data != null) {
+      if (e.response!.data is Map<String, dynamic>) {
+        return {
+          "error": e.response!.data["message"] ?? "Server error occurred",
+          "success": false,
+          "status": "error"
+        };
+      } else if (e.response!.data is String) {
+        return {
+          "error": e.response!.data,
+          "success": false,
+          "status": "error"
+        };
+      }
+    }
+    
+    return {
+      "error": e.message ?? "Network error",
+      "success": false,
+      "status": "error"
+    };
   } catch (e) {
-    throw Exception("Unexpected error: $e");
+    print("General Error: $e");
+    return {
+      "error": "Something went wrong",
+      "success": false,
+      "status": "error"
+    };
   }
 }
 
+  Future<ViewBankAccountResponse> fetchBankAccount({
+    required String userId,
+  }) async {
+    try {
+      // Retrieve the saved auth token
+      String? token = await getAuthToken();
+
+      if (token == null || token.isEmpty) {
+        throw Exception("Authorization token is missing. Please log in.");
+      }
+
+      // Make the GET request (since you're using queryParameters)
+      Response response = await _dio.get(
+        "bankdetails.php", // Your API endpoint
+        queryParameters: {"user_id": userId},
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      print("API Response: ${response.data}"); // Debugging
+
+      if (response.statusCode == 200) {
+        // Parse the response into your model
+        return ViewBankAccountResponse.fromJson(response.data);
+      } else {
+        throw Exception(
+            response.data["message"] ?? "Failed to fetch bank details");
+      }
+    } on DioException catch (e) {
+      throw Exception(
+          e.response?.data["message"] ?? "Network error: ${e.message}");
+    } catch (e) {
+      throw Exception("Unexpected error: $e");
+    }
+  }
 
   /// 📌 **Method to Get Token for Future Requests**
   Future<String?> getAuthToken() async {
@@ -422,141 +547,144 @@ Future<ViewBankAccountResponse> fetchBankAccount({
       throw Exception("API Error: ${e.response?.data}");
     }
   }
- Future<LanguageResponse> fetchLanguages() async {
-  final String endpoint = "get_languages.php"; // Replace with your actual endpoint
 
-  try {
-    // Fetch the saved auth token
-    String? token = await getAuthToken();
+  Future<LanguageResponse> fetchLanguages() async {
+    final String endpoint =
+        "get_languages.php"; // Replace with your actual endpoint
 
-    if (token == null || token.isEmpty) {
-      throw Exception("Authorization token is missing. Please log in.");
+    try {
+      // Fetch the saved auth token
+      String? token = await getAuthToken();
+
+      if (token == null || token.isEmpty) {
+        throw Exception("Authorization token is missing. Please log in.");
+      }
+
+      // Make the GET request with the auth token
+      Response response = await _dio.get(
+        endpoint,
+        options: Options(headers: {
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json",
+        }),
+      );
+
+      // Debugging: Print the raw API response
+
+      // Check if the response status code is 200 (OK)
+      if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
+        return LanguageResponse.fromJson(response.data);
+      } else {
+        throw Exception("Failed to fetch languages: ${response.statusMessage}");
+      }
+    } on DioException catch (e) {
+      print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
+      throw Exception("Error fetching languages: ${e.message}");
     }
-
-    // Make the GET request with the auth token
-    Response response = await _dio.get(
-      endpoint,
-      options: Options(headers: {
-        "Authorization": "Bearer $token",
-        "Content-Type": "application/json",
-      }),
-    );
-
-    // Debugging: Print the raw API response
-
-
-    // Check if the response status code is 200 (OK)
-    if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
-      return LanguageResponse.fromJson(response.data);
-    } else {
-      throw Exception("Failed to fetch languages: ${response.statusMessage}");
-    }
-  } on DioException catch (e) {
-    print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
-    throw Exception("Error fetching languages: ${e.message}");
   }
-}
-Future<BookResponse> fetchBooks() async {
-  final String endpoint = "books.php"; // Replace with your actual endpoint
 
-  try {
-    // Fetch the saved auth token
-    String? token = await getAuthToken();
+  Future<BookResponse> fetchBooks() async {
+    final String endpoint = "books.php";
 
-    if (token == null || token.isEmpty) {
-      throw Exception("Authorization token is missing. Please log in.");
-    }
+    try {
+      String? token = await getAuthToken();
 
-    // Make the GET request with the auth token
-    Response response = await _dio.get(
-      endpoint,
-      options: Options(headers: {
-        "Authorization": "Bearer $token",
-        "Content-Type": "application/json",
-      }),
-    );
+      if (token == null || token.isEmpty) {
+        throw Exception("Authorization token is missing. Please log in.");
+      }
 
-    // Debugging: Print the raw API response
+      Response response = await _dio.get(
+        endpoint,
+        options: Options(headers: {
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json",
+        }),
+      );
 
+      // Debugging: Print the raw API response
+      print('Books Response: ${response.data}');
+      // Check if the response status code is 200 (OK)
+      if (response.statusCode == 200) {
+        // Validate the response data
+        if (response.data is Map<String, dynamic>) {
+          Map<String, dynamic> responseData = response.data;
 
-    // Check if the response status code is 200 (OK)
-    if (response.statusCode == 200) {
-      // Validate the response data
-      if (response.data is Map<String, dynamic>) {
-        Map<String, dynamic> responseData = response.data;
-
-        // Ensure the required keys exist
-        if (responseData.containsKey("status") && responseData.containsKey("data")) {
-          return BookResponse.fromJson(responseData);
+          // Ensure the required keys exist
+          if (responseData.containsKey("status") &&
+              responseData.containsKey("data")) {
+            return BookResponse.fromJson(responseData);
+          } else {
+            throw Exception("Invalid API response: Missing required fields.");
+          }
         } else {
-          throw Exception("Invalid API response: Missing required fields.");
+          throw Exception("Invalid API response: Expected a JSON object.");
         }
       } else {
-        throw Exception("Invalid API response: Expected a JSON object.");
+        throw Exception("Failed to fetch books: ${response.statusMessage}");
       }
-    } else {
-      throw Exception("Failed to fetch books: ${response.statusMessage}");
+    } on DioException catch (e) {
+      print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
+      throw Exception("Error fetching books: ${e.message}");
+    } catch (e) {
+      print("Unexpected Error: $e");
+      throw Exception("An unexpected error occurred: $e");
     }
-  } on DioException catch (e) {
-    print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
-    throw Exception("Error fetching books: ${e.message}");
-  } catch (e) {
-    print("Unexpected Error: $e");
-    throw Exception("An unexpected error occurred: $e");
   }
-}
-Future<GamesResponse> fetchGames() async {
-  final String endpoint = "games.php"; // Replace with your actual endpoint
 
-  try {
-    // Fetch the saved auth token
-    String? token = await getAuthToken();
+  Future<GamesResponse> fetchGames() async {
+    final String endpoint = "games.php"; // Replace with your actual endpoint
 
-    if (token == null || token.isEmpty) {
-      throw Exception("Authorization token is missing. Please log in.");
-    }
+    try {
+      // Fetch the saved auth token
+      String? token = await getAuthToken();
 
-    // Make the GET request with the auth token
-    Response response = await _dio.get(
-      endpoint,
-      options: Options(headers: {
-        "Authorization": "Bearer $token",
-        "Content-Type": "application/json",
-      }),
-    );
+      if (token == null || token.isEmpty) {
+        throw Exception("Authorization token is missing. Please log in.");
+      }
 
-    // Debugging: Print the raw API response
+      // Make the GET request with the auth token
+      Response response = await _dio.get(
+        endpoint,
+        options: Options(headers: {
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json",
+        }),
+      );
 
-    // Check if the response status code is 200 (OK)
-    if (response.statusCode == 200) {
-      // Validate the response data
-      if (response.data is Map<String, dynamic>) {
-        Map<String, dynamic> responseData = response.data;
+      // Debugging: Print the raw API response
 
-        // Ensure the required keys exist
-        if (responseData.containsKey("status") && responseData.containsKey("data")) {
-          return GamesResponse.fromJson(responseData);
+      // Check if the response status code is 200 (OK)
+      if (response.statusCode == 200) {
+        // Validate the response data
+        if (response.data is Map<String, dynamic>) {
+          Map<String, dynamic> responseData = response.data;
+
+          // Ensure the required keys exist
+          if (responseData.containsKey("status") &&
+              responseData.containsKey("data")) {
+            return GamesResponse.fromJson(responseData);
+          } else {
+            throw Exception("Invalid API response: Missing required fields.");
+          }
         } else {
-          throw Exception("Invalid API response: Missing required fields.");
+          throw Exception("Invalid API response: Expected a JSON object.");
         }
       } else {
-        throw Exception("Invalid API response: Expected a JSON object.");
+        throw Exception("Failed to fetch books: ${response.statusMessage}");
       }
-    } else {
-      throw Exception("Failed to fetch books: ${response.statusMessage}");
+    } on DioException catch (e) {
+      print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
+      throw Exception("Error fetching books: ${e.message}");
+    } catch (e) {
+      print("Unexpected Error: $e");
+      throw Exception("An unexpected error occurred: $e");
     }
-  } on DioException catch (e) {
-    print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
-    throw Exception("Error fetching books: ${e.message}");
-  } catch (e) {
-    print("Unexpected Error: $e");
-    throw Exception("An unexpected error occurred: $e");
   }
-}
-Future<UsersResponse> fetchAllUsers() async {
-  final String endpoint = "allusers.php"; // Replace with your actual endpoint
 
-  // try {
+  Future<UsersResponse> fetchAllUsers() async {
+    final String endpoint = "allusers.php"; // Replace with your actual endpoint
+
+    // try {
     // Fetch the saved auth token
     String? token = await getAuthToken();
 
@@ -575,7 +703,6 @@ Future<UsersResponse> fetchAllUsers() async {
 
     // Debugging: Print the raw API response
 
-
     // Check if the response status code is 200 (OK)
     if (response.statusCode == 200) {
       // Validate the response data
@@ -583,7 +710,8 @@ Future<UsersResponse> fetchAllUsers() async {
         Map<String, dynamic> responseData = response.data;
 
         // Ensure the required keys exist
-        if (responseData.containsKey("status") && responseData.containsKey("data")) {
+        if (responseData.containsKey("status") &&
+            responseData.containsKey("data")) {
           return UsersResponse.fromJson(responseData);
         } else {
           throw Exception("Invalid API response: Missing required fields.");
@@ -595,19 +723,20 @@ Future<UsersResponse> fetchAllUsers() async {
       throw Exception("Failed to fetch books: ${response.statusMessage}");
     }
 
+    // } on DioException catch (e) {
+    //   print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
+    //   throw Exception("Error fetching books: ${e.message}");
+    // } catch (e) {
+    //   print("Unexpected Error: $e");
+    //   throw Exception("An unexpected error occurred: $e");
+    // }
+  }
 
-  // } on DioException catch (e) {
-  //   print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
-  //   throw Exception("Error fetching books: ${e.message}");
-  // } catch (e) {
-  //   print("Unexpected Error: $e");
-  //   throw Exception("An unexpected error occurred: $e");
-  // }
-}
-Future<FriendsResponse> fetchFriends() async {
-  final String endpoint = "friends_list.php"; // Replace with your actual endpoint
+  Future<FriendsResponse> fetchFriends() async {
+    final String endpoint =
+        "friends_list.php"; // Replace with your actual endpoint
 
-  // try {
+    // try {
     // Fetch the saved auth token
     String? token = await getAuthToken();
 
@@ -623,7 +752,7 @@ Future<FriendsResponse> fetchFriends() async {
         "Content-Type": "application/json",
       }),
     );
-    dev.log("kjnksdjcns ${token}");
+    dev.log("Login Auth Token: ${token}");
 
     // Debugging: Print the raw API response
 
@@ -634,7 +763,8 @@ Future<FriendsResponse> fetchFriends() async {
         Map<String, dynamic> responseData = response.data;
 
         // Ensure the required keys exist
-        if (responseData.containsKey("status") && responseData.containsKey("friends")) {
+        if (responseData.containsKey("status") &&
+            responseData.containsKey("friends")) {
           return FriendsResponse.fromJson(responseData);
         } else {
           throw Exception("Invalid API response: Missing required fields.");
@@ -646,18 +776,20 @@ Future<FriendsResponse> fetchFriends() async {
       throw Exception("Failed to fetch books: ${response.statusMessage}");
     }
 
-  // } on DioException catch (e) {
-  //   print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
-  //   throw Exception("Error fetching books: ${e.message}");
-  // } catch (e) {
-  //   print("Unexpected Error: $e");
-  //   throw Exception("An unexpected error occurred: $e");
-  // }
-}
-Future<RequestsResponse> fetchRequests() async {
-  final String endpoint = "chat_request_list.php"; // Replace with your actual endpoint
+    // } on DioException catch (e) {
+    //   print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
+    //   throw Exception("Error fetching books: ${e.message}");
+    // } catch (e) {
+    //   print("Unexpected Error: $e");
+    //   throw Exception("An unexpected error occurred: $e");
+    // }
+  }
 
-  // try {
+  Future<RequestsResponse> fetchRequests() async {
+    final String endpoint =
+        "chat_request_list.php"; // Replace with your actual endpoint
+
+    // try {
     // Fetch the saved auth token
     String? token = await getAuthToken();
 
@@ -676,7 +808,6 @@ Future<RequestsResponse> fetchRequests() async {
 
     // Debugging: Print the raw API response
 
-
     // Check if the response status code is 200 (OK)
     if (response.statusCode == 200) {
       // Validate the response data
@@ -684,7 +815,8 @@ Future<RequestsResponse> fetchRequests() async {
         Map<String, dynamic> responseData = response.data;
 
         // Ensure the required keys exist
-        if (responseData.containsKey("status") && responseData.containsKey("received_requests")) {
+        if (responseData.containsKey("status") &&
+            responseData.containsKey("received_requests")) {
           return RequestsResponse.fromJson(responseData);
         } else {
           throw Exception("Invalid API response: Missing required fields.");
@@ -695,127 +827,123 @@ Future<RequestsResponse> fetchRequests() async {
     } else {
       throw Exception("Failed to fetch books: ${response.statusMessage}");
     }
-  // } on DioException catch (e) {
-  //   print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
-  //   throw Exception("Error fetching books: ${e.message}");
-  // } catch (e) {
-  //   print("Unexpected Error: $e");
-  //   throw Exception("An unexpected error occurred: $e");
-  // }
-}
-Future<TopicsResponse> fetchTopics(int bookId) async {
-  final String endpoint = "topics.php"; // Replace with your actual endpoint
+    // } on DioException catch (e) {
+    //   print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
+    //   throw Exception("Error fetching books: ${e.message}");
+    // } catch (e) {
+    //   print("Unexpected Error: $e");
+    //   throw Exception("An unexpected error occurred: $e");
+    // }
+  }
 
-  try {
-    // Fetch the saved auth token
-    String? token = await getAuthToken();
+  Future<TopicsResponse> fetchTopics(int bookId) async {
+    final String endpoint = "topics.php"; // Replace with your actual endpoint
 
-    if (token == null || token.isEmpty) {
-      throw Exception("Authorization token is missing. Please log in.");
-    }
+    try {
+      // Fetch the saved auth token
+      String? token = await getAuthToken();
 
-    // Make the GET request with the auth token and book_id as a query parameter
-    Response response = await _dio.get(
-      endpoint,
-      queryParameters: {
-        'book_id': bookId, // Add book_id as a query parameter
-      },
-      options: Options(headers: {
-        "Authorization": "Bearer $token",
-        "Content-Type": "application/json",
-      }),
-    );
-    dev.log("sdkjlclksdcmsd ${response.data}");
-    // Debugging: Print the raw API response
+      if (token == null || token.isEmpty) {
+        throw Exception("Authorization token is missing. Please log in.");
+      }
 
+      // Make the GET request with the auth token and book_id as a query parameter
+      Response response = await _dio.get(
+        endpoint,
+        queryParameters: {
+          'book_id': bookId, // Add book_id as a query parameter
+        },
+        options: Options(headers: {
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json",
+        }),
+      );
+      dev.log("sdkjlclksdcmsd ${response.data}");
+      // Debugging: Print the raw API response
 
-    // Check if the response status code is 200 (OK)
-    if (response.statusCode == 200) {
-      // Validate the response data
-      if (response.data is Map<String, dynamic>) {
-        Map<String, dynamic> responseData = response.data;
+      // Check if the response status code is 200 (OK)
+      if (response.statusCode == 200) {
+        // Validate the response data
+        if (response.data is Map<String, dynamic>) {
+          Map<String, dynamic> responseData = response.data;
 
-        // Ensure the required keys exist
-        if (responseData.containsKey("status") && responseData.containsKey("topics")) {
-          return TopicsResponse.fromJson(responseData);
+          // Ensure the required keys exist
+          if (responseData.containsKey("status") &&
+              responseData.containsKey("topics")) {
+            return TopicsResponse.fromJson(responseData);
+          } else {
+            throw Exception("Invalid API response: Missing required fields.");
+          }
         } else {
-          throw Exception("Invalid API response: Missing required fields.");
+          throw Exception("Invalid API response: Expected a JSON object.");
         }
       } else {
-        throw Exception("Invalid API response: Expected a JSON object.");
+        throw Exception("Failed to fetch topics: ${response.statusMessage}");
       }
-    } else {
-      throw Exception("Failed to fetch topics: ${response.statusMessage}");
+    } on DioException catch (e) {
+      print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
+      throw Exception("Error fetching topics: ${e.message}");
+    } catch (e) {
+      print("Unexpected Error: $e");
+      throw Exception("An unexpected error occurred: $e");
     }
-  } on DioException catch (e) {
-    print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
-    throw Exception("Error fetching topics: ${e.message}");
-  } catch (e) {
-    print("Unexpected Error: $e");
-    throw Exception("An unexpected error occurred: $e");
   }
-}
-Future<QuestionsResponse> fetchQuestions(int topicId) async {
-  final String endpoint = "question.php"; 
 
-  try {
-    // Fetch the saved auth token
-    String? token = await getAuthToken();
+  Future<QuestionsResponse> fetchQuestions(int topicId) async {
+    final String endpoint = "question.php";
 
-    if (token == null || token.isEmpty) {
-      throw Exception("Authorization token is missing. Please log in.");
-    }
+    try {
+      // Fetch the saved auth token
+      String? token = await getAuthToken();
 
+      if (token == null || token.isEmpty) {
+        throw Exception("Authorization token is missing. Please log in.");
+      }
 
+      Response response = await _dio.get(
+        endpoint,
+        queryParameters: {
+          'topic_id': topicId, // Add book_id as a query parameter
+        },
+        options: Options(headers: {
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json",
+        }),
+      );
 
-    Response response = await _dio.get(
-      endpoint,
-      queryParameters: {
-        'topic_id': topicId, // Add book_id as a query parameter
-      },
-      options: Options(headers: {
-        "Authorization": "Bearer $token",
-        "Content-Type": "application/json",
-      }),
-    );
+      if (response.statusCode == 200) {
+        if (response.data is Map<String, dynamic>) {
+          Map<String, dynamic> responseData = response.data;
 
-    if (response.statusCode == 200) {
-
-
-      if (response.data is Map<String, dynamic>) {
-        Map<String, dynamic> responseData = response.data;
-
-
-        if (responseData["status"] == "success"
-        && responseData.containsKey("questions")) {
-          return QuestionsResponse.fromJson(responseData);
-        } else if(responseData["status"] == "error") {
-          return QuestionsResponse.fromJson(responseData);
-        }
-        else  {
-          throw Exception("Invalid API response: Missing required fields.");
+          if (responseData["status"] == "success" &&
+              responseData.containsKey("questions")) {
+            return QuestionsResponse.fromJson(responseData);
+          } else if (responseData["status"] == "error") {
+            return QuestionsResponse.fromJson(responseData);
+          } else {
+            throw Exception("Invalid API response: Missing required fields.");
+          }
+        } else {
+          throw Exception("Invalid API response: Expected a JSON object.");
         }
       } else {
-        throw Exception("Invalid API response: Expected a JSON object.");
+        throw Exception("Failed to fetch topics: ${response.statusMessage}");
       }
-    } else {
-      throw Exception("Failed to fetch topics: ${response.statusMessage}");
+    } on DioException catch (e) {
+      print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
+      throw Exception("Error fetching topics: ${e.message}");
+    } catch (e) {
+      print("Unexpected Error: $e");
+      throw Exception("An unexpected error occurred: $e");
     }
-  } on DioException catch (e) {
-    print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
-    throw Exception("Error fetching topics: ${e.message}");
-  } catch (e) {
-    print("Unexpected Error: $e");
-    throw Exception("An unexpected error occurred: $e");
   }
-}
 
-Future<QuestionDetailsResponse> fetchDetailedQuestion(int questionId) async {
-  final String endpoint = "example.php"; // Replace with your actual endpoint
+  Future<QuestionDetailsResponse> fetchDetailedQuestion(int questionId) async {
+    final String endpoint = "example.php"; // Replace with your actual endpoint
 
-  print('Passed questionId: $questionId'); // Debugging
+    print('Passed questionId: $questionId'); // Debugging
 
-  // try {
+    // try {
     // Fetch the saved auth token
     String? token = await getAuthToken();
 
@@ -836,7 +964,7 @@ Future<QuestionDetailsResponse> fetchDetailedQuestion(int questionId) async {
     );
 
     // Debugging: Print the raw API response
-  // dev.log("Raw API Response Eacch Questionssssssss: ${response.data}");
+    // dev.log("Raw API Response Eacch Questionssssssss: ${response.data}");
 
     // Check if the response status code is 200 (OK)
     if (response.statusCode == 200) {
@@ -845,15 +973,13 @@ Future<QuestionDetailsResponse> fetchDetailedQuestion(int questionId) async {
         Map<String, dynamic> responseData = response.data;
 
         // Ensure the required keys exist for a single question response
-        if (responseData["status"] == "success" && 
+        if (responseData["status"] == "success" &&
             responseData.containsKey("question") &&
             responseData.containsKey("examples")) {
           return QuestionDetailsResponse.fromJson(responseData);
-        } 
-        else if(responseData["status"] == "error") {
+        } else if (responseData["status"] == "error") {
           return QuestionDetailsResponse.fromJson(responseData);
-        }
-        else {
+        } else {
           throw Exception("Invalid API response: Missing required fields.");
         }
       } else {
@@ -862,89 +988,87 @@ Future<QuestionDetailsResponse> fetchDetailedQuestion(int questionId) async {
     } else {
       throw Exception("Failed to fetch question: ${response.statusMessage}");
     }
-  // } on DioException catch (e) {
-  //   print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
-  //   throw Exception("Error fetching question: ${e.message}");
-  // } catch (e) {
-  //   print("Unexpected Error: $e");
-  //   throw Exception("An unexpected error occurred: $e");
-  // }
-}
-
-Future<AvatarResponse> fetchAvatars() async {
-  final String endpoint = "get-avatars.php"; 
-
-  try {
-    String? token = await getAuthToken();
-    if (token == null || token.isEmpty) {
-      throw Exception("Authorization token is missing. Please log in.");
-    }
-
-    Response response = await _dio.get(
-      endpoint,
-      options: Options(headers: {
-        "Authorization": "Bearer $token",
-        "Content-Type": "application/json",
-      }),
-    );
-
-
-
-    if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
-      return AvatarResponse.fromJson(response.data);
-    } else {
-      throw Exception("Invalid API response format.");
-    }
-  } on DioException catch (e) {
-    print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
-    throw Exception("Error fetching avatars: ${e.message}");
-  } catch (e) {
-    print("Unexpected Error: $e");
-    throw Exception("An unexpected error occurred: $e");
+    // } on DioException catch (e) {
+    //   print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
+    //   throw Exception("Error fetching question: ${e.message}");
+    // } catch (e) {
+    //   print("Unexpected Error: $e");
+    //   throw Exception("An unexpected error occurred: $e");
+    // }
   }
-}
-Future<bool?> readMarkAsRead({required String bookId,required String topicId,required String questionId}) async {
-  final String endpoint = "mark_read.php";
 
-  try {
-    String? token = await getAuthToken();
-    if (token == null || token.isEmpty) {
-      throw Exception("Authorization token is missing. Please log in.");
-    }
+  Future<AvatarResponse> fetchAvatars() async {
+    final String endpoint = "get-avatars.php";
 
-    Response response = await _dio.post(
-      endpoint,
-      data: {
-        "book_id": bookId,
-        "topic_id": topicId,
-        "question_id": questionId
+    try {
+      String? token = await getAuthToken();
+      if (token == null || token.isEmpty) {
+        throw Exception("Authorization token is missing. Please log in.");
       }
-      ,
-      options: Options(headers: {
-        "Authorization": "Bearer $token",
-        "Content-Type": "application/json",
-      }),
-    );
 
-    if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
-      return true;
-    } else {
+      Response response = await _dio.get(
+        endpoint,
+        options: Options(headers: {
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json",
+        }),
+      );
 
+      if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
+        return AvatarResponse.fromJson(response.data);
+      } else {
+        throw Exception("Invalid API response format.");
+      }
+    } on DioException catch (e) {
+      print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
+      throw Exception("Error fetching avatars: ${e.message}");
+    } catch (e) {
+      print("Unexpected Error: $e");
+      throw Exception("An unexpected error occurred: $e");
     }
-  } on DioException catch (e) {
-    print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
-    throw Exception("Error fetching avatars: ${e.message}");
-  } catch (e) {
-    print("Unexpected Error: $e");
-    throw Exception("An unexpected error occurred: $e");
   }
-  return null;
-}
 
-Future<UserResponse> fetchProfileDetails() async {
-  final String endpoint = "users.php"; // Replace with your actual endpoint
+  Future<bool?> readMarkAsRead(
+      {required String bookId,
+      required String topicId,
+      required String questionId}) async {
+    final String endpoint = "mark_read.php";
 
-  // try {
+    try {
+      String? token = await getAuthToken();
+      if (token == null || token.isEmpty) {
+        throw Exception("Authorization token is missing. Please log in.");
+      }
+
+      Response response = await _dio.post(
+        endpoint,
+        data: {
+          "book_id": bookId,
+          "topic_id": topicId,
+          "question_id": questionId
+        },
+        options: Options(headers: {
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json",
+        }),
+      );
+
+      if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
+        return true;
+      } else {}
+    } on DioException catch (e) {
+      print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
+      throw Exception("Error fetching avatars: ${e.message}");
+    } catch (e) {
+      print("Unexpected Error: $e");
+      throw Exception("An unexpected error occurred: $e");
+    }
+    return null;
+  }
+
+  Future<UserResponse> fetchProfileDetails() async {
+    final String endpoint = "users.php"; // Replace with your actual endpoint
+
     // Fetch the saved auth token
     String? token = await getAuthToken();
 
@@ -961,281 +1085,290 @@ Future<UserResponse> fetchProfileDetails() async {
       }),
     );
 
-    // Debugging: Print the raw API response
-    // Check if the response status code is 200 (OK)
     if (response.statusCode == 200) {
       if (response.data is Map<String, dynamic>) {
         Map<String, dynamic> responseData = response.data;
 
-        dev.log("lskdmclksdmcsdlc ${responseData}");
-        // Ensure the response has required user details
-        if (responseData.containsKey("id") &&
-            responseData.containsKey("username") &&
-            responseData.containsKey("email")) {
+        dev.log("API Response: $responseData");
+
+        // ✅ Check API "status" instead of "id"/"username"
+        if (responseData["status"] == true) {
           return UserResponse.fromJson(responseData);
         } else {
-          throw Exception("Invalid API response: Missing required fields.");
+          throw Exception("API returned failure: ${responseData.toString()}");
         }
       } else {
         throw Exception("Invalid API response: Expected a JSON object.");
       }
     } else {
-      throw Exception("Failed to fetch user details: ${response.statusMessage}");
+      throw Exception(
+          "Failed to fetch user details: ${response.statusMessage}");
     }
-  // } on DioException catch (e) {
-  //   print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
-  //   throw Exception("Error fetching user details: ${e.message}");
-  // } catch (e) {
-  //   print("Unexpected Error: $e");
-  //   throw Exception("An unexpected error occurred: $e");
-  // }
-}
-Future<UserResponse> fetchUserProfileDetails(String token) async {
-  final String endpoint = "users.php"; // Replace with your actual endpoint
+  }
 
-  try {
+  Future<UserResponse> fetchUserProfileDetails(String token) async {
+    final String endpoint = "users.php"; // Replace with your actual endpoint
 
-    if (token == null || token.isEmpty) {
-      throw Exception("Authorization token is missing. Please log in.");
-    }
+    try {
+      if (token == null || token.isEmpty) {
+        throw Exception("Authorization token is missing. Please log in.");
+      }
 
-    // Make the GET request with the auth token
-    Response response = await _dio.get(
-      endpoint,
-      options: Options(headers: {
-        "Authorization": "Bearer $token",
-        "Content-Type": "application/json",
-      }),
-    );
+      // Make the GET request with the auth token
+      Response response = await _dio.get(
+        endpoint,
+        options: Options(headers: {
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json",
+        }),
+      );
 
-    // Debugging: Print the raw API response
+      // Debugging: Print the raw API response
 
+      // Check if the response status code is 200 (OK)
+      if (response.statusCode == 200) {
+        if (response.data is Map<String, dynamic>) {
+          Map<String, dynamic> responseData = response.data;
 
-    // Check if the response status code is 200 (OK)
-    if (response.statusCode == 200) {
-      if (response.data is Map<String, dynamic>) {
-        Map<String, dynamic> responseData = response.data;
-
-        // Ensure the response has required user details
-        if (responseData.containsKey("id") &&
-            responseData.containsKey("username") &&
-            responseData.containsKey("email")) {
-          return UserResponse.fromJson(responseData);
+          // Ensure the response has required user details
+          if (responseData.containsKey("id") &&
+              responseData.containsKey("username") &&
+              responseData.containsKey("email")) {
+            return UserResponse.fromJson(responseData);
+          } else {
+            throw Exception("Invalid API response: Missing required fields.");
+          }
         } else {
-          throw Exception("Invalid API response: Missing required fields.");
+          throw Exception("Invalid API response: Expected a JSON object.");
         }
       } else {
-        throw Exception("Invalid API response: Expected a JSON object.");
+        throw Exception(
+            "Failed to fetch user details: ${response.statusMessage}");
       }
-    } else {
-      throw Exception("Failed to fetch user details: ${response.statusMessage}");
+    } on DioException catch (e) {
+      print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
+      throw Exception("Error fetching user details: ${e.message}");
+    } catch (e) {
+      print("Unexpected Error: $e");
+      throw Exception("An unexpected error occurred: $e");
     }
-  } on DioException catch (e) {
-    print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
-    throw Exception("Error fetching user details: ${e.message}");
-  } catch (e) {
-    print("Unexpected Error: $e");
-    throw Exception("An unexpected error occurred: $e");
   }
-}
 
-Future<Map<String, dynamic>> sendChatRequest({
-  required int receiverId,
-}) async {
-  try {
-    // Retrieve the saved auth token
-    String? token = await getAuthToken();
+  Future<Map<String, dynamic>> sendChatRequest({
+    required int receiverId,
+  }) async {
+    try {
+      // Retrieve the saved auth token
+      String? token = await getAuthToken();
 
-    if (token == null || token.isEmpty) {
-      return {"error": "Authorization token is missing. Please log in.", "success": false};
-    }
+      if (token == null || token.isEmpty) {
+        return {
+          "error": "Authorization token is missing. Please log in.",
+          "success": false
+        };
+      }
 
-    // Create the request body
-    Map<String, dynamic> params = {
-      "receiver_id": receiverId,
-    };
-
-    // Make the POST request
-    Response response = await _dio.post(
-      "chat_request.php",  // Replace with your actual API endpoint
-      data: jsonEncode(params),
-      options: Options(
-        headers: {
-          "Authorization": "Bearer $token", // Add the Bearer token
-          "Content-Type": "application/json",
-        },
-      ),
-    );
-
-    print("API Response: ${response.data}"); // Debugging
-
-    if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
-      return response.data;
-    } else {
-      return {"error": response.data["message"] ?? "Something went wrong", "success": false};
-    }
-  } on DioException catch (e) {
-    return {"error": e.response?.data["message"] ?? "Network error", "success": false};
-  }
-}
-
-Future<Map<String, dynamic>> sendWithdrawalRequest({
-  required String amount,
-  required String paymentMethod
-}) async {
-  try {
-    // Retrieve the saved auth token
-    String? token = await getAuthToken();
-
-     if (token == null || token.isEmpty) {
-      return {
-        "success": false,
-        "error": "Authorization token is missing. Please log in.",
+      // Create the request body
+      Map<String, dynamic> params = {
+        "receiver_id": receiverId,
       };
-    }
 
-    // Create the request body
-    Map<String, dynamic> params = {
-      "amount": amount,
-      "payment_method":paymentMethod
-    };
+      // Make the POST request
+      Response response = await _dio.post(
+        "chat_request.php", // Replace with your actual API endpoint
+        data: jsonEncode(params),
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token", // Add the Bearer token
+            "Content-Type": "application/json",
+          },
+        ),
+      );
 
-    // Make the POST request
-    Response response = await _dio.post(
-      "send_withdraw_request.php", 
-      data: jsonEncode(params),
-      options: Options(
-        headers: {
-          "Authorization": "Bearer $token", 
-          "Content-Type": "application/json",
-        },
-      ),
-    );
+      print("API Response: ${response.data}"); // Debugging
 
-    print("API Response: ${response.data}"); 
-
-    if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
-      return response.data;
-    } else {
-      return {"error": response.data["message"] ?? "Something went wrong", "success": false};
-    }
-  } on DioException catch (e) {
-    return {"error": e.response?.data["message"] ?? "Network error", "success": false};
-  }
-}
-Future<Map<String, dynamic>> updateAvatar({
-  required String userId,
-  required int avatarId,
-}) async {
-  try {
-    // Retrieve the saved auth token
-    String? token = await getAuthToken();
-
-    if (token == null || token.isEmpty) {
-      return {"error": "Authorization token is missing. Please log in.", "success": false};
-    }
-
-    // Create the request body
-    Map<String, dynamic> params = {
-      "user_id": userId,
-      "avatar_id": avatarId
-    };
-
-    // Make the POST request
-    Response response = await _dio.post(
-      "update-avatar.php",  // Replace with your actual API endpoint
-      data: jsonEncode(params),
-      options: Options(
-        headers: {
-          "Authorization": "Bearer $token", // Add the Bearer token
-          "Content-Type": "application/json",
-        },
-      ),
-    );
-
-    print("API Response: ${response.data}"); // Debugging
-
-    if (response.statusCode == 200 && response.data['status'] == 'success') {
-      // Return the entire response data or a properly formatted map
+      if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
+        return response.data;
+      } else {
+        return {
+          "error": response.data["message"] ?? "Something went wrong",
+          "success": false
+        };
+      }
+    } on DioException catch (e) {
       return {
-        "success": true,
-        "message": response.data['message'] ?? "Avatar updated successfully",
-        "data": response.data // Include the entire response if needed
-      };
-    } else {
-      return {
-        "error": response.data["message"] ?? "Something went wrong", 
+        "error": e.response?.data["message"] ?? "Network error",
         "success": false
       };
     }
-  } on DioException catch (e) {
-    return {
-      "error": e.response?.data["message"] ?? "Network error", 
-      "success": false
-    };
   }
-}
 
-Future<Map<String, dynamic>> updateProfile({
-  String? username,
-  String? email,
-  String? mobile,
-}) async {
-  try {
-    // Retrieve the saved auth token
-    String? token = await getAuthToken();
+  Future<Map<String, dynamic>> sendWithdrawalRequest(
+      {required String amount, required String paymentMethod}) async {
+    try {
+      // Retrieve the saved auth token
+      String? token = await getAuthToken();
 
-    if (token == null || token.isEmpty) {
-      return {"error": "Authorization token is missing. Please log in.", "success": false};
-    }
+      if (token == null || token.isEmpty) {
+        return {
+          "success": false,
+          "error": "Authorization token is missing. Please log in.",
+        };
+      }
 
-    // Create the request body
-    Map<String, dynamic> params = {
-      "username": username,
-      "email": email,
-      "mobile": mobile
-    };
-
-    // Make the POST request
-    Response response = await _dio.post(
-      "edit_profile.php",  // Replace with your actual API endpoint
-      data: jsonEncode(params),
-      options: Options(
-        headers: {
-          "Authorization": "Bearer $token", // Add the Bearer token
-          "Content-Type": "application/json",
-        },
-      ),
-    );
-
-    print("API Response: ${response.data}"); // Debugging
-
-    if (response.statusCode == 200 && response.data['status'] == 'success') {
-      // Return the entire response data or a properly formatted map
-      return {
-        "success": true,
-        "message": response.data['message'] ?? "Avatar updated successfully",
-        "data": response.data // Include the entire response if needed
+      // Create the request body
+      Map<String, dynamic> params = {
+        "amount": amount,
+        "payment_method": paymentMethod
       };
-    } else {
+
+      // Make the POST request
+      Response response = await _dio.post(
+        "send_withdraw_request.php",
+        data: jsonEncode(params),
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      print("API Response: ${response.data}");
+
+      if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
+        return response.data;
+      } else {
+        return {
+          "error": response.data["message"] ?? "Something went wrong",
+          "success": false
+        };
+      }
+    } on DioException catch (e) {
       return {
-        "error": response.data["message"] ?? "Something went wrong", 
+        "error": e.response?.data["message"] ?? "Network error",
         "success": false
       };
     }
-  } on DioException catch (e) {
-    return {
-      "error": e.response?.data["message"] ?? "Network error", 
-      "success": false
-    };
   }
-}
 
-Future<Map<String, dynamic>> sendVerificationCode(
-  String email, BuildContext context) async {
-  final String endpoint = "forgot_password.php"; // API endpoint for sending verification code
+  Future<Map<String, dynamic>> updateAvatar({
+    required String userId,
+    required int avatarId,
+  }) async {
+    try {
+      // Retrieve the saved auth token
+      String? token = await getAuthToken();
 
-  // try {
+      if (token == null || token.isEmpty) {
+        return {
+          "error": "Authorization token is missing. Please log in.",
+          "success": false
+        };
+      }
+
+      // Create the request body
+      Map<String, dynamic> params = {"user_id": userId, "avatar_id": avatarId};
+
+      // Make the POST request
+      Response response = await _dio.post(
+        "update-avatar.php", // Replace with your actual API endpoint
+        data: jsonEncode(params),
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token", // Add the Bearer token
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      print("API Response: ${response.data}"); // Debugging
+
+      if (response.statusCode == 200 && response.data['status'] == 'success') {
+        // Return the entire response data or a properly formatted map
+        return {
+          "success": true,
+          "message": response.data['message'] ?? "Avatar updated successfully",
+          "data": response.data // Include the entire response if needed
+        };
+      } else {
+        return {
+          "error": response.data["message"] ?? "Something went wrong",
+          "success": false
+        };
+      }
+    } on DioException catch (e) {
+      return {
+        "error": e.response?.data["message"] ?? "Network error",
+        "success": false
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> updateProfile({
+    String? username,
+    String? email,
+    String? mobile,
+  }) async {
+    try {
+      // Retrieve the saved auth token
+      String? token = await getAuthToken();
+
+      if (token == null || token.isEmpty) {
+        return {
+          "error": "Authorization token is missing. Please log in.",
+          "success": false
+        };
+      }
+
+      // Create the request body
+      Map<String, dynamic> params = {
+        "username": username,
+        "email": email,
+        "mobile": mobile
+      };
+
+      // Make the POST request
+      Response response = await _dio.post(
+        "edit_profile.php", // Replace with your actual API endpoint
+        data: jsonEncode(params),
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token", // Add the Bearer token
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      print("API Response: ${response.data}"); // Debugging
+
+      if (response.statusCode == 200 && response.data['status'] == 'success') {
+        // Return the entire response data or a properly formatted map
+        return {
+          "success": true,
+          "message": response.data['message'] ?? "Avatar updated successfully",
+          "data": response.data // Include the entire response if needed
+        };
+      } else {
+        return {
+          "error": response.data["message"] ?? "Something went wrong",
+          "success": false
+        };
+      }
+    } on DioException catch (e) {
+      return {
+        "error": e.response?.data["message"] ?? "Network error",
+        "success": false
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> sendVerificationCode(
+      String email, BuildContext context) async {
+    final String endpoint =
+        "forgot_password.php"; // API endpoint for sending verification code
+
+    // try {
     Response response = await _dio.post(
       endpoint,
       data: jsonEncode({"email": email}),
@@ -1244,51 +1377,18 @@ Future<Map<String, dynamic>> sendVerificationCode(
     if (response.statusCode == 200) {
       if (response.data is Map<String, dynamic>) {
         final Map<String, dynamic> data = response.data;
-        
+
         // Check if the verification code was sent successfully
         if (data["status"] == "success") {
           return {
             "status": "success",
-            "message": data["message"] ?? "Verification code sent to your email."
+            "message":
+                data["message"] ?? "Verification code sent to your email."
           };
         } else {
-          return {"error": data["message"] ?? "Failed to send verification code"};
-        }
-      } else {
-        return {"error": "Invalid response format"};
-      }
-    } else {
-      return {"error": response.data["message"] ?? "Something went wrong"};
-    }
-  // } on DioException catch (e) {
-  //   return {"error": e.response?.data["message"] ?? "Network error"};
-  // }
-}
-
-Future<Map<String, dynamic>> verifyVerificationCode(
-  String email,String code, BuildContext context) async {
-  final String endpoint = "verify_code.php"; // API endpoint for sending verification code
-
-  try {
-    Response response = await _dio.post(
-      endpoint,
-      data: jsonEncode({"email": email,"code":code}),
-    );
-
-
-
-    if (response.statusCode == 200) {
-      if (response.data is Map<String, dynamic>) {
-        final Map<String, dynamic> data = response.data;
-        
-        // Check if the verification code was sent successfully
-        if (data["status"] == "success") {
           return {
-            "status": "success",
-            "message": data["message"] ?? "Verification successful!."
+            "error": data["message"] ?? "Failed to send verification code"
           };
-        } else if(data["status"] == "error") {
-          return {"error": data["message"] ?? "Invalid or expired code."};
         }
       } else {
         return {"error": "Invalid response format"};
@@ -1296,240 +1396,344 @@ Future<Map<String, dynamic>> verifyVerificationCode(
     } else {
       return {"error": response.data["message"] ?? "Something went wrong"};
     }
-  } on DioException catch (e) {
-    return {"error": e.response?.data["message"] ?? "Network error"};
+    // } on DioException catch (e) {
+    //   return {"error": e.response?.data["message"] ?? "Network error"};
+    // }
   }
-  // Ensure a return or throw statement at the end
-  return {"error": "Unexpected error occurred"};
-}
 
-Future<Map<String, dynamic>> changePasswordCode(
-  String email,String code, BuildContext context) async {
-  final String endpoint = "reset_password.php"; // API endpoint for sending verification code
+  Future<Map<String, dynamic>> verifyVerificationCode(
+      String email, String code, BuildContext context) async {
+    final String endpoint =
+        "verify_code.php"; // API endpoint for sending verification code
 
-  try {
-    String? token = await getAuthToken();
-    print("lsdkclksmccd ${{
-      "email": email,
-      "new_password": code
-    }}");
-    Response response = await _dio.post(
-      endpoint,
-      data: {
-        "email": email,
-        "new_password": code
-      },
-      options: Options(
-        headers: {
-          "Authorization": "Bearer $token", // Add the Bearer token
-          "Content-Type": "application/json",
-        },
-      ),
-    );
-    print("sdlkcmslkdmcslkdcmsdlck ${response.data}");
-    if (response.statusCode == 200) {
-      if (response.data is Map<String, dynamic>) {
-        final Map<String, dynamic> data = response.data;
-        
-        // Check if the verification code was sent successfully
-        if (data["status"] == "success") {
-          return {
-            "status": "success",
-            "message": data["message"] ?? "Password updated successfully."
-          };
-        } else if(data["status"] == "error") {
-          return {"error": data["message"] ?? "Can't update the password.try again"};
-        }
-      } else {
-        return {"error": "Invalid response format"};
-      }
-    } else {
-      return {"error": response.data["message"] ?? "Something went wrong"};
-    }
-  } on DioException catch (e) {
-    return {"error": e.response?.data["message"] ?? "Network error"};
-  }
-  // Ensure a return or throw statement at the end
-  return {"error": "Unexpected error occurred"};
-}
+    try {
+      Response response = await _dio.post(
+        endpoint,
+        data: jsonEncode({"email": email, "code": code}),
+      );
 
-Future<Map<String, dynamic>> acceptChatRequest({
-  required int requestId,
-}) async {
-  try {
-    // Retrieve the saved auth token
-    String? token = await getAuthToken();
+      if (response.statusCode == 200) {
+        if (response.data is Map<String, dynamic>) {
+          final Map<String, dynamic> data = response.data;
 
-    if (token == null || token.isEmpty) {
-      return {"error": "Authorization token is missing. Please log in.", "success": false};
-    }
-
-    // Create the request body
-    Map<String, dynamic> params = {
-      "request_id": requestId,
-    };
-
-    Response response = await _dio.post(
-      "accept_chat_request.php",  // Replace with your actual API endpoint
-      data: jsonEncode(params),
-      options: Options(
-        headers: {
-          "Authorization": "Bearer $token", // Add the Bearer token
-          "Content-Type": "application/json",
-        },
-      ),
-    );
-
-    print("API Response: ${response.data}"); // Debugging
-
-    if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
-      return response.data;
-    } else {
-      return {"error": response.data["message"] ?? "Something went wrong", "success": false};
-    }
-  } on DioException catch (e) {
-    return {"error": e.response?.data["message"] ?? "Network error", "success": false};
-  }
-}
-
-Future<Map<String, dynamic>> deleteAccount() async {
-  try {
-    // Retrieve the saved auth token
-    String? token = await getAuthToken();
-
-    if (token == null || token.isEmpty) {
-      return {"error": "Authorization token is missing. Please log in.", "success": false};
-    }
-
-    // Make the POST request
-    Response response = await _dio.post(
-      "account_delete.php",  // Replace with your actual API endpoint
-      options: Options(
-        headers: {
-          "Authorization": "Bearer $token", // Add the Bearer token
-          "Content-Type": "application/json",
-        },
-      ),
-    );
-
-    print("API Response: ${response.data}"); // Debugging
-
-    if (response.statusCode == 200  && response.data['success'] ==true && response.data is Map<String, dynamic>) {
-      return response.data;
-    } else {
-      return {"error": response.data["message"] ?? "Something went wrong", "success": false};
-    }
-  } on DioException catch (e) {
-    return {"error": e.response?.data["message"] ?? "Network error", "success": false};
-  }
-}
-
-Future<Map<String, dynamic>> logoutAccount() async {
-  try {
-    // Retrieve the saved auth token
-    String? token = await getAuthToken();
-
-    if (token == null || token.isEmpty) {
-      return {"error": "Authorization token is missing. Please log in.", "success": false};
-    }
-
-    // Make the POST request
-    Response response = await _dio.post(
-      "logout.php",  // Replace with your actual API endpoint
-      options: Options(
-        headers: {
-          "Authorization": "Bearer $token", // Add the Bearer token
-          "Content-Type": "application/json",
-        },
-      ),
-    );
-
-    print("API Response: ${response.data}"); // Debugging
-
-    if (response.statusCode == 200  && response.data['success'] ==true && response.data is Map<String, dynamic>) {
-      return response.data;
-    } else {
-      return {"error": response.data["message"] ?? "Something went wrong", "success": false};
-    }
-  } on DioException catch (e) {
-    return {"error": e.response?.data["message"] ?? "Network error", "success": false};
-  }
-}
-
-
-Future<MessagesResponse> fetchMessages({required int receiverId}) async {
-  final String endpoint = "chathistory.php"; // Replace with your actual endpoint
-
-  try {
-    // Fetch the saved auth token
-    String? token = await getAuthToken();
-
-    if (token == null || token.isEmpty) {
-      throw Exception("Authorization token is missing. Please log in.");
-    }
-
-    // Make the POST request with receiver_id in the body
-    Response response = await _dio.post(
-      endpoint,
-      data: {
-        'receiver_id': receiverId, // Include receiver_id in request body
-      },
-      options: Options(
-        headers: {
-          "Authorization": "Bearer $token",
-          "Content-Type": "application/json",
-        },
-      ),
-    );
-
-
-    // Debugging: Print the raw API response
-
-
-    // log("Raw API 999999999999 Response: ${response.data}");
-
-
-    // Check if the response status code is 200 (OK)
-    if (response.statusCode == 200) {
-      if (response.data is Map<String, dynamic>) {
-        Map<String, dynamic> responseData = response.data;
-
-        // Validate response structure
-        if (responseData.containsKey("status") &&
-            responseData.containsKey("messages")) {
-          
-          // Validate each message contains required fields
-          final messages = responseData['messages'] as List;
-          for (var msg in messages) {
-            if (!msg.containsKey('receiver_id') || 
-                !msg.containsKey('sender_id') ||
-                !msg.containsKey('message')) {
-              throw Exception("Invalid message format: missing required fields");
-            }
+          // Check if the verification code was sent successfully
+          if (data["status"] == "success") {
+            return {
+              "status": "success",
+              "message": data["message"] ?? "Verification successful!."
+            };
+          } else if (data["status"] == "error") {
+            return {"error": data["message"] ?? "Invalid or expired code."};
           }
-          
-          return MessagesResponse.fromJson(responseData);
         } else {
-          throw Exception("API response missing required fields");
+          return {"error": "Invalid response format"};
         }
       } else {
-        throw Exception("Invalid API response format");
+        return {"error": response.data["message"] ?? "Something went wrong"};
       }
-    } else {
-      throw Exception("Failed to fetch messages: ${response.statusMessage}");
+    } on DioException catch (e) {
+      return {"error": e.response?.data["message"] ?? "Network error"};
     }
-  } on DioException catch (e) {
-    print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
-    throw Exception("Network error: ${e.message}");
-  } catch (e) {
-    print("Unexpected Error: $e");
-    throw Exception("Failed to load messages");
+    // Ensure a return or throw statement at the end
+    return {"error": "Unexpected error occurred"};
   }
-}
-Future<bool?> sendMessagesToAPI({required Map<String,dynamic> messageMap}) async {
-  final String endpoint = "chat.php"; // Replace with your actual endpoint
 
-  // try {
+  Future<Map<String, dynamic>> changePasswordCode(
+      String email, String code, BuildContext context) async {
+    final String endpoint =
+        "reset_password.php"; // API endpoint for sending verification code
+
+    try {
+      String? token = await getAuthToken();
+      print("lsdkclksmccd ${{"email": email, "new_password": code}}");
+      Response response = await _dio.post(
+        endpoint,
+        data: {"email": email, "new_password": code},
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token", // Add the Bearer token
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+      print("sdlkcmslkdmcslkdcmsdlck ${response.data}");
+      if (response.statusCode == 200) {
+        if (response.data is Map<String, dynamic>) {
+          final Map<String, dynamic> data = response.data;
+
+          // Check if the verification code was sent successfully
+          if (data["status"] == "success") {
+            return {
+              "status": "success",
+              "message": data["message"] ?? "Password updated successfully."
+            };
+          } else if (data["status"] == "error") {
+            return {
+              "error": data["message"] ?? "Can't update the password.try again"
+            };
+          }
+        } else {
+          return {"error": "Invalid response format"};
+        }
+      } else {
+        return {"error": response.data["message"] ?? "Something went wrong"};
+      }
+    } on DioException catch (e) {
+      return {"error": e.response?.data["message"] ?? "Network error"};
+    }
+    // Ensure a return or throw statement at the end
+    return {"error": "Unexpected error occurred"};
+  }
+
+  Future<Map<String, dynamic>> acceptChatRequest({
+    required int requestId,
+  }) async {
+    try {
+      // Retrieve the saved auth token
+      String? token = await getAuthToken();
+
+      if (token == null || token.isEmpty) {
+        return {
+          "error": "Authorization token is missing. Please log in.",
+          "success": false
+        };
+      }
+
+      // Create the request body
+      Map<String, dynamic> params = {
+        "request_id": requestId,
+      };
+
+      Response response = await _dio.post(
+        "accept_chat_request.php", // Replace with your actual API endpoint
+        data: jsonEncode(params),
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token", // Add the Bearer token
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      print("API Response: ${response.data}"); // Debugging
+
+      if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
+        return response.data;
+      } else {
+        return {
+          "error": response.data["message"] ?? "Something went wrong",
+          "success": false
+        };
+      }
+    } on DioException catch (e) {
+      return {
+        "error": e.response?.data["message"] ?? "Network error",
+        "success": false
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> declineChatRequest({
+    required int requestId,
+  }) async {
+    try {
+      String? token = await getAuthToken();
+
+      if (token == null || token.isEmpty) {
+        return {
+          "error": "Authorization token is missing. Please log in.",
+          "success": false
+        };
+      }
+
+      // Create the request body
+      Map<String, dynamic> params = {
+        "request_id": requestId,
+      };
+
+      Response response = await _dio.post(
+        "decline_chat_request.php",
+        data: jsonEncode(params),
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      print("API Response: ${response.data}");
+
+      if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
+        return response.data;
+      } else {
+        return {
+          "error": response.data["message"] ?? "Something went wrong",
+          "success": false
+        };
+      }
+    } on DioException catch (e) {
+      return {
+        "error": e.response?.data["message"] ?? "Network error",
+        "success": false
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> deleteAccount() async {
+    try {
+      // Retrieve the saved auth token
+      String? token = await getAuthToken();
+
+      if (token == null || token.isEmpty) {
+        return {
+          "error": "Authorization token is missing. Please log in.",
+          "success": false
+        };
+      }
+
+      // Make the POST request
+      Response response = await _dio.post(
+        "account_delete.php", // Replace with your actual API endpoint
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token", // Add the Bearer token
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      print("API Response: ${response.data}"); // Debugging
+
+      if (response.statusCode == 200 &&
+          response.data['success'] == true &&
+          response.data is Map<String, dynamic>) {
+        return response.data;
+      } else {
+        return {
+          "error": response.data["message"] ?? "Something went wrong",
+          "success": false
+        };
+      }
+    } on DioException catch (e) {
+      return {
+        "error": e.response?.data["message"] ?? "Network error",
+        "success": false
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> logoutAccount() async {
+    try {
+      // Retrieve the saved auth token
+      String? token = await getAuthToken();
+
+      if (token == null || token.isEmpty) {
+        return {
+          "error": "Authorization token is missing. Please log in.",
+          "success": false
+        };
+      }
+
+      Response response = await _dio.post(
+        "logout.php",
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      print("API Response: ${response.data}");
+
+      if (response.statusCode == 200 &&
+          response.data['success'] == true &&
+          response.data is Map<String, dynamic>) {
+        return response.data;
+      } else {
+        return {
+          "error": response.data["message"] ?? "Something went wrong",
+          "success": false
+        };
+      }
+    } on DioException catch (e) {
+      return {
+        "error": e.response?.data["message"] ?? "Network error",
+        "success": false
+      };
+    }
+  }
+
+  Future<MessagesResponse> fetchMessages({required int receiverId}) async {
+    final String endpoint = "chathistory.php";
+
+    try {
+      String? token = await getAuthToken();
+
+      if (token == null || token.isEmpty) {
+        throw Exception("Authorization token is missing. Please log in.");
+      }
+      print('"Authorization": "Bearer $token"');
+
+      Response response = await _dio.post(
+        endpoint,
+        data: {
+          'receiver_id': receiverId,
+        },
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      // log("Raw API 999999999999 Response: ${response.data}");
+
+      // Check if the response status code is 200 (OK)
+      if (response.statusCode == 200) {
+        if (response.data is Map<String, dynamic>) {
+          Map<String, dynamic> responseData = response.data;
+
+          // Validate response structure
+          if (responseData.containsKey("status") &&
+              responseData.containsKey("messages")) {
+            // Validate each message contains required fields
+            final messages = responseData['messages'] as List;
+            for (var msg in messages) {
+              if (!msg.containsKey('receiver_id') ||
+                  !msg.containsKey('sender_id') ||
+                  !msg.containsKey('message')) {
+                throw Exception(
+                    "Invalid message format: missing required fields");
+              }
+            }
+
+            return MessagesResponse.fromJson(responseData);
+          } else {
+            throw Exception("API response missing required fields");
+          }
+        } else {
+          throw Exception("Invalid API response format");
+        }
+      } else {
+        throw Exception("Failed to fetch messages: ${response.statusMessage}");
+      }
+    } on DioException catch (e) {
+      print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
+      throw Exception("Network error: ${e.message}");
+    } catch (e) {
+      print("Unexpected Error: $e");
+      throw Exception("Failed to load messages");
+    }
+  }
+
+  Future<bool?> sendMessagesToAPI(
+      {required Map<String, dynamic> messageMap}) async {
+    final String endpoint = "chat.php"; // Replace with your actual endpoint
+
+    // try {
     // Fetch the saved auth token
     String? token = await getAuthToken();
 
@@ -1538,7 +1742,7 @@ Future<bool?> sendMessagesToAPI({required Map<String,dynamic> messageMap}) async
     }
 
     // Make the POST request with receiver_id in the body
-  print("sdlkcslkdcmsdc ${messageMap}");
+    print("sdlkcslkdcmsdc ${messageMap}");
     Response response = await _dio.post(
       "http://picturoenglish.com/api/chat.php",
       data: json.encode(messageMap),
@@ -1550,7 +1754,6 @@ Future<bool?> sendMessagesToAPI({required Map<String,dynamic> messageMap}) async
       ),
     );
 
-
     // Debugging: Print the raw API response
     print("Send API -- Response: ${response.data}");
 
@@ -1561,44 +1764,35 @@ Future<bool?> sendMessagesToAPI({required Map<String,dynamic> messageMap}) async
 
         // Validate response structure
         if (responseData.containsKey("status")) {
-
           return true;
-        } else {
-
-        }
-      } else {
-
-      }
-    } else {
-
-    }
+        } else {}
+      } else {}
+    } else {}
     return null;
-  // } on DioException catch (e) {
-  //   print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
-  //   throw Exception("Network error: ${e.message}");
-  // } catch (e) {
-  //   print("Unexpected Error: $e");
-  //   throw Exception("Failed to load messages");
-  // }
-}
-
+    // } on DioException catch (e) {
+    //   print("Dio Error: ${e.response?.statusCode} - ${e.response?.data}");
+    //   throw Exception("Network error: ${e.message}");
+    // } catch (e) {
+    //   print("Unexpected Error: $e");
+    //   throw Exception("Failed to load messages");
+    // }
+  }
 
   Future<Map<String, dynamic>> sendSms({
     required String phoneNumber,
     required String message,
-  }) async
-  {
+  }) async {
     try {
       final Map<String, dynamic> body = {
-        "key": "11ac642b5cd66a65bb0e636a0441619c", 
-        "route": "2", 
+        "key": "11ac642b5cd66a65bb0e636a0441619c",
+        "route": "2",
         "sender": "MERSOF",
         "number": phoneNumber,
-        "sms": "Your Login Verification code:$message Don't share this code with others -MERCURY",
+        "sms":
+            "Your Login Verification code:$message Don't share this code with others -MERCURY",
         "templateid": '1607100000000339284',
       };
 
-      
       Response response = await _dio.post(
         smsApiUrl,
         data: body,
@@ -1609,7 +1803,6 @@ Future<bool?> sendMessagesToAPI({required Map<String,dynamic> messageMap}) async
         ),
       );
 
-      
       if (response.statusCode == 200) {
         return {
           "success": true,
@@ -1630,10 +1823,7 @@ Future<bool?> sendMessagesToAPI({required Map<String,dynamic> messageMap}) async
     }
   }
 
-
-  Future<Map<String, dynamic>> blockUser(
-      int userId) async
-  {
+  Future<Map<String, dynamic>> blockUser(int userId) async {
     final String endpoint = "blocked.php"; // API endpoint
 
     String? token = await getAuthToken();
@@ -1646,9 +1836,7 @@ Future<bool?> sendMessagesToAPI({required Map<String,dynamic> messageMap}) async
       print("inside block api");
       Response response = await _dio.post(
         endpoint,
-        data: jsonEncode({
-          "user_id":userId
-        }),
+        data: jsonEncode({"user_id": userId}),
         options: Options(
           headers: {
             "Authorization": "Bearer $token",
@@ -1656,8 +1844,6 @@ Future<bool?> sendMessagesToAPI({required Map<String,dynamic> messageMap}) async
           },
         ),
       );
-
-
 
       if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
         final Map<String, dynamic> data = response.data;
@@ -1668,8 +1854,8 @@ Future<bool?> sendMessagesToAPI({required Map<String,dynamic> messageMap}) async
             "status": data["status"],
             "message": data["message"],
             "referral_code": data["referral_code"],
-            "token":data["token"],
-            "user_id":data["user_id"],
+            "token": data["token"],
+            "user_id": data["user_id"],
             "success": true,
           };
         } else if (data["status"] == "error") {
@@ -1680,21 +1866,30 @@ Future<bool?> sendMessagesToAPI({required Map<String,dynamic> messageMap}) async
           };
         } else {
           // Handle unexpected response
-          return {"error": "Unexpected response from the server.", "success": false};
+          return {
+            "error": "Unexpected response from the server.",
+            "success": false
+          };
         }
       } else {
         // Handle non-200 status code
-        return {"error": response.data["message"] ?? "Something went wrong", "success": false};
+        return {
+          "error": response.data["message"] ?? "Something went wrong",
+          "success": false
+        };
       }
     } on DioException catch (e) {
       // Handle network or server errors
-      return {"error": e.response?.data["message"] ?? "Network error", "success": false};
+      return {
+        "error": e.response?.data["message"] ?? "Network error",
+        "success": false
+      };
     }
   }
 
-
   Future<List> getBlockedUsers(int userId) async {
-    final String endpoint = "blocked_user_list.php?user_id=$userId"; // Replace with your actual endpoint
+    final String endpoint =
+        "blocked_user_list.php?user_id=$userId"; // Replace with your actual endpoint
 
     try {
       // Fetch the saved auth token
@@ -1713,8 +1908,6 @@ Future<bool?> sendMessagesToAPI({required Map<String,dynamic> messageMap}) async
         }),
       );
 
-
-
       // Check if the response status code is 200 (OK)
       if (response.statusCode == 200) {
         // Validate the response data
@@ -1722,9 +1915,9 @@ Future<bool?> sendMessagesToAPI({required Map<String,dynamic> messageMap}) async
           Map<String, dynamic> responseData = response.data;
 
           // Ensure the required keys exist
-          if (responseData.containsKey("status") && responseData.containsKey("data")) {
-
-            print("responseData");
+          if (responseData.containsKey("status") &&
+              responseData.containsKey("data")) {
+            print("responseData for Blocked Users: ${json.encode(responseData)}");
             print(json.encode(responseData));
 
             return (responseData["data"]);
@@ -1745,6 +1938,7 @@ Future<bool?> sendMessagesToAPI({required Map<String,dynamic> messageMap}) async
       throw Exception("An unexpected error occurred: $e");
     }
   }
+
   Future<void> unblockUser(int userId) async {
     String? token = await getAuthToken();
 
@@ -1759,17 +1953,140 @@ Future<bool?> sendMessagesToAPI({required Map<String,dynamic> messageMap}) async
       ),
     );
     print("sldjkcslkcsdc ${response.data}");
-    if(response.statusCode == 200){
+    if (response.statusCode == 200) {
       Map<String, dynamic> responseData = response.data;
-      if(responseData['status']){
-        Fluttertoast.showToast(msg: '${responseData['message']}',backgroundColor: Colors.green);
-      }else{
-        Fluttertoast.showToast(msg: '${responseData['message']}',backgroundColor: Colors.red);
+      if (responseData['status']) {
+        Fluttertoast.showToast(
+            msg: '${responseData['message']}', backgroundColor: Colors.green);
+      } else {
+        Fluttertoast.showToast(
+            msg: '${responseData['message']}', backgroundColor: Colors.red);
       }
-    }else if (response.statusCode != 200) {
-      Fluttertoast.showToast(msg: 'Unable to Unblock Check Your Internet Connection',backgroundColor: Colors.red);
+    } else if (response.statusCode != 200) {
+      Fluttertoast.showToast(
+          msg: 'Unable to Unblock Check Your Internet Connection',
+          backgroundColor: Colors.red);
       throw Exception('Failed to unblock user');
     }
   }
 
+  // Add this method to your ApiService class
+  Future<Map<String, dynamic>> rejectCall(int callerId, int calleeId) async {
+    final String endpoint = "reject.php";
+
+    try {
+      Response response = await _dio.post(
+        endpoint,
+        data: jsonEncode({
+          "from": calleeId.toString(),
+          "to": callerId.toString(),
+        }),
+        options: Options(
+          headers: {
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
+        return response.data;
+      } else {
+        return {"status": false, "message": "Failed to reject call"};
+      }
+    } on DioException catch (e) {
+      print("Reject call error: ${e.message}");
+      return {"status": false, "message": "Network error"};
+    }
+  }
+
+  Future<PlanInfoResponse> getChatBotPlanInfo({
+    required String userId,
+  }) async {
+    try {
+      String? token = await getAuthToken();
+
+      if (token == null || token.isEmpty) {
+        throw Exception("Authorization token is missing. Please log in.");
+      }
+
+      Response response = await _dio.get(
+        "get_plan_info.php",
+        queryParameters: {"user_id": userId},
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+
+      print("API Response: ${response.data}");
+
+      if (response.statusCode == 200) {
+        return PlanInfoResponse.fromJson(response.data);
+      } else {
+        throw Exception(
+            response.data["message"] ?? "Failed to fetch bank details");
+      }
+    } on DioException catch (e) {
+      throw Exception(
+          e.response?.data["message"] ?? "Network error: ${e.message}");
+    } catch (e) {
+      throw Exception("Unexpected error: $e");
+    }
+  }
+
+  Future<void> updateVoIPToken(String voipToken) async {
+  final String endpoint = "save_ios_voip_token.php";
+
+  String? token = await getAuthToken();
+
+  if (token == null || token.isEmpty) {
+    throw Exception("Authorization token missing");
+  }
+
+  Response response = await _dio.post(
+    endpoint,
+    data: {
+      "voipToken": voipToken,
+    },
+    options: Options(
+      headers: {
+        "Authorization": "Bearer $token",
+        "Content-Type": "application/json",
+      },
+    ),
+  );
+
+  if (response.statusCode == 200) {
+    if (response.data is Map<String, dynamic>) {
+      final data = response.data;
+
+      if (data["status"] == true) {
+        dev.log("✅ VoIP token updated successfully");
+      } else {
+        throw Exception("API Errors_voip: ${data["message"]}");
+      }
+    } else {
+      throw Exception("Invalid API response format");
+    }
+  } else {
+    throw Exception("Failed to update VoIP token");
+  }
+}
+
+Future<void> syncVoipTokenIfNeeded() async {
+  final prefs = await SharedPreferences.getInstance();
+  final voipToken = prefs.getString("voip_token");
+
+  if (voipToken == null) return;
+
+  String? authToken = await getAuthToken();
+  if (authToken == null) return;
+
+  await updateVoIPToken(voipToken);
+
+  // ✅ Mark as synced
+  await prefs.remove("voip_token");
+}
 }

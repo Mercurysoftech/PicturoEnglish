@@ -1,13 +1,18 @@
 import 'dart:convert';
 import 'dart:developer';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:intl/intl.dart';
 import 'package:picturo_app/classes/svgfiles.dart';
+import 'package:picturo_app/cubits/call_cubit/call_socket_handle_cubit.dart';
 import 'package:picturo_app/cubits/premium_cubit/premium_plans_cubit.dart';
 import 'package:picturo_app/models/premium_plan_model.dart';
+import 'package:picturo_app/providers/remaining_bot_calls_provider.dart';
+import 'package:picturo_app/providers/remaining_minutes_provider.dart';
 import 'package:picturo_app/screens/premium_plans_screen.dart';
+import 'package:picturo_app/utils/common_file.dart';
 import 'package:provider/provider.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,7 +20,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/profileprovider.dart';
 
 class PremiumScreen extends StatefulWidget {
-  const PremiumScreen({super.key, required this.userName,required this.selectedPlan});
+  const PremiumScreen(
+      {super.key, required this.userName, required this.selectedPlan});
   final String userName;
   final PlanModel selectedPlan;
 
@@ -25,8 +31,8 @@ class PremiumScreen extends StatefulWidget {
 
 class _PremiumScreenState extends State<PremiumScreen> {
   late Razorpay _razorpay;
-  final TextEditingController refferalController=TextEditingController();
-  String razorPayId='';
+  final TextEditingController refferalController = TextEditingController();
+  String razorPayId = '';
 
   @override
   void initState() {
@@ -62,8 +68,8 @@ class _PremiumScreenState extends State<PremiumScreen> {
       endDate = startDate.add(Duration(days: days));
     } else if (validatePlan.contains("month")) {
       int months = int.tryParse(validatePlan.split(" ")[0]) ?? 0;
-      endDate = DateTime(startDate.year, startDate.month + months, startDate.day,
-          startDate.hour, startDate.minute, startDate.second);
+      endDate = DateTime(startDate.year, startDate.month + months,
+          startDate.day, startDate.hour, startDate.minute, startDate.second);
     } else if (validatePlan.contains("year")) {
       int years = int.tryParse(validatePlan.split(" ")[0]) ?? 0;
       endDate = DateTime(startDate.year + years, startDate.month, startDate.day,
@@ -83,13 +89,15 @@ class _PremiumScreenState extends State<PremiumScreen> {
     final parts = voiceCall.split("/").first.trim(); // e.g. "10min" or "1 hour"
 
     if (parts.contains("min")) {
-      final minutes = int.tryParse(parts.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+      final minutes =
+          int.tryParse(parts.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
       return minutes * 60;
     } else if (parts.contains("hour")) {
       final hours = int.tryParse(parts.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
       return hours * 3600;
     } else if (parts.contains("sec")) {
-      final seconds = int.tryParse(parts.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+      final seconds =
+          int.tryParse(parts.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
       return seconds;
     }
 
@@ -97,7 +105,8 @@ class _PremiumScreenState extends State<PremiumScreen> {
   }
 
   Future<void> updateUserPricePlan() async {
-    const String url = 'https://picturoenglish.com/api/priceplan-updateuser.php';
+    const String url =
+        'https://picturoenglish.com/api/priceplan-updateuser.php';
 
     final Map<String, dynamic> body = {
       // "membership": "${widget.selectedPlan.name}",
@@ -110,10 +119,13 @@ class _PremiumScreenState extends State<PremiumScreen> {
       "planid": widget.selectedPlan.id
     };
 
+    final callSocketCubit = context.read<CallSocketHandleCubit>();
+    final remainingMinutesProvider =
+        Provider.of<RemainingMinutesProvider>(context, listen: false);
+
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString("auth_token");
     try {
-
       final response = await http.post(
         Uri.parse(url),
         headers: {
@@ -122,39 +134,63 @@ class _PremiumScreenState extends State<PremiumScreen> {
         },
         body: jsonEncode(body),
       );
-      log(";kadcmlskdc Plan Update  ${response.body}");
+      log("Plan Update ${response.body}");
       if (response.statusCode == 200) {
-        if(refferalController.text.isNotEmpty){
-          updateRefferels();
+        final responseData = jsonDecode(response.body);
+        if (responseData['status'] == true) {
+          // ignore: use_build_context_synchronously
+          context.read<RemainingBotCallsProvider>().fetchRemainingBotCalls();
+          print(
+              'requesting the remaining minutes: ${context.read<RemainingBotCallsProvider>().fetchRemainingBotCalls()}');
+
+          // Set the provider in cubit
+          callSocketCubit.setRemainingMinutesProvider(remainingMinutesProvider);
+
+          // Refresh plan instantly after upgrade - this triggers server to fetch
+          // latest plan from database and emit updated remaining minutes
+          callSocketCubit.refreshPlan();
+
+          // Optional: small delay to let backend update
+          await Future.delayed(const Duration(milliseconds: 500));
+
+          if (refferalController.text.isNotEmpty) {
+            updateRefferels();
+          }
+          if (widget.selectedPlan.name?.toLowerCase().contains("bot") ??
+              false) {
+            await buyChatBotApi();
+          } else {
+            Navigator.pop(context);
+            Navigator.pop(context);
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => PremiumPlansScreen(
+                      userName: widget.userName,
+                      isChatBot: false,
+                      isCall: false)),
+            );
+          }
+        } else {
+          _showErrorDialog(responseData['message'] ?? "Plan update failed");
         }
-        if(widget.selectedPlan.name?.toLowerCase().contains("bot")??false){
-          buyChatBotApi();
-        }else{
-          Navigator.pop(context);
-          Navigator.pop(context);
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => PremiumPlansScreen(userName: widget.userName,)), // Navigate to PremiumScreen
-          );
-
-        }
-
-
       } else {
         print("Failed with status: ${response.statusCode}");
         print("Response body: ${response.body}");
+        _showErrorDialog("Failed to update plan. Please try again.");
       }
     } catch (e) {
       print("Error occurred: $e");
     }
   }
+
   Future<void> updateRefferels() async {
     const String url = 'https://picturoenglish.com/api/referral_and_wallet.php';
     final prefs = await SharedPreferences.getInstance();
     final currentUserId = prefs.getString('user_id');
     final Map<String, dynamic> body = {
       "user_id": currentUserId,
-      "referral_code": "${refferalController.text}",
+      "referral_code": refferalController.text,
       "amount": widget.selectedPlan.price,
       "razorpay_order_id": "${razorPayId}"
     };
@@ -162,7 +198,6 @@ class _PremiumScreenState extends State<PremiumScreen> {
 
     String? token = prefs.getString("auth_token");
     try {
-
       final response = await http.post(
         Uri.parse(url),
         headers: {
@@ -171,24 +206,24 @@ class _PremiumScreenState extends State<PremiumScreen> {
         },
         body: jsonEncode(body),
       );
-      log(";kadcmlskdc refferal Id Response :  ${response.body}");
+      log("Premium Screen Page refferal Id Response :  ${response.body}");
       if (response.statusCode == 200) {
-        if(refferalController.text.isNotEmpty){
-
-        }
-        if(widget.selectedPlan.name?.toLowerCase().contains("bot")??false){
-          buyChatBotApi();
-        }else{
+        if (refferalController.text.isNotEmpty) {}
+        if (widget.selectedPlan.name?.toLowerCase().contains("bot") ?? false) {
+          await buyChatBotApi();
+        } else {
           Navigator.pop(context);
           Navigator.pop(context);
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => PremiumPlansScreen(userName: widget.userName,)), // Navigate to PremiumScreen
+            MaterialPageRoute(
+                builder: (context) => PremiumPlansScreen(
+                      userName: widget.userName,
+                      isChatBot: false,
+                      isCall: false,
+                    )), // Navigate to PremiumScreen
           );
-
         }
-
-
       } else {
         print("Failed with status: ${response.statusCode}");
         print("Response body: ${response.body}");
@@ -197,19 +232,19 @@ class _PremiumScreenState extends State<PremiumScreen> {
       print("Error occurred: $e");
     }
   }
-  void buyChatBotApi()async{
-    const String url = 'http://37.27.187.66:2030/buy-plan';
+
+  Future<void> buyChatBotApi() async {
+    const String url = 'http://46.202.167.55:2030/buy-plan';
     final prefs = await SharedPreferences.getInstance();
     final currentUserId = prefs.getString('user_id');
     final Map<String, dynamic> body = {
-      "user_id":"${currentUserId}",
+      "user_id": "${currentUserId}",
       "plan_type": "${widget.selectedPlan.name}"
     };
-    print("sdjcksjcsdc ${body}");
+    print("Buy ChatBot API: ${body}");
 
     String? token = prefs.getString("auth_token");
     try {
-
       final response = await http.post(
         Uri.parse(url),
         headers: {
@@ -220,39 +255,69 @@ class _PremiumScreenState extends State<PremiumScreen> {
       );
 
       if (response.statusCode == 200) {
-
-        buyChatBotApi();
+        print("ChatBot API Success");
+      } else {
+        print("Failed with status: ${response.statusCode}");
+        print("Response body: ${response.body}");
+        Fluttertoast.showToast(
+            msg: "Chatbot plan activation warning: ${response.statusCode}");
+      }
+    } catch (e) {
+      print("Error occurred: $e");
+      Fluttertoast.showToast(msg: "Error activating chatbot plan: $e");
+    } finally {
+      if (mounted) {
         Navigator.pop(context);
         Navigator.pop(context);
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => PremiumPlansScreen(userName: widget.userName,)), // Navigate to PremiumScreen
+          MaterialPageRoute(
+              builder: (context) => PremiumPlansScreen(
+                  userName: widget.userName,
+                  isChatBot: false,
+                  isCall: false)), // Navigate to PremiumScreen
         );
-
-      } else {
-        print("Failed with status: ${response.statusCode}");
-        print("Response body: ${response.body}");
       }
-    } catch (e) {
-      print("Error occurred: $e");
     }
   }
+
+  Future<bool> hasActivePlan() async {
+    try {
+      final planCubit = context.read<PlanCubit>();
+      final currentPlan = planCubit.currentPlan;
+
+      if (currentPlan == null) {
+        await planCubit.fetchCurrentPlanOnly();
+      }
+
+      final updatedPlan = planCubit.currentPlan;
+
+      if (updatedPlan?.data != null && updatedPlan!.data!.isNotEmpty) {
+        final planData = updatedPlan.data!.first;
+
+        final currentPlanId = planData.planId;
+        final endDateString = planData.endDate;
+        final endDate = DateTime.tryParse(endDateString ?? '');
+        final now = DateTime.now();
+
+        if (currentPlanId == widget.selectedPlan.id &&
+            endDate != null &&
+            endDate.isAfter(now) &&
+            widget.selectedPlan.id != 3) {
+          return true;
+        }
+      }
+    } catch (e) {
+      log("Error checking active plan: $e");
+    }
+
+    return false;
+  }
+
   void _handlePaymentError(PaymentFailureResponse response) {
     // Handle payment failure
-    showDialog(
-      context: context,
-      builder: (BuildContext context) => AlertDialog(
-        backgroundColor: Colors.white,
-        title: const Text("Payment Failed"),
-        content: Text("Error: ${response.message}"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("OK"),
-          ),
-        ],
-      ),
-    );
+    _showErrorDialog("Error: ${response.message ?? 'Unknown'}",
+        title: "Payment Failed");
   }
 
   void _handleExternalWallet(ExternalWalletResponse response) {
@@ -275,76 +340,75 @@ class _PremiumScreenState extends State<PremiumScreen> {
 
   bool paymentLoading = false;
 
-  void openCheckout() async {
+  Future<void> openCheckout() async {
     setState(() {
       paymentLoading = true;
     });
     // try {
     final mobile = context.read<ProfileProvider>().mobile;
 
-      // Call your backend to create the order
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? token = prefs.getString("auth_token");
-      final url = Uri.parse('https://picturoenglish.com/api/create_order.php');
+    // Call your backend to create the order
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString("auth_token");
+    final url = Uri.parse('https://picturoenglish.com/api/createorder.php');
 
-      final response = await http.post(
-        url,
-        headers: {
-          "Authorization": "Bearer $token",
-          "Content-Type": "application/json",
-        },
-        body: jsonEncode({
-          "amount": widget.selectedPlan.price,
-
-        }),
-      );
-
-
-      log(";kadcmlskdc ${{
+    final response = await http.post(
+      url,
+      headers: {
+        "Authorization": "Bearer $token",
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode({
         "amount": widget.selectedPlan.price,
-        if(refferalController.text.isNotEmpty)
-          "refferal_code":"${refferalController.text}"
-      }}  ++ ${response.body}__ ${response.statusCode == 200}");
-      if (response.statusCode == 200) {
-        final orderData = json.decode(response.body);
+        "planid": widget.selectedPlan.id,
+      }),
+    );
 
-        if (orderData['razorpay_order_id'] != null && orderData['amount'] != null) {
-          setState(() {
-            razorPayId=orderData['razorpay_order_id'].toString();
-          });
+    log("Premium Screen Page Order Creation Response: ${{
+      "amount": widget.selectedPlan.price,
+      if (refferalController.text.isNotEmpty)
+        "refferal_code": "${refferalController.text}"
+    }}  ++ ${response.body}__ ${response.statusCode == 200}");
+    if (response.statusCode == 200) {
+      final orderData = json.decode(response.body);
 
-          var options = {
+      if (orderData['razorpay_order_id'] != null &&
+          orderData['amount'] != null) {
+        setState(() {
+          razorPayId = orderData['razorpay_order_id'].toString();
+        });
 
-            'key': 'rzp_test_NPGwHpFZReb6dh',
-            // Replace with your real Razorpay Key ID
-            'amount': orderData['amount'],
-            // Amount in paise
-            'currency': 'INR',
-            'name': '${widget.selectedPlan.name}',
-            'description': 'One-Time Premium Purchase',
-            'order_id': orderData['razorpay_order_id'],
-            // Use Razorpay Order ID from backend
-            'prefill': {
-              'name': widget.userName,
-              'contact': '${mobile}',
-              // 'email': 'user@example.com',
-            },
-            'theme': {
-              'color': '#49329A',
-            }
-          };
-          _razorpay.open(options);
-        } else {
-          _showErrorDialog("Invalid order data received.");
-        }
+        var options = {
+          'key':
+              'rzp_live_DmO2qslBG6Nr8v', //test_key: rzp_test_NPGwHpFZReb6dh & live_key: rzp_live_DmO2qslBG6Nr8v
+          // Replace with your real Razorpay Key ID
+          'amount': orderData['amount'],
+          // Amount in paise
+          'currency': 'INR',
+          'name': '${widget.selectedPlan.name}',
+          'description': 'Premium Purchase',
+          'order_id': orderData['razorpay_order_id'],
+          // Use Razorpay Order ID from backend
+          'prefill': {
+            'name': widget.userName,
+            'contact': '${mobile}',
+            // 'email': 'user@example.com',
+          },
+          'theme': {
+            'color': '#49329A',
+          }
+        };
+        _razorpay.open(options);
       } else {
-
-        _showErrorDialog("Failed to create order.");
+        _showErrorDialog(orderData['error']);
       }
+    } else {
+      _showErrorDialog("Failed to create order.");
+    }
 
-      setState(() {
-        paymentLoading = false;
-      });
+    setState(() {
+      paymentLoading = false;
+    });
     // } catch (e) {
     //   debugPrint('Error: $e');
     //   _showErrorDialog("Something went wrong. Please try again.");
@@ -354,16 +418,66 @@ class _PremiumScreenState extends State<PremiumScreen> {
     // }
   }
 
-  void _showErrorDialog(String message) {
+  void _showErrorDialog(String message, {String title = "Error"}) {
+    bool isPaymentError =
+        message.contains("Unable to connect to payment server") ||
+            message.toLowerCase().contains("server") ||
+            message.contains("Payment gateway connection failed");
+
+    // if (isPaymentError) {
+    //   message = "Error while processing payment. Please try again.";
+    // }
+
     showDialog(
       context: context,
       builder: (BuildContext context) => AlertDialog(
-        title: Text("Error"),
-        content: Text(message),
+        backgroundColor: Colors.white,
+        contentPadding: isPaymentError
+            ? EdgeInsets.zero
+            : const EdgeInsets.fromLTRB(24.0, 20.0, 24.0, 24.0),
+        actionsPadding: isPaymentError ? const EdgeInsets.all(10) : null,
+        actionsAlignment:
+            isPaymentError ? MainAxisAlignment.center : MainAxisAlignment.end,
+        alignment: Alignment.center,
+        title: isPaymentError
+            ? null
+            : Text(
+                title,
+                style: TextStyle(
+                    fontFamily: AppConstants.commonFont,
+                    color: Colors.redAccent,
+                    fontWeight: FontWeight.bold),
+              ),
+        content: isPaymentError
+            ? null
+            : Text(
+                message,
+                style: TextStyle(
+                  fontFamily: AppConstants.commonFont,
+                  fontSize: 14,
+                  color: const Color(0xFF464646), // Ensure text is visible
+                ),
+              ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text("OK"),
+          Padding(
+            padding: isPaymentError
+                ? const EdgeInsets.only(top: 10, bottom: 10)
+                : EdgeInsets.zero,
+            child: TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                if (isPaymentError) {
+                  openCheckout();
+                }
+              },
+              child: Text(
+                isPaymentError ? "Retry" : "OK",
+                style: TextStyle(
+                    fontFamily: AppConstants.commonFont,
+                    fontSize: isPaymentError ? 18 : 16,
+                    fontWeight: FontWeight.bold),
+              ),
+            ),
           ),
         ],
       ),
@@ -372,15 +486,20 @@ class _PremiumScreenState extends State<PremiumScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final remainingMinutesProvider =
+        Provider.of<RemainingMinutesProvider>(context, listen: true);
+    final minutes = remainingMinutesProvider.remainingMinutes;
+
+    print('The Remaining Minutes from Cubit in premium plan screen: $minutes');
+
     return Scaffold(
       backgroundColor: Color(0xFFE0F7FF),
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(80), // Increased app bar height
+        preferredSize: Size.fromHeight(80),
         child: AppBar(
           backgroundColor: Color(0xFF49329A),
           leading: Padding(
             padding: const EdgeInsets.only(top: 15.0, left: 24.0),
-            // Adjust top padding
             child: IconButton(
               icon: Icon(Icons.arrow_back_ios, color: Colors.white, size: 26),
               onPressed: () {
@@ -389,16 +508,18 @@ class _PremiumScreenState extends State<PremiumScreen> {
             ),
           ),
           title: Padding(
-            padding: const EdgeInsets.only(top: 15.0), // Adjust top padding
+            padding: const EdgeInsets.only(top: 15.0),
             child: Row(
               children: [
-                Text(
-                  'Unlock ${widget.selectedPlan.name}',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Poppins Regular',
+                Flexible(
+                  child: Text(
+                    'Unlock ${widget.selectedPlan.name}',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Poppins Regular',
+                    ),
                   ),
                 ),
               ],
@@ -438,7 +559,7 @@ class _PremiumScreenState extends State<PremiumScreen> {
                       Color(0xFFFFF0D3),
                       Color(0xFFE7F8FF),
                       Color(0xFFEEEFFF)
-                    ], // Set your gradient colors here
+                    ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -478,8 +599,8 @@ class _PremiumScreenState extends State<PremiumScreen> {
                                   ),
                                 ),
                                 Padding(
-                                  padding:
-                                      const EdgeInsets.symmetric(horizontal: 4.0),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 4.0),
                                   child: Text(
                                     'English',
                                     style: TextStyle(
@@ -502,14 +623,15 @@ class _PremiumScreenState extends State<PremiumScreen> {
                           ],
                         ),
                         SizedBox(width: 30),
-                        // Reduce spacing between 'Picturo' and 'Premium'
-                        Text(
-                          '${widget.selectedPlan.name}',
-                          style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Poppins',
-                              color: Color(0XFF49329A)),
+                        Expanded(
+                          child: Text(
+                            '${widget.selectedPlan.name}',
+                            style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Poppins Medium',
+                                color: Color(0XFF49329A)),
+                          ),
                         ),
                       ],
                     ),
@@ -536,7 +658,8 @@ class _PremiumScreenState extends State<PremiumScreen> {
                                 ),
                               ),
                               Text(
-                                widget.selectedPlan.validityDays??'',
+                                '${widget.selectedPlan.validityDays} Day/s' ??
+                                    '',
                                 style: TextStyle(
                                   color: Color(0xFF464646),
                                   fontFamily: 'Poppins Regular',
@@ -545,7 +668,7 @@ class _PremiumScreenState extends State<PremiumScreen> {
                             ],
                           ),
                           Text(
-                            widget.selectedPlan.price??'',
+                            widget.selectedPlan.price ?? '',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -558,7 +681,7 @@ class _PremiumScreenState extends State<PremiumScreen> {
                     ),
                     SizedBox(height: 15),
                     Text(
-                      'Enjoy the best experience with our one-time purchase.',
+                      'Enjoy the best experience with our purchase.',
                       style: TextStyle(
                         fontSize: 14,
                         fontFamily: 'Poppins Regular',
@@ -569,78 +692,118 @@ class _PremiumScreenState extends State<PremiumScreen> {
                       width: double.infinity,
                       child: Row(
                         children: [
-                          SvgPicture.string(
-                            Svgfiles.diamondSvg,
-                            width: 22,
-                            height: 22,
-                          ),
-                          SizedBox(
-                            width: 10,
-                          ),
-                          Text(
-                            'Premium Features',
-                            textAlign: TextAlign.start,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontFamily: 'Poppins Regular',
-                            ),
-                          ),
+                          // SvgPicture.string(
+                          //   Svgfiles.diamondSvg,
+                          //   width: 22,
+                          //   height: 22,
+                          // ),
+                          // SizedBox(
+                          //   width: 10,
+                          // ),
+                          // Text(
+                          //   'Premium Features',
+                          //   textAlign: TextAlign.start,
+                          //   style: TextStyle(
+                          //     fontSize: 14,
+                          //     fontFamily: 'Poppins Regular',
+                          //   ),
+                          // ),
                         ],
                       ),
                     ),
                     SizedBox(height: 15),
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
-                      child:       Column(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Row(
+                          //   children: [
+                          //     Expanded(child: Text("Call limit per day")),
+                          //     Expanded(
+                          //         child: Text(
+                          //             "${widget.selectedPlan.callLimitPerDay ?? 'N/A'}")),
+                          //   ],
+                          // ),
+                          // Row(
+                          //   children: [
+                          //     Expanded(child: Text("Chatbot prompt limit")),
+                          //     Expanded(
+                          //         child: Text(
+                          //             "${widget.selectedPlan.chatbotPromptLimit ?? 'N/A'}")),
+                          //   ],
+                          // ),
+                          // Row(
+                          //   children: [
+                          //     Expanded(child: Text("Is unlimited call")),
+                          //     Expanded(
+                          //         child: Text(
+                          //             widget.selectedPlan.isUnlimitedCall == 1
+                          //                 ? "Yes"
+                          //                 : "No")),
+                          //   ],
+                          // ),
+                          // Row(
+                          //   children: [
+                          //     Expanded(child: Text("Is unlimited chat")),
+                          //     Expanded(
+                          //         child: Text(
+                          //             widget.selectedPlan.isUnlimitedChat == 1
+                          //                 ? "Yes"
+                          //                 : "No")),
+                          //   ],
+                          // ),
                           Row(
                             children: [
-                              Expanded(child: Text("Call limit per day")),
-                              Expanded(child: Text("${widget.selectedPlan.callLimitPerDay ?? 'N/A'}")),
+                              Expanded(
+                                  child: Text(
+                                "Price",
+                                style: TextStyle(
+                                  fontFamily: 'Poppins Medium',
+                                ),
+                              )),
+                              Expanded(
+                                  child: Text("₹ ${widget.selectedPlan.price}",
+                                      style: TextStyle(
+                                        fontFamily: 'Poppins Medium',
+                                      ))),
                             ],
                           ),
-                          Row(
-                            children: [
-                              Expanded(child: Text("Chatbot prompt limit")),
-                              Expanded(child: Text("${widget.selectedPlan.chatbotPromptLimit ?? 'N/A'}")),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              Expanded(child: Text("Is unlimited call")),
-                              Expanded(child: Text(widget.selectedPlan.isUnlimitedCall == 1 ? "Yes" : "No")),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              Expanded(child: Text("Is unlimited chat")),
-                              Expanded(child: Text(widget.selectedPlan.isUnlimitedChat == 1 ? "Yes" : "No")),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              Expanded(child: Text("Price")),
-                              Expanded(child: Text("₹ ${widget.selectedPlan.price}")),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              Expanded(child: Text("Created at")),
-                              Expanded(child: Text(widget.selectedPlan.createdAt.toString())),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              Expanded(child: Text("Updated at")),
-                              Expanded(child: Text(widget.selectedPlan.updatedAt.toString())),
-                            ],
-                          ),
+                          // Row(
+                          //   children: [
+                          //     Expanded(
+                          //       child: Text("Created at",
+                          //           style: TextStyle(
+                          //             fontFamily: 'Poppins Medium',
+                          //           )),
+                          //     ),
+                          //     Expanded(
+                          //         child: Text(
+                          //             widget.selectedPlan.createdAt.toString(),
+                          //             style: TextStyle(
+                          //               fontFamily: 'Poppins Medium',
+                          //             ))),
+                          //   ],
+                          // ),
+                          // Row(
+                          //   children: [
+                          //     Expanded(
+                          //         child: Text("Updated at",
+                          //             style: TextStyle(
+                          //               fontFamily: 'Poppins Medium',
+                          //             ))),
+                          //     Expanded(
+                          //         child: Text(
+                          //             widget.selectedPlan.updatedAt.toString(),
+                          //             style: TextStyle(
+                          //               fontFamily: 'Poppins Medium',
+                          //             ))),
+                          //   ],
+                          // ),
                         ],
                       ),
                     ),
                     SizedBox(height: 15),
-
                     Container(
                       padding: EdgeInsets.fromLTRB(15, 5, 10, 5),
                       decoration: BoxDecoration(
@@ -648,15 +811,16 @@ class _PremiumScreenState extends State<PremiumScreen> {
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: Color(0xFFDDDDDD)),
                       ),
-                      child: TextField(controller: refferalController,
+                      child: TextField(
+                        controller: refferalController,
                         decoration: InputDecoration(
                           hintText: 'Referral Code (i.e SD2334F) Optional',
                           hintStyle: TextStyle(
                             color: Color(0xFFAAAAAA),
                             fontFamily: 'Poppins Regular',
                           ),
-                          border:
-                              InputBorder.none, // Remove default TextField border
+                          border: InputBorder
+                              .none, // Remove default TextField border
                         ),
                         style: TextStyle(
                           fontSize: 14,
@@ -679,16 +843,31 @@ class _PremiumScreenState extends State<PremiumScreen> {
                                 borderRadius: BorderRadius.circular(10),
                               ),
                             ),
-                            onPressed: (paymentLoading) ? () {} : openCheckout,
-                            child: Text(
-                              'Pay now',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Poppins Regular',
-                                color: Colors.white,
-                              ),
-                            ),
+                            onPressed: paymentLoading
+                                ? null
+                                : () async {
+                                    setState(() => paymentLoading = true);
+                                    await openCheckout();
+                                    setState(() => paymentLoading = false);
+                                  },
+                            child: paymentLoading
+                                ? SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : Text(
+                                    'Pay now',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'Poppins Regular',
+                                      color: Colors.white,
+                                    ),
+                                  ),
                           ),
                         ),
                       ),

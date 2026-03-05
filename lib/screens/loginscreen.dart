@@ -10,9 +10,12 @@ import 'package:picturo_app/screens/signupscreen.dart';
 import 'package:picturo_app/services/api_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:url_launcher/url_launcher_string.dart';
 
 import '../utils/common_file.dart';
-import 'helperbotpage.dart';
+
+import '../services/chat_socket_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -36,35 +39,47 @@ class _LoginScreenState extends State<LoginScreen> {
     _loadSavedCredentials();
   }
 
-   // Load saved credentials if they exist
   Future<void> _loadSavedCredentials() async {
     final prefs = await SharedPreferences.getInstance();
     final savedEmail = prefs.getString('saved_email');
     final savedPassword = prefs.getString('saved_password');
-    
-    if (savedEmail != null && savedPassword != null) {
-      setState(() {
-        _emailController.text = savedEmail;
-        _passwordController.text = savedPassword;
-        _isChecked = true;
-      });
+    final rememberMe = prefs.getBool('remember_me') ?? false;
+
+    setState(() {
+      _isChecked = rememberMe;
+    });
+
+    if (rememberMe && savedEmail != null && savedPassword != null) {
+      // Set the values to controllers
+      _emailController.text = savedEmail;
+      _passwordController.text = savedPassword;
+    } else {
+      // Clear controllers if remember me is not checked
+      _emailController.clear();
+      _passwordController.clear();
     }
   }
 
-  // Save credentials to shared preferences
-  Future<void> _saveCredentials(String email, String password) async {
+  Future<void> _saveCredentials() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('saved_email', email);
-    await prefs.setString('saved_password', password);
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (_isChecked && email.isNotEmpty && password.isNotEmpty) {
+      await prefs.setString('saved_email', email);
+      await prefs.setString('saved_password', password);
+      await prefs.setBool('remember_me', true);
+    } else {
+      await _clearCredentials();
+    }
   }
 
-  // Clear saved credentials
   Future<void> _clearCredentials() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('saved_email');
     await prefs.remove('saved_password');
+    await prefs.setBool('remember_me', false);
   }
-
 
   Future<void> initializeApiService() async {
     apiService = await ApiService.create();
@@ -72,6 +87,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _login() async {
     print("inside login");
+
+    // Ensure any stale socket connection is cleaned up before new login
+    try {
+      await ChatSocket.fullCleanupForLogout();
+    } catch (e) {
+      print("Warning: Failed to cleanup socket before login: $e");
+    }
+
+    // Save remember me preference before login
+    //await _saveCredentials();
+
     setState(() {
       _isLoading = true;
     });
@@ -89,50 +115,56 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       final response = await apiService.login(email, password, context);
+      print("🔐 Login API Response: $response");
 
       if (response["success"] == true) {
-         if (_isChecked) {
-          await _saveCredentials(email, password);
-        } else {
-          await _clearCredentials();
-        }
-        
         final String? token = response["token"];
         final String? userId = response["userid"];
-        
+
+        print("🔑 Token: ${token?.substring(0, 10)}...");
+        print("👤 UserId from API: $userId");
 
         if (token != null && userId != null) {
+          // Save credentials ONLY after successful login
+          if (_isChecked) {
+            await _saveCredentials();
+          }
+
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString("auth_token", token);
-          await prefs.setBool('isLoggedIn', true);
+
           await prefs.setString("user_id", userId);
+          print("✅ Saved user_id to SharedPreferences: $userId");
 
           Provider.of<UserProvider>(context, listen: false).setUserId(userId);
 
           final profileResponse = await apiService.fetchProfileDetails();
 
-
-          if (profileResponse.age == 0 ||
-              profileResponse.gender.isEmpty ||
-              profileResponse.qualification.isEmpty ||
-              profileResponse.speakingLevel.isEmpty ||
-              profileResponse.reason.isEmpty) {
+          if (profileResponse.user.age == 0 &&
+                  profileResponse.user.gender == 'empty' ||
+              profileResponse.user.qualification == 'empty' ||
+              profileResponse.user.speakingLevel == 'empty') {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const GenderAgeScreen()),
             );
-          } else if (profileResponse.speakingLanguage.isEmpty) {
+          } else if (profileResponse.user.speakingLanguage.isEmpty) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const LanguageSelectionApp()),
+              MaterialPageRoute(
+                  builder: (context) => const LanguageSelectionApp()),
             );
-          } else if (profileResponse.location.isEmpty) {
+          } else if (profileResponse.user.location == 'No Location Provided') {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const LocationGetPage(isFromProfile: false,)),
+              MaterialPageRoute(
+                  builder: (context) => const LocationGetPage(
+                        isFromProfile: false,
+                      )),
             );
           } else {
             _showMessage("Login successful!");
+            await prefs.setBool('isLoggedIn', true);
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => const Homepage()),
@@ -143,28 +175,28 @@ class _LoginScreenState extends State<LoginScreen> {
             _isLoading = false;
           });
           _showMessage("Invalid response from server. Please try again.");
-
         }
       } else {
         setState(() {
           _isLoading = false;
         });
 
-        if(response['error'].toString().contains("User already logged in on another device.")){
-          _showMessage("User already logged in on another device.");
-        }else{
-          _showMessage(response["error"] ?? "Login failed. Please try again.");
-        }
-
-
+        // if (response['error']
+        //     .toString()
+        //     .contains("User already logged in on another device.")) {
+        //   _showMessage("User already logged in on another device.");
+        // } else {
+        //   _showMessage(response["error"] ?? "Login failed. Please try again.");
+        // }
+        _showMessage(response["error"] ?? "Login failed. Please try again.");
       }
-
-
-    } catch (e) {
+    } catch (e, stacktrace) {
       setState(() {
         _isLoading = false;
       });
-      _showMessage("An error occurred. Please try again.");
+      print("Login error: $e");
+      print("Stacktrace: $stacktrace");
+      _showMessage("An error occurred: $e");
     } finally {
       setState(() {
         _isLoading = false;
@@ -187,7 +219,12 @@ class _LoginScreenState extends State<LoginScreen> {
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFFEEEFFF), Color(0xFFFFF0D3), Color(0xFFE7F8FF), Color(0xFFEEEFFF)],
+            colors: [
+              Color(0xFFEEEFFF),
+              Color(0xFFFFF0D3),
+              Color(0xFFE7F8FF),
+              Color(0xFFEEEFFF)
+            ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -216,7 +253,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                           Text(
+                          Text(
                             "Welcome back",
                             style: TextStyle(
                               fontSize: 26,
@@ -239,7 +276,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             controller: _emailController,
                             decoration: InputDecoration(
                               hintText: "Email",
-                              hintStyle: const TextStyle(color: Color(0xFF737373)),
+                              hintStyle:
+                                  const TextStyle(color: Color(0xFF737373)),
                               prefixIcon: IconButton(
                                 icon: Image.asset(
                                   'assets/Vector.png',
@@ -253,13 +291,16 @@ class _LoginScreenState extends State<LoginScreen> {
                               border: InputBorder.none,
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(color: Color(0xFFC3C3C3), width: 0.5),
+                                borderSide: const BorderSide(
+                                    color: Color(0xFFC3C3C3), width: 0.5),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(color: Color(0xFFC3C3C3), width: 0.5),
+                                borderSide: const BorderSide(
+                                    color: Color(0xFFC3C3C3), width: 0.5),
                               ),
-                              floatingLabelBehavior: FloatingLabelBehavior.never,
+                              floatingLabelBehavior:
+                                  FloatingLabelBehavior.never,
                             ),
                             style: const TextStyle(
                               fontFamily: 'Poppins Regular',
@@ -272,7 +313,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             obscureText: !_isPasswordVisible,
                             decoration: InputDecoration(
                               hintText: "Password",
-                              hintStyle: const TextStyle(color: Color(0xFF737373)),
+                              hintStyle:
+                                  const TextStyle(color: Color(0xFF737373)),
                               prefixIcon: IconButton(
                                 icon: Image.asset(
                                   'assets/solar_lock-linear.png',
@@ -283,7 +325,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               suffixIcon: IconButton(
                                 icon: Icon(
-                                  _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                                  _isPasswordVisible
+                                      ? Icons.visibility
+                                      : Icons.visibility_off,
                                   color: const Color(0xFF737373),
                                 ),
                                 onPressed: () {
@@ -296,13 +340,16 @@ class _LoginScreenState extends State<LoginScreen> {
                               fillColor: Colors.white,
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(color: Color(0xFFC3C3C3), width: 0.5),
+                                borderSide: const BorderSide(
+                                    color: Color(0xFFC3C3C3), width: 0.5),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(color: Color(0xFFC3C3C3), width: 0.5),
+                                borderSide: const BorderSide(
+                                    color: Color(0xFFC3C3C3), width: 0.5),
                               ),
-                              floatingLabelBehavior: FloatingLabelBehavior.never,
+                              floatingLabelBehavior:
+                                  FloatingLabelBehavior.never,
                             ),
                             style: const TextStyle(
                               fontFamily: 'Poppins Regular',
@@ -317,18 +364,34 @@ class _LoginScreenState extends State<LoginScreen> {
                                 children: [
                                   Checkbox(
                                     value: _isChecked,
-                                    onChanged: (bool? newValue) {
+                                    onChanged: (bool? newValue) async {
                                       setState(() {
                                         _isChecked = newValue ?? false;
                                       });
+
+                                      // Save the preference immediately when checkbox changes
+                                      final prefs =
+                                          await SharedPreferences.getInstance();
+                                      await prefs.setBool(
+                                          'remember_me', _isChecked);
+
+                                      // If unchecked, clear saved credentials
+                                      // if (!_isChecked) {
+                                      //   await _clearCredentials();
+                                      // }
                                     },
                                     side: BorderSide(
-                                      color: _isChecked ? const Color(0xFF4CAF50) : Colors.grey,
+                                      color: _isChecked
+                                          ? const Color(0xFF4CAF50)
+                                          : Colors.grey,
                                       width: _isChecked ? 2.0 : 0.0,
                                     ),
                                     activeColor: const Color(0xFF4CAF50),
-                                    fillColor: WidgetStateProperty.resolveWith<Color>((states) {
-                                      if (states.contains(WidgetState.selected)) {
+                                    fillColor:
+                                        WidgetStateProperty.resolveWith<Color>(
+                                            (states) {
+                                      if (states
+                                          .contains(WidgetState.selected)) {
                                         return const Color(0xFF4CAF50);
                                       }
                                       return Colors.white;
@@ -348,7 +411,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 onPressed: () {
                                   Navigator.push(
                                     context,
-                                    MaterialPageRoute(builder: (context) => const ForgotPasswordPage()),
+                                    MaterialPageRoute(
+                                        builder: (context) =>
+                                            const ForgotPasswordPage()),
                                   );
                                 },
                                 child: const Text(
@@ -369,14 +434,22 @@ class _LoginScreenState extends State<LoginScreen> {
                               onPressed: !_isLoading ? _login : null,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF49329A),
-                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                               ),
                               child: _isLoading
-                                  ? const CircularProgressIndicator(color: Colors.white)
-                                  :  Text(
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : Text(
                                       "Sign In",
                                       style: TextStyle(
                                         fontSize: 16,
@@ -390,7 +463,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           Center(
                             child: RichText(
                               text: TextSpan(
-                                text: "Don’t have an account? ",
+                                text: "Don't have an account? ",
                                 style: TextStyle(
                                   color: Colors.grey[600],
                                   fontFamily: AppConstants.commonFont,
@@ -399,7 +472,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 children: [
                                   TextSpan(
                                     text: "Sign Up",
-                                    style:  TextStyle(
+                                    style: TextStyle(
                                       color: Color(0xFF49329A),
                                       fontFamily: AppConstants.commonFont,
                                       fontSize: 15,
@@ -407,51 +480,46 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                     recognizer: TapGestureRecognizer()
                                       ..onTap = () {
-                                        Navigator.pushNamed(context, '/signup');
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (_) =>
+                                                  const Signupscreen()),
+                                        );
                                       },
                                   ),
                                 ],
                               ),
                             ),
                           ),
-                          SizedBox(height: 20,),
-                          InkWell(
-                            onTap: (){
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => HelperBotScreen()), // Navigate to BlockedUsersPage
-                              );
-                            },
-                            child: Center(
-                              child: RichText(
-                                text: TextSpan(
-                                  text: "Do You Need Help ? ",
+                          SizedBox(
+                            height: 30,
+                          ),
+                          Column(
+                            children: [
+                              Text(
+                                'By Continuing, you agree to Picturo\'s Terms of Use. ',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey,
+                                  fontFamily: 'Poppins Regular',
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              GestureDetector(
+                                onTap: _launchPrivacyPolicy,
+                                child: Text(
+                                  'Read our Privacy Policy.',
                                   style: TextStyle(
-                                    color: Colors.grey[600],
-                                    fontFamily: AppConstants.commonFont,
-                                    fontSize: 15,
+                                    fontSize: 14,
+                                    color: Color(0xFF49329A),
+                                    fontFamily: 'Poppins Medium',
+                                    decoration: TextDecoration.underline,
                                   ),
-                                  children: [
-                                    TextSpan(
-                                      text: "Click Here",
-                                      style:  TextStyle(
-                                        color: Colors.orange,
-                                        fontFamily: AppConstants.commonFont,
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      recognizer: TapGestureRecognizer()
-                                        ..onTap = () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(builder: (context) => HelperBotScreen()), // Navigate to BlockedUsersPage
-                                          );
-                                        },
-                                    ),
-                                  ],
+                                  textAlign: TextAlign.center,
                                 ),
                               ),
-                            ),
+                            ],
                           ),
                         ],
                       ),
@@ -464,5 +532,13 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _launchPrivacyPolicy() async {
+    final Uri url =
+        Uri.parse("https://picturoenglish.com/termsandconditions.html");
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      throw Exception('Could not launch $url');
+    }
   }
 }

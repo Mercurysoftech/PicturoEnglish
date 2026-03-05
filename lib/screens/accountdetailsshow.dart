@@ -7,6 +7,7 @@ import 'package:picturo_app/responses/view_bank_response.dart';
 import 'package:picturo_app/screens/myprofilepage.dart';
 import 'package:picturo_app/screens/verifybankaccounts.dart';
 import 'package:picturo_app/services/api_service.dart';
+import 'package:picturo_app/utils/common_file.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -57,34 +58,34 @@ class _AccountDetailShowState extends State<AccountDetailShow> {
     });
   }
 
-   Future<void> _fetchBankDetails() async {
-  setState(() {
-    _isLoading = true;
-    _errorMessage = null;
-  });
+  Future<void> _fetchBankDetails() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
-  try {
-    final response = await _apiService.fetchBankAccount(userId: _userId!);
-    
-    if (response.status == "error" && 
-        response.message == "No account_details found for this user.") {
+    try {
+      final response = await _apiService.fetchBankAccount(userId: _userId!);
+
+      if (response.status == "error" &&
+          response.message == "No account_details found for this user.") {
+        setState(() {
+          _bankDetails = null; // Ensure bankDetails is null to show add button
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _bankDetails = response;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
       setState(() {
-        _bankDetails = null; // Ensure bankDetails is null to show add button
-        _isLoading = false;
-      });
-    } else {
-      setState(() {
-        _bankDetails = response;
+        _errorMessage = e.toString();
         _isLoading = false;
       });
     }
-  } catch (e) {
-    setState(() {
-      _errorMessage = e.toString();
-      _isLoading = false;
-    });
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -109,10 +110,10 @@ class _AccountDetailShowState extends State<AccountDetailShow> {
         leading: Padding(
           padding: const EdgeInsets.only(top: 15.0, left: 24.0),
           child: IconButton(
-            icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 26),
+            icon:
+                const Icon(Icons.arrow_back_ios, color: Colors.white, size: 26),
             onPressed: () {
               Navigator.pop(context);
-
             },
           ),
         ),
@@ -150,7 +151,7 @@ class _AccountDetailShowState extends State<AccountDetailShow> {
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: _fetchBankDetails,
-            child: const Text('Retry'),
+            child: const Text(''),
           ),
         ],
       ),
@@ -171,14 +172,16 @@ class _AccountDetailShowState extends State<AccountDetailShow> {
             borderRadius: BorderRadius.circular(15),
             onTap: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const VerifyBankAccount()),
+              MaterialPageRoute(
+                  builder: (context) => const VerifyBankAccount()),
             ),
             child: const Padding(
               padding: EdgeInsets.all(40),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.add_circle_outline, size: 50, color: Color(0xFF49329A)),
+                  Icon(Icons.add_circle_outline,
+                      size: 50, color: Color(0xFF49329A)),
                   SizedBox(height: 20),
                   Text(
                     'Add Bank Account',
@@ -198,91 +201,93 @@ class _AccountDetailShowState extends State<AccountDetailShow> {
     );
   }
 
-   Widget _buildBankDetails() {
-  return ListView(
-    padding: const EdgeInsets.all(20),
-    children: [
-      for (final account in _bankDetails!.accountDetails!)
-        Card(
-          color: Colors.white,
-          margin: const EdgeInsets.only(bottom: 20),
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                _buildBankHeader(account),
-                const Divider(thickness: 1, color: Colors.grey),
-                _buildDetailItem('Account Holder Name', account.accountHolderName!),
-                _buildDetailItem('Account Number', account.accountNumber!),
-                _buildDetailItem('IFSC Code', account.ifscCode!),
-                _buildDetailItem('MICR', account.micr!),
-                _buildRemoveAccountButton(account), // Pass account to remove function
-              ],
+  Widget _buildBankDetails() {
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        for (final account in _bankDetails!.accountDetails!)
+          Card(
+            color: Colors.white,
+            margin: const EdgeInsets.only(bottom: 20),
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  _buildBankHeader(account),
+                  const Divider(thickness: 1, color: Colors.grey),
+                  _buildDetailItem(
+                      'Account Holder Name', account.accountHolderName!),
+                  _buildDetailItem('Account Number', account.accountNumber!),
+                  _buildDetailItem('IFSC Code', account.ifscCode!),
+                  _buildDetailItem('MICR', account.micr!),
+                  _buildRemoveAccountButton(
+                      account), // Pass account to remove function
+                ],
+              ),
             ),
           ),
+        const SizedBox(height: 20),
+        _buildChangeButton(),
+      ],
+    );
+  }
+
+  Widget _buildBankHeader(ViewAccountDetails account) {
+    return ListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8F8F8), // Background color
+          shape: BoxShape.circle, // Makes it circular
         ),
-      const SizedBox(height: 20),
-      _buildChangeButton(),
-    ],
-  );
-}
-
-Widget _buildBankHeader(ViewAccountDetails account) {
-  return ListTile(
-    leading: Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F8F8), // Background color
-        shape: BoxShape.circle, // Makes it circular
+        child: SvgPicture.string(
+          Svgfiles.bankSvg,
+          width: 22,
+          height: 22,
+          color: const Color(0xFF49329A),
+        ),
       ),
-      child: SvgPicture.string(
-        Svgfiles.bankSvg,
-        width: 22,
-        height: 22,
-        color: const Color(0xFF49329A),
+      title: Text(
+        account.bankName!,
+        style: const TextStyle(
+          fontWeight: FontWeight.bold,
+          fontFamily: 'Poppins Regular',
+        ),
       ),
-    ),
-    title: Text(
-      account.bankName!,
-      style: const TextStyle(
-        fontWeight: FontWeight.bold,
-        fontFamily: 'Poppins Regular',
+      subtitle: Text(
+        account.branchName!,
+        style: const TextStyle(fontFamily: 'Poppins Regular'),
       ),
-    ),
-    subtitle: Text(
-      account.branchName!,
-      style: const TextStyle(fontFamily: 'Poppins Regular'),
-    ),
-  );
-}
-
+    );
+  }
 
   Widget _buildDetailItem(String title, String value) {
     return ListTile(
       title: Text(title, style: const TextStyle(fontFamily: 'Poppins Regular')),
-      subtitle: Text(value, style: const TextStyle(fontFamily: 'Poppins Regular')),
+      subtitle:
+          Text(value, style: const TextStyle(fontFamily: 'Poppins Regular')),
     );
   }
 
   Widget _buildRemoveAccountButton(ViewAccountDetails account) {
-  return ListTile(
-    title: const Text(
-      'Remove account',
-      style: TextStyle(
-        fontFamily: 'Poppins Regular',
-        color: Color(0xFFBE0000),
-        fontSize: 12,
-        fontWeight: FontWeight.bold,
+    return ListTile(
+      title: const Text(
+        'Remove account',
+        style: TextStyle(
+          fontFamily: 'Poppins Regular',
+          color: Color(0xFFBE0000),
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+        ),
+        textAlign: TextAlign.end,
       ),
-      textAlign: TextAlign.end,
-    ),
-    onTap: () => _confirmRemoveAccount(account),
-  );
-}
+      onTap: () => _confirmRemoveAccount(account),
+    );
+  }
 
   Widget _buildChangeButton() {
     return Padding(
@@ -302,7 +307,7 @@ Widget _buildBankHeader(ViewAccountDetails account) {
             padding: const EdgeInsets.symmetric(vertical: 15),
           ),
           child: const Text(
-            "Add",
+            "Update",
             style: TextStyle(
               fontSize: 16,
               color: Colors.white,
@@ -315,34 +320,48 @@ Widget _buildBankHeader(ViewAccountDetails account) {
     );
   }
 
- void _confirmRemoveAccount(ViewAccountDetails account) {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Confirm Removal'),
-      content: const Text('Are you sure you want to remove this bank account?'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+  void _confirmRemoveAccount(ViewAccountDetails account) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        title: const Text(
+          'Confirm Removal',
+          style: TextStyle(fontFamily: AppConstants.commonFont),
         ),
-        TextButton(
-          onPressed: () {
-            // Navigator.pop(context);
-            _removeAccount(account); // Pass the specific account to remove
-          },
-          child: const Text('Remove', style: TextStyle(color: Colors.red)),
+        content: const Text(
+          'Are you sure you want to remove this bank account?',
+          style: TextStyle(fontFamily: AppConstants.commonFont),
         ),
-      ],
-    ),
-  );
-}
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(fontFamily: AppConstants.commonFont),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              // Navigator.pop(context);
+              _removeAccount(account); // Pass the specific account to remove
+            },
+            child: const Text('Remove',
+                style: TextStyle(
+                    color: Colors.red, fontFamily: AppConstants.commonFont)),
+          ),
+        ],
+      ),
+    );
+  }
 
   Future<void> _removeAccount(ViewAccountDetails account) async {
     final apiService = await ApiService.create();
-    final bool languageResponse = await apiService.removeBankAccount(account.accountNumber??"");
+    final bool languageResponse =
+        await apiService.removeBankAccount(account.accountNumber ?? "");
     Navigator.pop(context);
-    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>AccountDetailShow()));
+    Navigator.pushReplacement(
+        context, MaterialPageRoute(builder: (context) => AccountDetailShow()));
   }
 }
 

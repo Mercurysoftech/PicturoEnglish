@@ -1,15 +1,24 @@
 import 'dart:async';
 import 'dart:developer';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:picturo_app/classes/services/notification_service.dart';
 import 'package:picturo_app/classes/svgfiles.dart';
+import 'package:picturo_app/cubits/user_status/user_status_cubit.dart';
+import 'package:picturo_app/main.dart';
+import 'package:picturo_app/providers/remaining_minutes_provider.dart';
 import 'package:picturo_app/screens/chatmessagelayout.dart';
+import 'package:picturo_app/screens/homepage.dart';
 import 'package:picturo_app/screens/myprofilepage.dart';
+import 'package:picturo_app/screens/premium_plans_screen.dart';
 import 'package:picturo_app/services/api_service.dart';
+import 'package:picturo_app/services/socket_notifications_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
@@ -23,12 +32,12 @@ import '../services/chat_socket_service.dart';
 import '../utils/common_file.dart';
 import 'call/calling_widget.dart';
 
-enum ChatMenuAction { //enum class for menu option like "block user"...etc
+enum ChatMenuAction {
+  //enum class for menu option like "block user"...etc
   block,
 }
 
 class ChatScreen extends StatefulWidget {
-
   final String userName;
   final Widget avatarWidget;
   final int userId;
@@ -59,35 +68,305 @@ class _ChatScreenState extends State<ChatScreen> {
   Timer? _typingTimer;
   bool _isUserTyping = false;
   String? _userId;
+  bool _isBlocked = false;
+  int _remainingMinutes = 0;
+  bool _showUpgradeDialog = false;
+  RemainingMinutesProvider? _remainingMinutesProvider;
+
   @override
   void initState() {
     super.initState();
     _initializeApiService();
     initSocket();
+    requestRemainingMinutes();
+    ChatScreenTracker.activeChatUserId = widget.userId.toString();
+    print(
+        'User name received: ${widget.userName} and User ID: ${widget.userId}');
     _setupTypingListener();
+
+    _initializeProviderConnection();
   }
-
-
 //--------------------------------------------New Updates Start-----------------------------------
 
   RTCPeerConnection? peerConnection;
   MediaStream? localStream;
 
+  void _initializeProviderConnection() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final callSocketCubit = context.read<CallSocketHandleCubit>();
+      final remainingMinutesProvider =
+          Provider.of<RemainingMinutesProvider>(context, listen: false);
 
+      // Set the provider in cubit
+      callSocketCubit.setRemainingMinutesProvider(remainingMinutesProvider);
 
+      // Request initial minutes
+      callSocketCubit.requestRemainingMinutes();
 
-  void initSocket( ) async{
+      // Listen for minutes changes to show dialog
+      _remainingMinutesProvider = remainingMinutesProvider;
+      remainingMinutesProvider.addListener(_checkRemainingMinutes);
+    });
+  }
+
+  void _checkRemainingMinutes() {
+    if (!mounted) return;
+    final remainingMinutesProvider =
+        Provider.of<RemainingMinutesProvider>(context, listen: false);
+    final minutes = remainingMinutesProvider.remainingMinutes;
+
+    if (minutes <= 0 && !_showUpgradeDialog) {
+      setState(() {
+        _showUpgradeDialog = true;
+      });
+
+      // // Show the upgrade dialog
+      // WidgetsBinding.instance.addPostFrameCallback((_) {
+      //   _showFullScreenUpgradeDialog();
+      // });
+    }
+  }
+
+  void _showFullScreenUpgradeDialog() {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierLabel: "Upgrade Required",
+      transitionDuration: Duration(milliseconds: 300),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return _buildUpgradeDialogContent();
+      },
+    );
+  }
+
+  Widget _buildUpgradeDialogContent() {
+    return Scaffold(
+      backgroundColor: Color(0xFF49329A),
+      body: SafeArea(
+        child: Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFF49329A),
+                Color(0xFF6A5ACD),
+                Color(0xFF483D8B),
+              ],
+            ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Icon
+              Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(14.0),
+                  child: Image.asset(
+                    'assets/crown.png',
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+
+              SizedBox(height: 30),
+
+              // Title
+              Text(
+                'Call Minutes Expired',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  fontFamily: 'Poppins Medium',
+                ),
+                textAlign: TextAlign.center,
+              ),
+
+              SizedBox(height: 20),
+
+              // Message
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 40),
+                child: Text(
+                  'You have used all your daily call minutes. Upgrade your plan to continue making calls and enjoy unlimited conversations.',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.white.withOpacity(0.9),
+                    fontFamily: 'Poppins Regular',
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+
+              SizedBox(height: 40),
+
+              // Features List
+              //_buildFeatureItem(Icons.call, 'Unlimited Calls'),
+              _buildFeatureItem(
+                  CupertinoIcons.timer_fill, 'More Daily Minutes'),
+              //_buildFeatureItem(Icons.workspace_premium, 'Premium Features'),
+
+              SizedBox(height: 50),
+
+              // Buttons
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 40),
+                child: Column(
+                  children: [
+                    // Upgrade Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 55,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _navigateToPremiumPlans();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.amber,
+                          foregroundColor: Colors.black,
+                          elevation: 5,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                        ),
+                        child: Text(
+                          'UPGRADE NOW',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Poppins Medium',
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    SizedBox(height: 15),
+
+                    // OK Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 55,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          setState(() {
+                            _showUpgradeDialog = false;
+                          });
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white.withOpacity(0.2),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15),
+                            side: BorderSide(
+                                color: Colors.white.withOpacity(0.5)),
+                          ),
+                        ),
+                        child: Text(
+                          'OK, MAYBE LATER',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            fontFamily: 'Poppins Regular',
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeatureItem(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 40),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            color: Colors.amber,
+            size: 20,
+          ),
+          SizedBox(width: 15),
+          Text(
+            text,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontFamily: 'Poppins Regular',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _navigateToPremiumPlans() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PremiumPlansScreen(
+          isChatBot: false,
+          isCall: true,
+        ),
+      ),
+    );
+  }
+
+  void initSocket() async {
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getString('user_id');
-    _userId=userId;
-    await ChatSocket.connectScoket();
+    _userId = userId;
+    await ChatSocket.connectSocket();
+    print("ksjdcnksjdcnksjcnsd ${ChatSocket.socket?.connected}");
+
+    // Request the target user's current online status from the server
+    ChatSocket.requestUserOnlineStatus(widget.userId.toString());
+
     ChatSocket.socket?.on('newMessage', (data) {
+      log("ksjdcnksjdcnksjcnsd  New Msg ${data}");
       _handleIncomingMessage(data);
     });
 
-    ChatSocket.socket?.onError((handler){
-
+    ChatSocket.socket?.on('messageBlocked', (data) {
+      log("🚫 Message Blocked Event: $data");
+      if (mounted) {
+        // _showMessageBlockedDialog(data['message'] ??
+        //     "Cannot send message. One of the users is blocked.");
+      }
+      setState(() {
+        _isBlocked = true;
+      });
     });
+
+    // ChatSocket.socket?.on('remainingMinutes', (data) {
+    //   if (data is Map<String, dynamic>) {
+    //     final userId = data['userId']?.toString();
+    //     final remainingMinutes = data['dailyMinutes'] ?? 0;
+    //     print('Remaining Minutes: $remainingMinutes');
+
+    //     ChatScreenTracker.updateRemainingMinutes(remainingMinutes);
+    //   }
+    // });
+
+    ChatSocket.socket?.onError((handler) {});
     ChatSocket.socket?.on('userOnline', (data) {
       _handleOnlineStatus({'user_id': data['user_id'], 'is_online': true});
     });
@@ -109,7 +388,41 @@ class _ChatScreenState extends State<ChatScreen> {
         'is_typing': false,
       });
     });
+  }
 
+  Future<void> requestRemainingMinutes() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString('user_id');
+    if (userId != null) {
+      ChatSocket.socket?.emit('getRemainingMinutes', {
+        'userId': userId,
+      });
+    }
+  }
+
+  void _showMessageBlockedDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(
+          'Message Blocked',
+          style: TextStyle(fontFamily: AppConstants.commonFont),
+        ),
+        content: Text(
+          message,
+          style: TextStyle(fontFamily: AppConstants.commonFont),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'OK',
+              style: TextStyle(fontFamily: AppConstants.commonFont),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void sendMessage(String senderId, String receiverId, String message) {
@@ -117,11 +430,11 @@ class _ChatScreenState extends State<ChatScreen> {
     String now = DateTime.now().toUtc().toIso8601String();
 
     ChatSocket.socket?.emit('sendMessage', {
-      "message_id":messageId,
+      "message_id": messageId,
       'sender_id': senderId,
       'receiver_id': receiverId,
       'message': message,
-      "notify_message":{
+      "notify_message": {
         "from": senderId,
         "message": message,
         "message_id": messageId,
@@ -129,11 +442,11 @@ class _ChatScreenState extends State<ChatScreen> {
       },
     });
     print("lsdjkvlskdcmlskd ${{
-      "message_id":messageId,
+      "message_id": messageId,
       'sender_id': senderId,
       'receiver_id': receiverId,
       'message': message,
-      "notify_message":{
+      "notify_message": {
         "from": senderId,
         "message": message,
         "message_id": messageId,
@@ -141,7 +454,6 @@ class _ChatScreenState extends State<ChatScreen> {
       },
     }}");
   }
-
 
   @override
   void didUpdateWidget(ChatScreen oldWidget) {
@@ -152,46 +464,40 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _initializeApiService() async {
-  try {
-    _apiService = await ApiService.create();
+    try {
+      _apiService = await ApiService.create();
 
-
-    await _loadMessages();
-  } catch (e) {
-    print("Error initializing API service: $e");
-  } finally {
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
+      await _loadMessages();
+    } catch (e) {
+      print("Error initializing API service: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
-}
-
 
   Future<void> _loadMessages() async {
-  try {
-    final response = await _apiService.fetchMessages(receiverId: widget.userId);
-    final messages = response.messages;
+    try {
+      final response =
+          await _apiService.fetchMessages(receiverId: widget.userId);
+      final messages = response.messages;
 
-    setState(() {
-      _messages.addAll(
-        messages.reversed.map((msg) => {
-          "senderId": msg.senderId.toString(),
-          "message": msg.message,
-          "timestamp": msg.formattedTime,
-        }),
-      );
-    });
-  } catch (e) {
-    print("Failed to load messages: $e");
+      setState(() {
+        _messages.addAll(
+          messages.reversed.map((msg) => {
+                "senderId": msg.senderId.toString(),
+                "message": msg.message,
+                "timestamp": msg.formattedTime,
+              }),
+        );
+      });
+    } catch (e) {
+      print("Failed to load messages: $e");
+    }
   }
-}
-
-
-
-
-
 
   void _setupTypingListener() {
     _messageController.addListener(() {
@@ -212,87 +518,92 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
-void _handleTypingStatus(dynamic data) {
-  if (!mounted) return;
-  
-  if (data is Map<String, dynamic>) {
-    final senderId = data['sender_id']?.toString();
-    final isTyping = data['is_typing'] as bool? ?? false;
-    
-    if (senderId == widget.userId.toString()) {
-      setState(() {
-        _isUserTyping = isTyping;
-      });
-      
-      // Automatically reset typing status after 3 seconds if no new typing events come in
-      if (isTyping) {
-        Future.delayed(const Duration(seconds: 3), () {
-          if (mounted && _isUserTyping) {
-            setState(() {
-              _isUserTyping = false;
-            });
+  void _handleTypingStatus(dynamic data) {
+    if (!mounted) return;
+
+    if (data is Map<String, dynamic>) {
+      final senderId = data['sender_id']?.toString();
+      final isTyping = data['is_typing'] as bool? ?? false;
+
+      if (senderId == widget.userId.toString()) {
+        setState(() {
+          _isUserTyping = isTyping;
+        });
+
+        if (isTyping) {
+          Future.delayed(const Duration(seconds: 3), () {
+            if (mounted && _isUserTyping) {
+              setState(() {
+                _isUserTyping = false;
+              });
+            }
+          });
+        }
+      }
+    }
+  }
+
+  void _handleOnlineStatus(dynamic data) {
+    if (!mounted) return;
+
+    if (data is Map<String, dynamic>) {
+      final userId = data['user_id']?.toString();
+      final isOnline = data['is_online'] as bool? ?? false;
+
+      if (userId == widget.userId.toString()) {
+        setState(() {
+          _isOnline = isOnline;
+          if (!isOnline) {
+            _isUserTyping = false;
           }
         });
       }
     }
   }
-}
 
-void _handleOnlineStatus(dynamic data) {
-  if (!mounted) return;
-  
-  if (data is Map<String, dynamic>) {
-    final userId = data['user_id']?.toString();
-    final isOnline = data['is_online'] as bool? ?? false;
-    
-    if (userId == widget.userId.toString()) {
+  void _handleIncomingMessage(dynamic data) {
+    if (!mounted) return;
+
+    if (data is! Map<String, dynamic>) {
+      print('Invalid message format: $data');
+      return;
+    }
+
+    final senderId = data['sender_id']?.toString();
+    final receiverId = data['receiver_id']?.toString();
+
+    if (receiverId == _userId && senderId == widget.userId.toString()) {
       setState(() {
-        _isOnline = isOnline;
-        if (!isOnline) {
-          _isUserTyping = false;
-        }
+        _messages.insert(0, {
+          "senderId": senderId,
+          "message": data['message']?.toString() ?? "",
+          "timestamp": data['timestamp'] ?? getCurrentFormattedTime(),
+        });
       });
     }
   }
-}
 
-  void _handleIncomingMessage(dynamic data) {
-  if (!mounted) return;
-  
-  if (data is! Map<String, dynamic>) {
-    print('Invalid message format: $data');
-    return;
-  }
-  
-  final senderId = data['sender_id']?.toString();
-  final receiverId = data['receiver_id']?.toString();
-
-
-  if (receiverId == _userId || senderId == widget.userId.toString()) {
-    setState(() {
-      _messages.insert(0, {
-        "senderId": senderId,
-        "message": data['message']?.toString() ?? "",
-        "timestamp": data['timestamp']?? getCurrentFormattedTime(),
-      });
-    });
-  }
-}
   String getCurrentFormattedTime() {
     final now = DateTime.now();
-    final formatter = DateFormat('hh:mm a'); // 12-hour format with AM/PM
+    final formatter = DateFormat('hh:mm a');
     return formatter.format(now);
   }
- void _sendMessage()async {
-    if(_messageController.text.isNotEmpty){
 
+  void _sendMessage() async {
+    if (_isBlocked) {
+      _showMessageBlockedDialog(
+          'Cannot send message. One of the users is blocked.');
+      return;
+    }
+    if (_messageController.text.isNotEmpty) {
       final prefs = await SharedPreferences.getInstance();
 
-      _userId= prefs.getString('user_id');
+      _userId = prefs.getString('user_id');
       print("My UserId : ${_userId}");
       final receiverId = widget.userId.toString();
-      final now = _formatTimeTo12Hour(DateTime.now().toIso8601String()); // Get current time in ISO format
-      sendMessage(_userId.toString(),receiverId, _messageController.text.trim());
+      final now = _formatTimeTo12Hour(DateTime.now().toIso8601String());
+      sendMessage(
+          _userId.toString(), receiverId, _messageController.text.trim());
       setState(() {
         _messages.insert(0, {
           "senderId": _userId.toString(),
@@ -303,46 +614,52 @@ void _handleOnlineStatus(dynamic data) {
       });
       _messageController.clear();
     }
-}
-
+  }
 
   String _formatTimeTo12Hour(String? timestamp) {
-  if (timestamp == null) return '';
-  
-  try {
-    final dateTime = timestamp.contains('T') 
-        ? DateTime.parse(timestamp) 
-        : DateTime.tryParse(timestamp) ?? DateTime.now();
-    
-    final hour = dateTime.hour;
-    final minute = dateTime.minute.toString().padLeft(2, '0');
-    
-    // Convert to 12-hour format
-    final period = hour >= 12 ? 'PM' : 'AM';
-    final twelveHour = hour % 12;
-    final displayHour = twelveHour == 0 ? 12 : twelveHour;
-    
-    return '$displayHour:$minute $period';
-  } catch (e) {
-    print('Error formatting time: $e');
-    return '';
-  }
-}
+    if (timestamp == null) return '';
 
-   @override
-void dispose() {
-  _typingTimer?.cancel();
-  _messageController.dispose();
-  super.dispose();
-}
+    try {
+      final dateTime = timestamp.contains('T')
+          ? DateTime.parse(timestamp)
+          : DateTime.tryParse(timestamp) ?? DateTime.now();
+
+      final hour = dateTime.hour;
+      final minute = dateTime.minute.toString().padLeft(2, '0');
+
+      final period = hour >= 12 ? 'PM' : 'AM';
+      final twelveHour = hour % 12;
+      final displayHour = twelveHour == 0 ? 12 : twelveHour;
+
+      return '$displayHour:$minute $period';
+    } catch (e) {
+      print('Error formatting time: $e');
+      return '';
+    }
+  }
+
+  @override
+  void dispose() {
+    _remainingMinutesProvider?.removeListener(_checkRemainingMinutes);
+    _typingTimer?.cancel();
+    _messageController.dispose();
+    if (ChatScreenTracker.activeChatUserId == widget.userId.toString()) {
+      ChatScreenTracker.activeChatUserId = null;
+    }
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-
     return WillPopScope(
-      onWillPop: () async{
+      onWillPop: () async {
         context.read<GetFriendsListCubit>().fetchAllFriends();
-        return true;
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const Homepage()),
+          (route) => false,
+        );
+        return false;
       },
       child: Scaffold(
         backgroundColor: Color(0xFFE0F7FF),
@@ -351,41 +668,58 @@ void dispose() {
           child: AppBar(
             backgroundColor: Color(0xFF49329A),
             leading: InkWell(
-              onTap: (){
-                Navigator.pop(context);
+              onTap: () {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const Homepage()),
+                  (route) => false,
+                );
               },
               child: Padding(
-                padding: const EdgeInsets.only(top: 10.0,left: 18),
+                padding: const EdgeInsets.only(top: 10.0, left: 18),
                 child: IconButton(
                   icon: Icon(Icons.arrow_back_ios, color: Colors.white),
-                  onPressed: (){
-                    Navigator.pop(context);
+                  onPressed: () {
                     context.read<GetFriendsListCubit>().fetchAllFriends();
-
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (_) => const Homepage()),
+                      (route) => false,
+                    );
                   },
                 ),
               ),
             ),
             leadingWidth: 22,
             title: Padding(
-              padding: const EdgeInsets.only(top: 10.0,),
+              padding: const EdgeInsets.only(
+                top: 10.0,
+              ),
               child: Row(
                 children: [
                   InkWell(
-                      onTap: (){
-                        Navigator.pop(context);
+                      onTap: () {
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(builder: (_) => const Homepage()),
+                          (route) => false,
+                        );
                       },
-                      child: SizedBox(width: 14,
-                      height: 32,
+                      child: SizedBox(
+                        width: 14,
+                        height: 32,
                       )),
                   InkWell(
-                      onTap: (){
+                      onTap: () {
                         context.read<GetFriendsListCubit>().fetchAllFriends();
-                        Navigator.pop(context);
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(builder: (_) => const Homepage()),
+                          (route) => false,
+                        );
                       },
                       child: widget.avatarWidget),
                   SizedBox(width: 10),
-
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -395,29 +729,35 @@ void dispose() {
                         child: Text(
                           widget.userName,
                           style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'Poppins Regular',
-                            fontSize: 16
-                          ),
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Poppins Regular',
+                              fontSize: 16),
                         ),
                       ),
-                      Text(
-                        _isUserTyping
-                            ? 'Typing...'
-                            : _isOnline
-                            ? 'Online'
-                            : 'Offline',
-        style: TextStyle(
-      color: _isUserTyping
-          ? Colors.green
-          : _isOnline
-              ? Colors.white
-              : Colors.white,
-      fontSize: 12,
-      fontFamily: 'Poppins Regular'
-        ),
-      )
+                      BlocBuilder<UserStatusCubit, Map<String, bool>>(
+                        builder: (context, userStatus) {
+                          final isOnline =
+                              userStatus[widget.userId.toString()] ?? false;
+
+                          return Text(
+                            _isUserTyping
+                                ? 'Typing...'
+                                : isOnline
+                                    ? 'Online'
+                                    : 'Offline',
+                            style: TextStyle(
+                              color: _isUserTyping
+                                  ? Colors.green
+                                  : isOnline
+                                      ? Colors.white
+                                      : Colors.white,
+                              fontSize: 12,
+                              fontFamily: 'Poppins Regular',
+                            ),
+                          );
+                        },
+                      ),
                     ],
                   ),
                 ],
@@ -429,83 +769,158 @@ void dispose() {
                 child: Row(
                   children: [
                     CoinBadge(),
-                    SizedBox(width: 5,),
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: ()async {
-                          if (context.read<CallSocketHandleCubit>().isLiveCallActive) {
-                            Fluttertoast.showToast(
-                              msg: "You're already in another call",
-                              backgroundColor: Colors.orange,
-                            );
-                          } else {
-                            final prefs = await SharedPreferences.getInstance();
-                            String? userId = prefs.getString("user_id");
+                    SizedBox(
+                      width: 5,
+                    ),
+                    BlocConsumer<CallSocketHandleCubit, CallSocketHandleState>(
+                      listener: (context, callState) {
+                        //
+                      },
+                      builder: (context, callState) {
+                        // Use state directly for robust updates
+                        final minutes = callState.remainingMinutes;
 
-                            int? profileProvider = userId != null && userId != '' ? int.tryParse(userId) : null;
+                        // print('The Remaining Minutes from Cubit: $minutes');
+                        return Stack(
+                          children: [
+                            Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () async {
+                                  if (minutes <= 0) {
+                                    _showFullScreenUpgradeDialog();
+                                    return;
+                                  }
 
-                            if (profileProvider != null) {
-                              await requestPermissions();
+                                  try {
+    // 🔑 THIS is what triggers the iOS permission dialog
+    await prepareIOSMic();
+  } catch (e) {
+    // User denied mic
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Microphone permission required")),
+    );
+    return;
+  }
 
-                              context.read<CallSocketHandleCubit>().resetCubit();
+                                  // if (context
+                                  //     .read<CallSocketHandleCubit>()
+                                  //     .isLiveCallActive) {
+                                  //   Fluttertoast.showToast(
+                                  //     msg: "You're already in another call",
+                                  //     backgroundColor: Colors.orange,
+                                  //   );
+                                  // } else {
+                                  final prefs =
+                                      await SharedPreferences.getInstance();
+                                  String? userId = prefs.getString("user_id");
 
-                              context.read<CallSocketHandleCubit>().emitCallingFunction(
-                                targetId: widget.userId ?? 0,
-                                currentUserId: profileProvider,
-                                targettedUserName: "${widget.userName}",
-                              );
-                              // Navigate first
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => CallingScreen(
-                                    currentUserId:profileProvider ,
-                                    callerName: widget.userName,
-                                    avatarUrl: widget.profilePicId, friendId: widget.userId,
+                                  int? profileProvider =
+                                      userId != null && userId != ''
+                                          ? int.tryParse(userId)
+                                          : null;
+
+                                  if (profileProvider != null) {
+                                    await requestPermissions();
+
+                                    context
+                                        .read<CallSocketHandleCubit>()
+                                        .resetCubit();
+
+                                    context
+                                        .read<CallSocketHandleCubit>()
+                                        .emitCallingFunction(
+                                          targetId: widget.userId ?? 0,
+                                          currentUserId: profileProvider,
+                                          targettedUserName:
+                                              "${widget.userName}",
+                                        );
+                                    // Navigate first
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => CallingScreen(
+                                          currentUserId: profileProvider,
+                                          callerName: widget.userName,
+                                          avatarUrl: widget.profilePicId,
+                                          friendId: widget.userId,
+                                        ),
+                                      ),
+                                    );
+
+                                    if (!context
+                                        .read<CallSocketHandleCubit>()
+                                        .isLiveCallActive) {
+                                      context
+                                          .read<CallTimerCubit>()
+                                          .resetTimer();
+                                    }
+                                  }
+                                  //}
+                                },
+                                borderRadius: BorderRadius.circular(70),
+                                child: Container(
+                                  padding: EdgeInsets.all(5),
+                                  child: SvgPicture.string(
+                                    Svgfiles.svgString,
+                                    width: 28,
+                                    height: 28,
+                                    fit: BoxFit.fitHeight,
                                   ),
                                 ),
-                              );
-
-                              // Emit socket events
-
-
-                              // Reset timer if not in active call
-                              if (!context.read<CallSocketHandleCubit>().isLiveCallActive) {
-                                context.read<CallTimerCubit>().resetTimer();
-                              }
-                            }
-                          }
-
-
-                        },
-
-                        borderRadius: BorderRadius.circular(70),
-                        child: Container(
-                          padding: EdgeInsets.all(5),
-                          child: SvgPicture.string(
-                            Svgfiles.svgString,
-                            width: 28,
-                            height: 28,
-                            fit: BoxFit.fitHeight,
+                              ),
+                            ),
+                            if (minutes > 0)
+                              Positioned(
+                                right: 0,
+                                top: 0,
+                                child: Container(
+                                  padding: EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                        color: Colors.white, width: 1.5),
+                                  ),
+                                  constraints: BoxConstraints(
+                                    minWidth: 16,
+                                    minHeight: 16,
+                                  ),
+                                  child: Text(
+                                    '$minutes',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        );
+                      },
+                    ),
+                    PopupMenuButton<ChatMenuAction>(
+                      icon:
+                          Icon(Icons.more_vert, color: Colors.white, size: 28),
+                      onSelected: (ChatMenuAction result) {
+                        if (result == ChatMenuAction.block) {
+                          _showBlockConfirmationDialog();
+                        }
+                      },
+                      itemBuilder: (BuildContext context) =>
+                          <PopupMenuEntry<ChatMenuAction>>[
+                        const PopupMenuItem<ChatMenuAction>(
+                          value: ChatMenuAction.block,
+                          child: Text(
+                            'Block User',
+                            style:
+                                TextStyle(fontFamily: AppConstants.commonFont),
                           ),
                         ),
-                      ),
+                      ],
                     ),
-                   PopupMenuButton<ChatMenuAction>(
-        icon: Icon(Icons.more_vert, color: Colors.white, size: 28),
-        onSelected: (ChatMenuAction result) {
-      if (result == ChatMenuAction.block) {
-        _showBlockConfirmationDialog();
-      }
-        },
-        itemBuilder: (BuildContext context) => <PopupMenuEntry<ChatMenuAction>>[
-      const PopupMenuItem<ChatMenuAction>(
-        value: ChatMenuAction.block,
-        child: Text('Block User',style: TextStyle(fontFamily: AppConstants.commonFont),),
-      ),
-        ],
-      ),
                   ],
                 ),
               ),
@@ -543,18 +958,21 @@ void dispose() {
                           final isMe = message["senderId"] == _userId;
 
                           return Align(
-                            alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                            alignment: isMe
+                                ? Alignment.centerRight
+                                : Alignment.centerLeft,
                             child: ChatMessageLayout(
                               isMeChatting: isMe,
                               messageBody: message["message"] ?? "",
-                              timestamp:message["timestamp"] ?? "null",
+                              timestamp: message["timestamp"] ?? "null",
                             ),
                           );
                         },
                       ),
                     ),
                     Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                       child: TextField(
                         controller: _messageController,
                         decoration: InputDecoration(
@@ -565,7 +983,8 @@ void dispose() {
                             borderRadius: BorderRadius.circular(30),
                             borderSide: BorderSide.none,
                           ),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+                          contentPadding: EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 15),
                           suffixIcon: Padding(
                             padding: EdgeInsets.only(right: 5),
                             child: Material(
@@ -599,61 +1018,131 @@ void dispose() {
       ),
     );
   }
-  void _showBlockConfirmationDialog() {
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        title: Text('Block User',style: TextStyle(fontFamily: AppConstants.commonFont),),
-        content: Text('Are you sure you want to block ${widget.userName}?',style: TextStyle(fontFamily: AppConstants.commonFont),),
-        actions: <Widget>[
-          TextButton(
-            child: Text('Cancel',style: TextStyle(fontFamily: AppConstants.commonFont),),
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-          ),
-          TextButton(
-            child: Text('Block', style: TextStyle(color: Colors.red,fontFamily: AppConstants.commonFont),),
-            onPressed: () {
-              // Add your block user logic here
-              _blockUser();
-              Navigator.of(context).pop();
-            },
-          ),
-        ],
-      );
-    },
-  );
+
+  Future<void> prepareIOSMic() async {
+  final stream = await navigator.mediaDevices.getUserMedia({
+    'audio': true,
+    'video': false,
+  });
+
+  // Stop immediately — permission stays granted
+  for (var track in stream.getTracks()) {
+    track.stop();
+  }
+  await stream.dispose();
 }
 
-  Future<void> requestPermissions() async {
-    final status = await Permission.microphone.request();
+  void _showBlockConfirmationDialog() {
+    FocusScope.of(context).unfocus();
 
-    if (status != PermissionStatus.granted) {
-      throw Exception("Microphone permission not granted");
-    }
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          title: Text(
+            'Block User',
+            style: TextStyle(fontFamily: AppConstants.commonFont),
+          ),
+          content: Text(
+            'Are you sure you want to block ${widget.userName}?',
+            style: TextStyle(fontFamily: AppConstants.commonFont),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text(
+                'Cancel',
+                style: TextStyle(fontFamily: AppConstants.commonFont),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: Text(
+                'Block',
+                style: TextStyle(
+                    color: Colors.red, fontFamily: AppConstants.commonFont),
+              ),
+              onPressed: () {
+                // Add your block user logic here
+                _blockUser();
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
+
+  Future<bool> requestPermissions() async {
+  final status = await Permission.microphone.request();
+
+  if (status.isGranted) {
+    return true;
+  }
+
+  if (status.isPermanentlyDenied) {
+    Fluttertoast.showToast(
+      msg: "Microphone permission is permanently denied. Enable it in settings.",
+      backgroundColor: Colors.red,
+    );
+    await openAppSettings();
+    return false;
+  }
+
+  // Normal denied
+  Fluttertoast.showToast(
+    msg: "Microphone permission is required to make calls",
+    backgroundColor: Colors.orange,
+  );
+  return false;
+}
 
 // Add this method to handle the actual blocking
-Future<void> _blockUser() async {
-  try {
-    // Implement your block user API call here
-    // Example:
-    await _apiService.blockUser(widget.userId);
-    context.read<UserFriendsCubit>().fetchAllUsersAndFriends();
-    // Show a success message
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('User blocked successfully')),
-    );
-    
-    // Optionally navigate back
-    Navigator.of(context).pop();
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Failed to block user: $e')),
-    );
+  Future<void> _blockUser() async {
+    try {
+      await _apiService.blockUser(widget.userId);
+
+      // refresh friends on cubit
+      context.read<UserFriendsCubit>().fetchAllUsersAndFriends();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('User blocked successfully')),
+      );
+
+      // Pop ChatScreen with a result
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to block user: $e')),
+      );
+    }
   }
 }
 
+class RemainingMinutesIndicator extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<RemainingMinutesProvider>(
+      builder: (context, provider, child) {
+        return Container(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: provider.remainingMinutes > 0 ? Colors.green : Colors.red,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            '${provider.remainingMinutes} min',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        );
+      },
+    );
+  }
 }

@@ -74,36 +74,62 @@ class _VerifyBankAccountState extends State<VerifyBankAccount> {
   }
 
   try {
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Center(child: CircularProgressIndicator()),
+    );
+
     Map<String, dynamic> response = await _apiService.postBankAccount(
       accountNumber: banknum.text.trim(),
       confrimAccountNumber: confirm.text.trim(),
-      accountHolderName: name.text.trim(),  // Assuming `branch` holds bank name
+      accountHolderName: name.text.trim(),
       ifscCode: ifsc.text.trim(),
     );
 
-    print('accountNumber:${banknum.text.trim()}');
+    // Hide loading indicator
+    Navigator.pop(context);
 
-    if (response["status"] == "success") {
-      // Save data in provider
-    Provider.of<BankAccountProvider>(context, listen: false)
-        .setBankAccountDetails(response["account_details"]);
+    print('Full API Response: $response'); // Debugging
+
+    // Check response status - handle multiple possible success indicators
+    bool isSuccess = response["status"] == "success" || 
+                    response["success"] == true || 
+                    (response["error"] == null && response.containsKey("account_details"));
+    
+    if (isSuccess) {
+      // Check if account_details exists
+      if (response.containsKey("account_details")) {
+        // Save data in provider
+        Provider.of<BankAccountProvider>(context, listen: false)
+            .setBankAccountDetails(response["account_details"]);
 
         // Save data in SharedPreferences
         await _saveBankDetailsToSharedPreferences(response["account_details"]);
         
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Bank account verified successfully!"))
-      );
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => AccountDetailShow()),
-      );
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response["message"] ?? "Bank account verified successfully!"))
+        );
+        
+       Navigator.pop(context);
+      } else {
+        // Even if no account_details, it might still be successful
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response["message"] ?? "Bank account updated successfully!"))
+        );
+        Navigator.pop(context); // Just go back
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response["error"] ?? "Verification failed"))
+        SnackBar(content: Text(response["error"] ?? "Verification failed. Please try again."))
       );
     }
   } catch (e) {
+    // Hide loading indicator if still showing
+    if (Navigator.canPop(context)) Navigator.pop(context);
+    
+    print("Error in postBankAccount: $e");
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text("Something went wrong. Please try again."))
     );

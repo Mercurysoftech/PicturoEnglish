@@ -1,4 +1,4 @@
-package com.picturoenglish.picturo
+package com.picturo.picturoenglish
 
 object NotificationConstants {
     const val morningNotificationId = 1

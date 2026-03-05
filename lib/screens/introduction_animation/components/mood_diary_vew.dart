@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../genderandagepage.dart';
 import '../../homepage.dart';
-import '../../loginscreen.dart';
+
 
 class MoodDiaryVew extends StatelessWidget {
   final AnimationController animationController;
@@ -84,8 +83,8 @@ class MoodDiaryVew extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                "Chat & Call",
-                style: TextStyle(fontSize: 26.0, fontWeight: FontWeight.bold),
+                "Chat & Call to Learn English",
+                style: TextStyle(fontSize: 26.0, fontWeight: FontWeight.bold,fontFamily: 'Poppins Medium'),
               ),
               SlideTransition(
                 position: moodFirstHalfAnimation,
@@ -95,7 +94,8 @@ class MoodDiaryVew extends StatelessWidget {
                     padding: EdgeInsets.only(
                         left: 64, right: 64, top: 16, bottom: 16),
                     child: Text(
-                      "Stay connected with seamless messaging and high-quality voice or video calls, enjoy group chats, and experience secure, real-time communication anytime, anywhere.",
+                      "Boost your English skills through real conversations!Chat with mentors or co-learners, join fun group discussions, and practice speaking with high-quality voice calls.Experience interactive, real-time English learning — anytime, anywhere!",
+                      style: TextStyle(fontFamily: 'Poppins Regular'),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -140,6 +140,7 @@ class MoodDiaryVew extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 18,
                             color: Colors.black,
+                            fontFamily: 'Poppins Regular'
                           ),
                         ),
                       ),
@@ -173,6 +174,7 @@ class MoodDiaryVew extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 18,
                             color: Colors.white,
+                            fontFamily: 'Poppins Medium'
                           ),
                         ),
                       ),

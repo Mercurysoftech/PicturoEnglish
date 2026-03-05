@@ -1,5 +1,5 @@
+// content_view_percentage_cubit.dart
 import 'dart:developer';
-
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
@@ -19,10 +19,10 @@ class ProgressCubit extends Cubit<ProgressState> {
     required int topicId,
     required bool isFromTopic,
   }) async {
-
     emit(ProgressLoading());
 
-    final url = Uri.parse("https://picturoenglish.com/api/getprogress_percentage.php");
+    final url =
+        Uri.parse("https://picturoenglish.com/api/getprogress_percentage.php");
     final body = {
       "book_id": bookId,
       "topic_id": topicId,
@@ -46,12 +46,41 @@ class ProgressCubit extends Cubit<ProgressState> {
         if (data['success'] == true) {
           final int totalQuestions = data['total_questions'];
           final int readQuestions = data['read_questions'];
-          double progress = totalQuestions > 0 ? readQuestions / totalQuestions : 0.0;
+          final bool isFreehitUser = data['isfreehituser'] ?? false;
+          final bool isSubscribePlan = data['issubscribeplan'] ?? false;
+          final int actualProgress = data['actual_progress'] ?? 0;
+          final int allowedProgress = data['allowed_progress'] ?? 0;
 
-           if(progress==1&&isFromTopic){
-             Fluttertoast.showToast(msg: "Content was Completed Successfully",backgroundColor: Colors.green);
-           }
-          emit(ProgressLoaded(progress));
+          // double progress =
+          //     totalQuestions > 0 ? readQuestions / totalQuestions : 0.0;
+          final double progress =
+              (data['progress_ratio'] as num?)?.toDouble() ?? 0.0;
+
+          log("Progress: $progress");
+          log("Actual Progress: $actualProgress");
+          log("Total Questions: $totalQuestions, Read Questions: $readQuestions");
+          log("Is Free User: $isFreehitUser, Is Subscribed: $isSubscribePlan");
+          log("Actual Progress: $actualProgress, Allowed Progress: $allowedProgress");
+
+          // Check if should show subscription dialog
+          final bool shouldShowSubscriptionDialog =
+              isFreehitUser && !isSubscribePlan;
+
+          final bool isCompleted = progress >= 1.0 && isFromTopic;
+          if (progress >= 1.0 && isFromTopic) {
+            Fluttertoast.showToast(
+                msg: "Content was Completed Successfully",
+                backgroundColor: Colors.green);
+          }
+
+          emit(ProgressLoaded(
+            progress,
+            shouldShowSubscriptionDialog: shouldShowSubscriptionDialog,
+            isFreehitUser: isFreehitUser,
+            isSubscribePlan: isSubscribePlan,
+            actualProgress: actualProgress,
+            allowedProgress: allowedProgress,
+          ));
         } else {
           emit(ProgressFailed("Failed to fetch progress"));
         }

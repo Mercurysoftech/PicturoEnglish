@@ -13,6 +13,7 @@ import 'package:picturo_app/screens/call/widgets/call_receive_widget.dart';
 
 import '../screens/chatscreenpage.dart';
 import 'api_service.dart';
+import 'navigation_service.dart';
 
 class PushNotificationService {
   static final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -39,7 +40,7 @@ class PushNotificationService {
       return 'http://picturoenglish.com/admin/${avatar.avatarUrl}';
     } catch (e) {
       print('Error fetching avatar URL: $e');
-      throw e;
+      rethrow;
     }
   }
 
@@ -103,34 +104,49 @@ class PushNotificationService {
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
+    const DarwinInitializationSettings initializationSettingsIOS =
+        DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+    );
+
     const InitializationSettings initializationSettings =
         InitializationSettings(
       android: initializationSettingsAndroid,
+      iOS: initializationSettingsIOS,
     );
 
-    await flutterLocalNotificationsPlugin.initialize(initializationSettings,
-        onDidReceiveNotificationResponse:
-            (NotificationResponse response) async {
-      Map<String, dynamic> data = jsonDecode(response.payload ?? '{}');
-      Future.delayed(const Duration(milliseconds: 500), () {
-        Get.to(() => ChatScreen(
-              avatarWidget: buildUserAvatar(data['sender_profile'] == "null"
-                  ? 0
-                  : int.parse(data['sender_profile'] ?? '0')),
-              userName: data['sender_Name'] ?? 'N/A',
-              userId: int.parse(data['sender_Id'] ?? '0'),
-              profilePicId: data['sender_profile'] == "null"
-                  ? 0
-                  : int.parse(data['sender_profile'] ?? '0'),
-            ));
-      });
-      await flutterLocalNotificationsPlugin.cancel(response.id ?? 0);
-    });
+    await flutterLocalNotificationsPlugin.initialize(
+      initializationSettings,
+      onDidReceiveNotificationResponse: (NotificationResponse response) async {
+        if (response.payload != null) {
+          try {
+            final Map<String, dynamic> data =
+                jsonDecode(response.payload ?? '{}');
+            log("🔔 Notification tapped: $data");
 
-    await flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(channel);
+            Future.delayed(const Duration(milliseconds: 500), () {
+              Get.to(() => ChatScreen(
+                    avatarWidget: buildUserAvatar(
+                        data['sender_profile'] == "null"
+                            ? 0
+                            : int.parse(data['sender_profile'] ?? '0')),
+                    userName:
+                        data['username'] ?? (data['sender_username'] ?? 'N/A'),
+                    userId: int.parse(data['sender_id'] ?? '0'),
+                    profilePicId: data['sender_profile'] == "null"
+                        ? 0
+                        : int.parse(data['sender_profile'] ?? '0'),
+                  ));
+            });
+            await flutterLocalNotificationsPlugin.cancel(response.id ?? 0);
+          } catch (e) {
+            log("⚠️ Error navigating from notification: $e");
+          }
+        }
+      },
+    );
 
     await FirebaseMessaging.instance.requestPermission(
       alert: true,
@@ -138,44 +154,12 @@ class PushNotificationService {
       sound: true,
     );
 
-   FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
-  print("📲 Foreground FCM: ${message.data}");
-
-  RemoteNotification? notification = message.notification;
-  AndroidNotification? android = message.notification?.android;
-
-  if (notification != null && android != null) {
-    // Show notification manually while app is foreground
-    flutterLocalNotificationsPlugin.show(
-      notification.hashCode,
-      notification.title,
-      notification.body,
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'default_channel_id',
-          'Default Channel',
-          importance: Importance.max,
-          priority: Priority.high,
-        ),
-      ),
-    );
-  }
-});
-
-
-
     FirebaseMessaging.instance.getInitialMessage().then((message) {
       if (message != null) {
         log("📱 App opened from terminated state with notification");
         _logFullPayload(message.data, "Terminated");
         _handleMessage(message);
       }
-    });
-
-    FirebaseMessaging.onMessageOpenedApp.listen((message) {
-      log("📱 App opened from background with notification");
-      _logFullPayload(message.data, "Background");
-      _handleMessage(message);
     });
   }
 
@@ -190,57 +174,56 @@ ${const JsonEncoder.withIndent('  ').convert(payload)}
 """);
   }
 
-  static Future<void> _showNotification({
-    required String title,
-    required String body,
-    required String payload,
-  }) async {
-    log("""
-📨 Showing Notification
-----------------------
-Title: $title
-Body: $body
-Payload: $payload
-----------------------
-""");
-    await flutterLocalNotificationsPlugin.show(
-      DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      title,
-      body,
-      NotificationDetails(
-        android: AndroidNotificationDetails(
-          channel.id,
-          channel.name,
-          channelDescription: channel.description,
-          importance: Importance.max,
-          priority: Priority.high,
-          playSound: true,
-          icon: '@mipmap/ic_launcher',
+  static void showNotification(RemoteMessage message) {
+    // Don't show normal notification for incoming calls - only CallKit
+    if (message.data['type'] == 'incoming_call' ||
+        (message.notification?.title?.toLowerCase().contains('incoming call') ??
+            false)) {
+      log("📞 Skipping normal notification for incoming_call - using CallKit instead");
+      return;
+    }
+
+    RemoteNotification? notification = message.notification;
+    AndroidNotification? android = message.notification?.android;
+
+    if (notification != null) {
+      flutterLocalNotificationsPlugin.show(
+        payload: jsonEncode({
+          "sender_id": "${message.data['sender_id']}",
+          "username": "${message.data['username']}"
+        }),
+        notification.hashCode,
+        notification.title,
+        notification.body,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'default_channel_id',
+            'Default Channel',
+            importance: Importance.max,
+            priority: Priority.high,
+          ),
         ),
-      ),
-      payload: payload,
-    );
+      );
+    }
   }
 
   static void _handleMessage(RemoteMessage message) {
     log("🔄 Handling notification message");
     _logFullPayload(message.data, "Handling");
 
-    if (navigatorKey.currentContext == null) {
+    if (NavigationService.instance.navigationKey.currentContext == null) {
       log("⚠️ No navigatorKey context available");
       return;
     }
 
     final data = message.data;
 
-    // Handle call notifications
-    if (data['type'] == 'incoming_call') {
-      log("📞 Handling incoming call notification");
-      _handleIncomingCallNotification(data);
-      return;
-    }
+    // if (data['type'] == 'incoming_call') {
+    //   log("📞 Handling incoming call notification");
+    //   _handleIncomingCallNotification(data);
+    //   return;
+    // }
 
-    // Handle chat notifications
     log("💬 Handling chat notification");
     final senderName = data['username'] ?? "Unknown";
     final profilePicId = int.tryParse(data['avatar_id'] ?? "0") ?? 0;
@@ -253,59 +236,63 @@ Payload: $payload
 - Avatar ID: $profilePicId
 """);
 
-    Navigator.of(navigatorKey.currentContext!).pushAndRemoveUntil(
-      MaterialPageRoute(
-        builder: (context) => ChatScreen(
-          avatarWidget: buildUserAvatar(profilePicId),
-          userName: senderName,
-          userId: userId,
-          profilePicId: profilePicId,
+    if (data['type'] == 'chat') {
+      Navigator.of(NavigationService.instance.navigationKey.currentContext!)
+          .pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (context) => ChatScreen(
+            avatarWidget: buildUserAvatar(profilePicId),
+            userName: senderName,
+            userId: userId,
+            profilePicId: profilePicId,
+          ),
         ),
-      ),
-      (route) => false,
-    );
+        (route) => false,
+      );
+    }
 
     initialNotificationPayload = null;
   }
 
   static void _handleIncomingCallNotification(Map<String, dynamic> data) {
-  log("📞 Processing incoming call notification");
+    log("📞 Processing incoming call notification");
 
-  try {
-    final cubit = navigatorKey.currentContext?.read<CallSocketHandleCubit>();
-    if (cubit == null) {
-      log("⚠️ Call cubit not available in context");
-      return;
-    }
+    try {
+      final cubit = NavigationService.instance.navigationKey.currentContext
+          ?.read<CallSocketHandleCubit>();
+      if (cubit == null) {
+        log("⚠️ Call cubit not available in context");
+        return;
+      }
 
-    if (cubit.isLiveCallActive) {
-      log("⚠️ Call already active - ignoring duplicate notification");
-      return;
-    }
+      if (cubit.isLiveCallActive) {
+        log("⚠️ Call already active - ignoring duplicate notification");
+        return;
+      }
 
-    // Safely parse caller ID with fallback to 0
-    final callerId = int.tryParse(data['caller_id']?.toString() ?? "0") ?? 0;
-    final callerName = data['caller_username']?.toString() ?? "Unknown";
+      final callerId = int.tryParse(data['caller_id']?.toString() ?? "0") ?? 0;
+      final callerName = data['caller_username']?.toString() ?? "Unknown";
 
-    log("""
+      log("""
 📞 Incoming Call Details:
 - Caller ID: $callerId
 - Caller Name: $callerName
-- Current User ID: ${navigatorKey.currentContext?.read<UserProvider>().userId}
+- Current User ID: ${NavigationService.instance.navigationKey.currentContext?.read<UserProvider>().userId}
 """);
 
-    Navigator.of(navigatorKey.currentContext!).pushAndRemoveUntil(
-      MaterialPageRoute(
-        builder: (context) => CallAcceptScreen(
-          callerName: callerName,
-          avatarUrl: 0,
-          callerId: callerId,
+      Navigator.of(NavigationService.instance.navigationKey.currentContext!)
+          .pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (context) => CallAcceptScreen(
+            callerName: callerName,
+            avatarUrl: 0,
+            callerId: callerId,
+          ),
         ),
-      ),
-      (route) => false,
-    );
-  } catch (e) {
-    log("⚠️ Error handling incoming call notification: $e");
+        (route) => false,
+      );
+    } catch (e) {
+      log("⚠️ Error handling incoming call notification: $e");
+    }
   }
-}
 }

@@ -1,3 +1,4 @@
+// quest_game_qtn_list_state.dart
 part of 'quest_game_qtn_list_cubit.dart';
 
 abstract class GrammarQuestState extends Equatable {
@@ -9,12 +10,30 @@ class GrammarQuestLoading extends GrammarQuestState {}
 
 class GrammarQuestLoaded extends GrammarQuestState {
   final List<GrammarQuestion> questions;
+  final bool shouldShowSubscriptionDialog;
+  final bool isFreeHitUser;
+  final bool isSubscribePlan;
+  final int progressPercentage;
+  final int maxAllowedPercentage;
 
-
-  GrammarQuestLoaded(this.questions,);
+  GrammarQuestLoaded(
+    this.questions, {
+    this.shouldShowSubscriptionDialog = false,
+    this.isFreeHitUser = false,
+    this.isSubscribePlan = false,
+    this.progressPercentage = 0,
+    this.maxAllowedPercentage = 0,
+  });
 
   @override
-  List<Object?> get props => [questions];
+  List<Object?> get props => [
+        questions,
+        shouldShowSubscriptionDialog,
+        isFreeHitUser,
+        isSubscribePlan,
+        progressPercentage,
+        maxAllowedPercentage,
+      ];
 }
 
 class GrammarQuestFailed extends GrammarQuestState {
@@ -24,24 +43,4 @@ class GrammarQuestFailed extends GrammarQuestState {
 
   @override
   List<Object?> get props => [message];
-}
-
-class GrammarQuestion {
-  final int id;
-  final String gameQus;
-  final String image_path;
-  final int level;
-  final bool completed;
-
-  GrammarQuestion({required this.id, required this.gameQus,required this.image_path,required  this.level,required this.completed});
-
-  factory GrammarQuestion.fromJson(Map<String, dynamic> json) {
-    return GrammarQuestion(
-      level: json["level"]??0,
-      completed: json['completed']??false,
-      image_path: json['image_path']??'',
-      id: json['id']??0,
-      gameQus: json['sentence']??'',
-    );
-  }
 }

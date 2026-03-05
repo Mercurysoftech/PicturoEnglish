@@ -161,7 +161,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
                       child: ListTile(
                         leading: CircleAvatar(
                           backgroundImage:
-                          AssetImage('assets/avatar_1.png'),
+                          AssetImage('assets/avatar2.png'),
                           radius: 25,
                         ),
                         title: Text(
@@ -209,5 +209,61 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildUserAvatar(int avatarId) {
+    // If avatarId is 0 or null, use default panda image
+    if (avatarId == null || avatarId == 0) {
+      return CircleAvatar(
+        radius: 25,
+        backgroundColor: Color(0xFF49329A),
+        backgroundImage: AssetImage('assets/avatar2.png'),
+      );
+    }
+
+    // Otherwise, use network image with the avatar URL
+    return FutureBuilder<String>(
+      future: _getAvatarUrl(avatarId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return CircleAvatar(
+            radius: 25,
+            backgroundColor: Color(0xFF49329A),
+            child: CircularProgressIndicator(
+              color: Colors.white,
+              strokeWidth: 2,
+            ),
+          );
+        } else if (snapshot.hasError || !snapshot.hasData) {
+          return CircleAvatar(
+            radius: 25,
+            backgroundColor: Color(0xFF49329A),
+            backgroundImage: AssetImage('assets/avatar2.png'),
+          );
+        } else {
+          return CircleAvatar(
+            radius: 25,
+            backgroundImage: NetworkImage(snapshot.data!),
+          );
+        }
+      },
+    );
+  }
+
+  Future<String> _getAvatarUrl(int avatarId) async {
+    try {
+      final apiService = await ApiService.create();
+      final avatarResponse = await apiService.fetchAvatars();
+
+      final avatar = avatarResponse.data.firstWhere(
+        (a) => a.id == avatarId,
+        orElse: () => throw Exception('Avatar not found'),
+      );
+
+      return 'http://picturoenglish.com/admin/${avatar.avatarUrl}';
+    } catch (e) {
+      print('Error fetching avatar URL: $e');
+      throw e; // This will trigger the error state in FutureBuilder
+    }
   }
 }

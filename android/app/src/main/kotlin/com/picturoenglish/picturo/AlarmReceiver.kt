@@ -1,4 +1,4 @@
-package com.picturoenglish.picturo
+package com.picturo.picturoenglish
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -23,43 +23,47 @@ class AlarmReceiver : BroadcastReceiver() {
     }
 
     private fun showNotification(
-        context: Context,
-        channelId: String,
-        notificationId: Int,
-        title: String,
-        body: String
+            context: Context,
+            channelId: String,
+            notificationId: Int,
+            title: String,
+            body: String
     ) {
-        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val notificationManager =
+                context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         // Create notification channel for Android O+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channelName = when {
-                channelId.contains("morning") -> "Morning Reminders"
-                channelId.contains("evening") -> "Evening Reminders"
-                else -> "Picturo Notifications"
-            }
-            
-            val channel = NotificationChannel(
-                channelId,
-                channelName,
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = when {
-                    channelId.contains("morning") -> "Morning notification channel"
-                    channelId.contains("evening") -> "Evening notification channel"
-                    else -> "Channel for Picturo App notifications"
-                }
-            }
+            val channelName =
+                    when {
+                        channelId.contains("morning") -> "Morning Reminders"
+                        channelId.contains("evening") -> "Evening Reminders"
+                        else -> "Picturo Notifications"
+                    }
+
+            val channel =
+                    NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_HIGH)
+                            .apply {
+                                description =
+                                        when {
+                                            channelId.contains("morning") ->
+                                                    "Morning notification channel"
+                                            channelId.contains("evening") ->
+                                                    "Evening notification channel"
+                                            else -> "Channel for Picturo App notifications"
+                                        }
+                            }
             notificationManager.createNotificationChannel(channel)
         }
 
-        val notification = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle(title)
-            .setContentText(body)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setAutoCancel(true)
-            .build()
+        val notification =
+                NotificationCompat.Builder(context, channelId)
+                        .setSmallIcon(android.R.drawable.ic_dialog_info)
+                        .setContentTitle(title)
+                        .setContentText(body)
+                        .setPriority(NotificationCompat.PRIORITY_HIGH)
+                        .setAutoCancel(true)
+                        .build()
 
         notificationManager.notify(notificationId, notification)
     }

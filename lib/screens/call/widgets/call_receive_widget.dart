@@ -33,7 +33,7 @@ class _CallAcceptScreenState extends State<CallAcceptScreen> {
     return CircleAvatar(
       radius: 40,
       backgroundImage: NetworkImage(
-        "http://picturoenglish.com/admin/$avatarId", // Adjust if avatarUrl is a path
+        "http://picturoenglish.com/admin/$avatarId",
       ),
     );
   }
@@ -47,9 +47,11 @@ class _CallAcceptScreenState extends State<CallAcceptScreen> {
           if (_isNavigating) return;
 
           if (state is CallRejected) {
-            _isNavigating = true;
-            Navigator.of(context).pop();
-            context.read<CallSocketHandleCubit>().resetCubit();
+            Future.delayed(Duration.zero, () {
+              _isNavigating = true;
+              //Navigator.of(context).pop();
+              context.read<CallSocketHandleCubit>().resetCubit();
+            });
           } else if (state is CallAccepted) {
             _isNavigating = true;
             Navigator.of(context)
@@ -58,7 +60,7 @@ class _CallAcceptScreenState extends State<CallAcceptScreen> {
                 builder: (context) => VoiceCallScreen(
                   callerId: widget.callerId,
                   callerName: widget.callerName,
-                  callerImage: '',
+                  callerImage: widget.avatarUrl?.toString() ?? '',
                   isIncoming: true,
                 ),
               ),
@@ -107,7 +109,7 @@ class _CallAcceptScreenState extends State<CallAcceptScreen> {
                     GestureDetector(
                       onTap: () async {
                         context.read<CallSocketHandleCubit>().endCall();
-                        if (mounted) Navigator.of(context).pop();
+                        //if (mounted) Navigator.of(context).pop();
                       },
                       child: Container(
                         padding: const EdgeInsets.all(20),
@@ -127,9 +129,9 @@ class _CallAcceptScreenState extends State<CallAcceptScreen> {
 
                     GestureDetector(
                       onTap: () async {
-                        context
-                            .read<CallSocketHandleCubit>()
-                            .acceptCall(widget.callerId);
+                        context.read<CallSocketHandleCubit>().acceptCall(
+                            widget.callerId,
+                            callerName: widget.callerName);
                         // navigation will be handled by BlocListener
                       },
                       child: Container(

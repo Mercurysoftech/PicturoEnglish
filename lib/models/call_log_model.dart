@@ -3,7 +3,8 @@ class CallLog {
   final int callerId;
   final int receiverId;
   final String callType;
-  final String userName;
+  final String callerUserName;
+  final String receiverUserName;
   final String status;
   final int duration;
   final String createdAt;
@@ -13,7 +14,8 @@ class CallLog {
     required this.callerId,
     required this.receiverId,
     required this.callType,
-    required this.userName,
+    required this.callerUserName,
+    required this.receiverUserName,
     required this.status,
     required this.duration,
     required this.createdAt,
@@ -25,10 +27,11 @@ class CallLog {
       callerId: json['caller_id'],
       receiverId: json['receiver_id'],
       callType: json['call_type'],
-      userName: json['userName']??"",
       status: json['status'],
       duration: json['duration'],
       createdAt: json['created_at'],
+      callerUserName: json['caller_username']??"",
+      receiverUserName: json['receiver_username']??"",
     );
   }
 }

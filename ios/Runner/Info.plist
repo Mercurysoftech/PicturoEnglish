@@ -2,10 +2,14 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>API_KEY</key>
+	<string>$(API_KEY)</string>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Picturo App</string>
+	<string>Picturo English</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -22,27 +26,56 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSAppTransportSecurity</key>
-    <dict>
-        <key>NSAllowsArbitraryLoads</key>
-        <true/>
-    </dict>
-	<key>API_KEY</key>
-	<string>$(API_KEY)</string>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+		<key>NSAllowsArbitraryLoadsInWebContent</key>
+		<true/>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>site.ping4sms.com</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+			</dict>
+		</dict>
+	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Picturo English uses the camera for video calling and to allow users to capture photos for learning activities.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Your location is required to support enhanced app features that may operate in both foreground and background.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Your location may be used to support continuous learning features that rely on background updates.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Your location is used to personalize content and improve app services while the app is open.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Picturo English uses the microphone for voice messages, speech-to-text lessons, and video calling.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Picturo English needs permission to save edited or generated images to your photo library.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Picturo English requires access to your photo library so you can select and upload images inside the app.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Picturo English uses speech recognition to convert your spoken English into text for grammar learning features.</string>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+		<string>fetch</string>
+		<string>audio</string>
+		<string>voip</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>This app uses the microphone to convert your speech to text</string>
-	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>This app uses speech recognition to convert your speech to text</string>
 	<string>Main</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>We need your location to provide better services</string>
-	<key>NSLocationAlwaysUsageDescription</key>
-	<string>We need your location for background location updates</string>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
@@ -56,9 +89,5 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<key>CADisableMinimumFrameDurationOnPhone</key>
-	<true/>
-	<key>UIApplicationSupportsIndirectInputEvents</key>
-	<true/>
 </dict>
 </plist>

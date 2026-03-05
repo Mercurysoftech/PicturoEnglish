@@ -1,9 +1,18 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:flutter_vector_icons/flutter_vector_icons.dart';
+import 'package:picturo_app/classes/helper/logout_cleanup_manager.dart';
+import 'package:picturo_app/classes/services/cache_clear_utility.dart';
+import 'package:picturo_app/classes/services/connectivity_service.dart';
 import 'package:picturo_app/classes/svgfiles.dart';
+import 'package:picturo_app/cubits/get_sub_topics_list/get_sub_topics_list_cubit.dart';
 import 'package:picturo_app/providers/profileprovider.dart';
+import 'package:picturo_app/providers/remaining_minutes_provider.dart';
+import 'package:picturo_app/providers/unread_count_provider.dart';
+import 'package:picturo_app/providers/userprovider.dart';
 import 'package:picturo_app/responses/my_profile_response.dart';
 import 'package:picturo_app/screens/accountdetailsshow.dart';
 import 'package:picturo_app/screens/blockeduserspage.dart';
@@ -21,10 +30,11 @@ import 'package:picturo_app/screens/withdrawpage.dart';
 import 'package:picturo_app/services/api_service.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../cubits/call_cubit/call_socket_handle_cubit.dart';
 import '../cubits/get_coins_cubit/coins_cubit.dart';
+import '../cubits/user_status/user_status_cubit.dart';
+import '../services/chat_socket_service.dart';
 import '../utils/common_app_bar.dart';
 import 'earnings_ref/earnings_referral.dart';
 import 'locationgetpage.dart';
@@ -41,7 +51,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
   ApiService? apiService;
   bool _isLoading = true;
   int? _currentAvatarId;
-  final String baseUrl = "https://picturoenglish.com/admin/";
+  final String baseUrl = "https://cdn.jsdelivr.net/gh/Mercurysoftech/PicturoEnglish@main/images_app/";
    late ApiService _apiService;
   
     
@@ -52,7 +62,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     
     if (mounted) {
       setState(() {
-        _currentAvatarId = userResponse.avatarId;
+        _currentAvatarId = userResponse.user.avatarId;
       });
       await _loadAvatar(); // Load avatar after setting the ID
     }
@@ -135,6 +145,16 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     ApiService.create().then((service) {
       _apiService = service;
     });
+
+    final connectivityService =
+        Provider.of<ConnectivityService>(context, listen: false);
+
+    connectivityService.addListener(() {
+      if (connectivityService.isOnline) {
+        // Re-fetch profile when internet comes back
+        context.read<ProfileProvider>().fetchProfile();
+      }
+    });
   }
   
 
@@ -174,18 +194,18 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                             children: [
                           _buildProfileCard(context, profileProvider),
                           SizedBox(height: 10),
-                          _buildUserDetailsCard(profileProvider.user!),
+                          _buildUserDetailsCard(profileProvider.user!,profileProvider.wallet!),
                           SizedBox(height: 10),
 
                           PremiumButton(userName: profileProvider.username??'',),
                           SizedBox(height: 10),
                           _buildSettingsOption(Icons.language, "Language", context,profileProvider),
                               SizedBox(height: 10),
-                          _buildSettingsOption(Icons.location_history, "Location", context,profileProvider),
+                          _buildSettingsOption(CupertinoIcons.location, "Location", context,profileProvider),
                               // SizedBox(height: 10),
                           // _buildSettingsOption(Icons.location_city, "Update Location", context,profileProvider),
                               SizedBox(height: 10),
-                          _buildSettingsOption(Icons.monetization_on_outlined, "Referral Earning", context,profileProvider),
+                          _buildSettingsOption(CupertinoIcons.money_dollar_circle, "My Wallet", context,profileProvider),
                           SizedBox(height: 10),
                           _buildBankDetailsOption("Bank account details", context),
                            SizedBox(height: 10),
@@ -195,13 +215,17 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                           SizedBox(height: 10),
                           _buildSettingsOption(Icons.block, "Blocked users", context,profileProvider),
                           SizedBox(height: 10),
-                           _buildSettingsOption(Icons.help_outline, "Help", context,profileProvider),
-                           SizedBox(height: 10),
-                              _buildSettingsOption(Icons.share, "Share This App", context,profileProvider),
-                           SizedBox(height: 10),
-                          _buildSettingsOption(Icons.delete_outline, "Delete Account", context,profileProvider),
+                          _buildSettingsOption(Icons.help_outline, "Help", context,profileProvider),
+                          SizedBox(height: 10),
+                          _buildSettingsOption(Icons.share, "Share This App", context,profileProvider),
+                          SizedBox(height: 10,),
+                          CacheClearButton(),
+                          SizedBox(height: 10),
+                          _buildSettingsOption(FontAwesome.trash_o, "Delete Account", context,profileProvider),
                           SizedBox(height: 10),
                           _buildLogoutButton(),
+                          SizedBox(height: 20,),
+                          
                         ],
                       ),
                     ),
@@ -280,7 +304,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     );
   }
 
-  Widget _buildUserDetailsCard(UserResponse user) {
+  Widget _buildUserDetailsCard(User user,Wallet wallet) {
     return Card(
       color: Colors.white,
       elevation: 0,
@@ -291,9 +315,10 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildDetailRow("User name", user.username),
-            _buildDetailRow("Referral code", user.referralCode), // Replace with actual user code if available
-            _buildDetailRow("Numbers of referral", "0"), // Replace with actual referral count if available
-            _buildDetailRow("Total earning", "₹ 0"), // Replace with actual earning if available
+            _buildDetailRow("Referral code", user.referralCode), 
+            _buildDetailRow("Numbers of referral",wallet?.transactions?.length.toString() ?? "0"), 
+            _buildDetailRow("Total earning", "₹ ${wallet?.totalBalance ?? 0}"),
+            //_buildDetailRow("Plan Ends", user?.planEndTime ?? "No Active Plans"), 
             _buildDetailRow("Location", user.location),
           ],
         ),
@@ -302,6 +327,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
   }
 
   Widget _buildDetailRow(String label, String value) {
+    bool isValueEmpty = value.isEmpty;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
@@ -327,7 +353,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
           (label=='Location')?Expanded(
             flex:4, // Equal space
             child: Text(
-              value,
+              !isValueEmpty ? value : 'No Location Provided',
               maxLines: 4,
               style: TextStyle(
                 fontSize: 14,
@@ -385,7 +411,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
             if(title=="Share This App"){
               Share.share("https://play.google.com/store/apps/details?id=com.picturo.picturoenglish&pcampaignid=web_share");
             }else
-            if (title == 'Referral Earning') {
+            if (title == 'My Wallet') {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => WalletReferralPage()), // Navigate to ChangeLanguagePage
@@ -444,7 +470,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
       child: Padding(
         padding: EdgeInsets.all(5.0),
         child: ListTile(
-          leading: Icon(Icons.money, color: Color(0XFF49329A)),
+          leading: Icon(FontAwesome.money, color: Color(0XFF49329A)),
           title: Text(title,
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, fontFamily: 'Poppins Regular')),
           trailing: Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 18),
@@ -543,10 +569,6 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     );
   }
 
-  
-
-  
-
   Future<void> _logout(BuildContext context) async {
   // Show confirmation dialog
   bool? confirmLogout = await showDialog<bool>(
@@ -560,17 +582,20 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
         actions: <Widget>[
           TextButton(
             child: Text("Cancel", 
-                style: TextStyle(color: Color(0xFF49329A), 
-                fontFamily: 'Poppins Regular'),
+                style: TextStyle(
+                  color: Color(0xFF49329A), 
+                  fontFamily: 'Poppins Regular'
+                ),
             ),
             onPressed: () => Navigator.of(context).pop(false),
-            ),
+          ),
           TextButton(
             child: Text("Logout", 
-                style: TextStyle(color: Colors.red,
-                fontFamily: 'Poppins Regular')),
-            onPressed: (){
-              print("sdkcmscskcsl;dc");
+                style: TextStyle(
+                  color: Colors.red,
+                  fontFamily: 'Poppins Regular'
+                )),
+            onPressed: () {
               Navigator.of(context).pop(true);
             },
           ),
@@ -586,30 +611,112 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => Center(child: CircularProgressIndicator()),
+        builder: (context) => Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text(
+                'Logging out...',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontFamily: 'Poppins Regular',
+                  fontSize: 14
+                ),
+              ),
+            ],
+          ),
+        ),
       );
 
-      // Call logout API
-      final response = await apiService!.logoutAccount();
+      print("🚀 Starting logout process...");
+
+      // 1. Call logout API
+      try {
+        final response = await apiService!.logoutAccount();
+        print("✅ 1. Logout API called");
+      } catch (e) {
+        print("⚠️ 1. Logout API error: $e");
+      }
+
+      // 2. Disconnect CallSocket FIRST (before clearing SharedPreferences)
+      print("🔌 2. Disconnecting CallSocket...");
+      try {
+        await context.read<CallSocketHandleCubit>().fullResetForLogout();
+        print("✅ 2. CallSocket reset done");
+      } catch (e) {
+        print("❌ 2. CallSocket reset error: $e");
+      }
+
+      // 3. Disconnect ChatSocket (before clearing SharedPreferences)
+      print("🔌 3. Disconnecting ChatSocket...");
+      try {
+        await ChatSocket.fullCleanupForLogout();
+        print("✅ 3. ChatSocket cleanup done");
+      } catch (e) {
+        print("❌ 3. ChatSocket cleanup error: $e");
+      }
+
+      // 4. Clear UserStatusCubit
+      print("🗑️ 4. Clearing UserStatusCubit...");
+      try {
+        context.read<UserStatusCubit>().clearAllStatus();
+        print("✅ 4. UserStatusCubit cleared");
+      } catch (e) {
+        print("❌ 4. UserStatusCubit error: $e");
+      }
+
+      // 5. Clear ProfileProvider
+      print("🗑️ 5. Clearing ProfileProvider...");
+      try {
+        await context.read<ProfileProvider>().clearProfile();
+        print("✅ 5. ProfileProvider cleared");
+      } catch (e) {
+        print("❌ 5. ProfileProvider error: $e");
+      }
+
+      // 6. Clear RemainingMinutesProvider
+      print("🗑️ 6. Clearing RemainingMinutesProvider...");
+      try {
+        Provider.of<RemainingMinutesProvider>(context, listen: false).reset();
+        print("✅ 6. RemainingMinutesProvider cleared");
+      } catch (e) {
+        print("❌ 6. RemainingMinutesProvider error: $e");
+      }
+
+      // 7. CLEAR ALL SharedPreferences (this is the main cleanup)
+      print("🗑️ 7. Clearing ALL SharedPreferences...");
+      try {
+        await LogoutCleanupManager.performCompleteCleanup();
+        print("✅ 7. SharedPreferences cleared");
+      } catch (e) {
+        print("❌ 7. SharedPreferences error: $e");
+      }
+
+      // 8. Clear questions cache
+      print("🗑️ 8. Clearing questions cache...");
+      try {
+        await LocalStorageHelper.clearAllQuestionsCache();
+        print("✅ 8. Questions cache cleared");
+      } catch (e) {
+        print("❌ 8. Questions cache error: $e");
+      }
+
+      print("✅✅✅ LOGOUT COMPLETE ✅✅✅");
 
       // Close loading indicator
-      Navigator.of(context).pop();
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
 
-      // Clear local storage
-      context.read<CallSocketHandleCubit>().disposeLocalRender();
-      context.read<CallSocketHandleCubit>().disposeRemoteRender();
-      context.read<CallSocketHandleCubit>().disposeRenderers();
-      context.read<CallSocketHandleCubit>().disposeScoket();
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('token');  // Clear token
-      await prefs.setBool('isLoggedIn', false);
-      await prefs.clear();
-
-      // Navigate to login screen
+      // 8. Navigate to login screen
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => const LoginScreen()),
         (route) => false,
       );
+
+      print("✅ Logout complete!");
 
     } catch (e) {
       // Close loading indicator if still showing
@@ -619,8 +726,13 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
 
       // Show error message
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Logout failed: ${e.toString()}')),
+        SnackBar(
+          content: Text('Logout failed: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
       );
+      
+      print("❌ Logout error: $e");
     }
   }
 }
@@ -647,6 +759,29 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     );
   }
 
+  Widget _buildClearCacheOption() {
+  return Card(
+    color: Colors.white,
+    elevation: 0,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+    child: Padding(
+      padding: EdgeInsets.all(5.0),
+      child: ListTile(
+        leading: Icon(Icons.cached, color: Color(0XFF49329A)),
+        title: Text("Clear Cache",
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, fontFamily: 'Poppins Regular')),
+        trailing: Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 18),
+        onTap: () => {
+           Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const CacheClearButton()),
+        (route) => false,
+      )
+        },
+      ),
+    ),
+  );
+}
+
 }
 
 class PremiumButton extends StatelessWidget {
@@ -658,7 +793,7 @@ class PremiumButton extends StatelessWidget {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => PremiumPlansScreen(userName: userName,)), // Navigate to PremiumScreen
+          MaterialPageRoute(builder: (context) => PremiumPlansScreen(userName: userName, isChatBot: false, isCall: false)), // Navigate to PremiumScreen
         );
       },
       child: Container(
@@ -793,21 +928,30 @@ class CoinBadge extends StatelessWidget {
         } else if (state is CoinLoaded) {
           return Padding(
             padding: const EdgeInsets.only(right: 10.0),
-            child: Badge(
-              label: Text(
-                "${state.coins}",
-                style: const TextStyle(
-                  color: Color(0xFF49329A),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              backgroundColor: Colors.white,
-              child: const Icon(
-                Icons.workspace_premium,
-                color: Colors.yellow,
-                size: 30,
-              ),
-            ),
+            child: InkWell(
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => WalletReferralPage()),
+    );
+  },
+  child: Badge(
+    // label: Text(
+    //   "${state.coins}",
+    //   style: const TextStyle(
+    //     color: Color(0xFF49329A),
+    //     fontWeight: FontWeight.w600,
+    //   ),
+    // ),
+     backgroundColor: Colors.transparent,
+    child: const ImageIcon(
+  AssetImage('assets/wallet.png'), // path to your image asset
+  color: Colors.white,
+  size: 28,
+)
+  ),
+)
+
           );
         } else if (state is CoinError) {
           return SizedBox();

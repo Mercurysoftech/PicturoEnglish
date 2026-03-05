@@ -1,8 +1,11 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:picturo_app/main.dart';
-import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:picturo_app/screens/loginscreen.dart';
@@ -44,6 +47,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     );
 
     _startTypingAnimation();
+    _ensureApnsToken();
 
     // Delay splash and check user login status
     Future.delayed(const Duration(seconds: 3), () {
@@ -51,20 +55,37 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     });
   }
 
+  // iOS: secondary APNs token safety net (main.dart already waits, this is a fallback)
+  Future<void> _ensureApnsToken() async {
+    if (Platform.isIOS) {
+      try {
+        FirebaseMessaging messaging = FirebaseMessaging.instance;
+        String? apnsToken = await messaging.getAPNSToken();
+        if (apnsToken == null) {
+          int attempts = 0;
+          while (apnsToken == null && attempts < 5) {
+            await Future.delayed(const Duration(seconds: 1));
+            apnsToken = await messaging.getAPNSToken();
+            attempts++;
+          }
+        }
+      } catch (e) {
+        // silent — main.dart already handles APNs token errors
+      }
+    }
+  }
+
   // Simulate user login status check using SharedPreferences
   // In SplashScreen's _checkLoginStatus
-Future<void> _checkLoginStatus() async {
-  final prefs = await SharedPreferences.getInstance();
-  final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
-  
-  // Check if we have an initial notification payload
-  final hasNotificationPayload = initialNotificationPayload != null;
-  
-  if (mounted) {
-    bool? isFirst = prefs.getBool("isFirstTime");
-    
-    // If we have a notification, don't navigate here - let the notification handler do it
-    if (!hasNotificationPayload) {
+  Future<void> _checkLoginStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+
+    // Guard: if app was launched from a notification tap, main.dart handles
+    // navigation via _handleNotificationNavigation(). Do NOT override it here.
+    final hasNotificationPayload = initialNotificationPayload != null;
+
+    if (mounted && !hasNotificationPayload) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (context) => isLoggedIn ? const Homepage() : const LoginScreen(),
@@ -72,7 +93,6 @@ Future<void> _checkLoginStatus() async {
       );
     }
   }
-}
 
   void _startTypingAnimation() {
     const typingSpeed = Duration(milliseconds: 25);

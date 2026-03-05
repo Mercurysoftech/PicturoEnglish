@@ -3,9 +3,9 @@ import 'dart:developer';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:picturo_app/responses/topics_response.dart'; // Import your TopicsResponse model
+import 'package:picturo_app/responses/topics_response.dart';
 import 'package:picturo_app/screens/homepage.dart';
-import 'package:picturo_app/services/api_service.dart'; // Import your API service
+import 'package:picturo_app/services/api_service.dart';
 import 'package:picturo_app/screens/subtopicpage.dart';
 import 'package:picturo_app/utils/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
@@ -18,8 +18,6 @@ import '../../utils/common_app_bar.dart';
 import '../../utils/common_file.dart';
 import '../widgets/drag_and_learn_level.dart';
 
-
-
 class DLGameTopicsPage extends StatefulWidget {
   final String title;
   final int topicId;
@@ -29,116 +27,237 @@ class DLGameTopicsPage extends StatefulWidget {
   _DLGameTopicsPageState createState() => _DLGameTopicsPageState();
 }
 
-class _DLGameTopicsPageState extends State<DLGameTopicsPage> {
-  int? selectedIndex; // Track the selected item
+class _DLGameTopicsPageState extends State<DLGameTopicsPage> with AutomaticKeepAliveClientMixin {
+  int? selectedIndex;
+  bool _hasLoadedOnce = false;
 
-
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
     super.initState();
-    context.read<DragLearnCubit>().fetchDragLearnData(bookId:widget.topicId);
-    context.read<TopicCubit>().fetchTopics(widget.topicId);
+    // Fetch data - will use cache if available (instant!)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_hasLoadedOnce) {
+        context.read<DragLearnCubit>().fetchDragLearnData(bookId: widget.topicId);
+        context.read<TopicCubit>().fetchTopics(widget.topicId);
+        _hasLoadedOnce = true;
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    // ignore: deprecated_member_use
+    super.build(context);
+    
     return Scaffold(
       backgroundColor: Color(0xFFE0F7FF),
-      appBar: CommonAppBar(title:widget.title,isBackbutton: true,),
+      appBar: CommonAppBar(
+        title: widget.title,
+        isBackbutton: true,
+      ),
       body: BlocBuilder<TopicCubit, TopicState>(
-        builder: (context, state) {
-          if(state is TopicLoaded){
-            List<Map<String,dynamic>> topics=state.topics;
-            return Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Color(0xFFE0F7FF),
-                    Color(0xFFEAE4FF),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              child: BlocBuilder<DragLearnCubit, DragLearnState>(
-                builder: (context, dragLearnState) {
-
-                  if(dragLearnState is DragLearnLoaded){
-                    DragAndLearnLevelModel data=dragLearnState.data;
-                    return Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text("Categories", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, fontFamily: AppConstants.commonFont, color: Colors.black)),
-                          SizedBox(height: 16),
-                          Expanded(
-                            child: Scrollbar(
-                              child: ListView.builder(
-                                itemCount: topics.length,
-                                itemBuilder: (context, index) {
-                                  return GestureDetector(
-                                    onTap: () {
-                                      setState(() {
-                                        selectedIndex = index;
-                                      });
-                                      //BlocBuilder<ProgressCubit, ProgressState>(
-                                      //         builder: (context, state) {
-                                      context.read<ProgressCubit>().fetchProgress(isFromTopic: false,bookId: widget.topicId, topicId: topics[index]['id']);
-
-                                      List<Data>? selectedFiles= data.data?.where((element)=>element.topicId.toString()==topics[index]['id'].toString()).toList();
-
-                                      if(selectedFiles!=null&&selectedFiles.isNotEmpty){
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(builder: (context) => DragLearnPage(title: topics[index]['title'],bookId: widget.topicId, data: selectedFiles.first,)),
-                                        );
-                                      }
-
-                                    },
-                                    child: Padding(
-                                      padding: const EdgeInsets.only(bottom: 12.0),
-                                      child: TopicCard(
-                                        title: topics[index]['title']=="Action verb"?"Action Verbs":topics[index]['title']!,
-                                        image: topics[index]['image']!,
-                                        isSelected: selectedIndex == index,
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }else{
-                    return Center(
-                      child: SizedBox(
-                        height: 30,
-                        width: 30,
-                        child: CircularProgressIndicator(),
-                      ),
-                    );
-                  }
-
-  },
-),
-            );
-          }else{
-            return Center(child: SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator())) ;
+        buildWhen: (previous, current) {
+          // Only rebuild when we actually have data or an error
+          // Don't rebuild for loading states if we already have data
+          if (previous is TopicLoaded && current is TopicLoading) {
+            return false; // Keep showing previous data
           }
-
+          return true;
+        },
+        builder: (context, topicState) {
+          if (topicState is TopicLoaded) {
+            return BlocBuilder<DragLearnCubit, DragLearnState>(
+              buildWhen: (previous, current) {
+                // Same logic - don't rebuild for loading if we have data
+                if (previous is DragLearnLoaded && current is DragLearnLoading) {
+                  return false;
+                }
+                return true;
+              },
+              builder: (context, dragLearnState) {
+                if (dragLearnState is DragLearnLoaded) {
+                  return _buildContent(topicState.topics, dragLearnState.data);
+                } else if (dragLearnState is DragLearnFailed) {
+                  return _buildError(
+                    dragLearnState.error,
+                    () => context.read<DragLearnCubit>().fetchDragLearnData(
+                          bookId: widget.topicId,
+                          forceRefresh: true,
+                        ),
+                  );
+                } else if (dragLearnState is DragLearnLoading) {
+                  return _buildLoading();
+                } else {
+                  // Initial state - show nothing, wait for data
+                  return SizedBox.shrink();
+                }
+              },
+            );
+          } else if (topicState is TopicError) {
+            return _buildError(
+              topicState.message,
+              () => context.read<TopicCubit>().fetchTopics(
+                    widget.topicId,
+                    forceRefresh: true,
+                  ),
+            );
+          } else if (topicState is TopicLoading) {
+            return _buildLoading();
+          } else {
+            // Initial state - show nothing, wait for data
+            return SizedBox.shrink();
+          }
         },
       ),
     );
   }
+
+  Widget _buildContent(List<Map<String, dynamic>> topics, DragAndLearnLevelModel data) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Color(0xFFE0F7FF),
+            Color(0xFFEAE4FF),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: RefreshIndicator(
+        onRefresh: () async {
+          await Future.wait([
+            context.read<DragLearnCubit>().fetchDragLearnData(
+                  bookId: widget.topicId,
+                  forceRefresh: true,
+                ),
+            context.read<TopicCubit>().fetchTopics(
+                  widget.topicId,
+                  forceRefresh: true,
+                ),
+          ]);
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Categories",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: AppConstants.commonFont,
+                  color: Colors.black,
+                ),
+              ),
+              SizedBox(height: 16),
+              Expanded(
+                child: Scrollbar(
+                  child: ListView.builder(
+                    key: PageStorageKey('drag_learn_topics_${widget.topicId}'),
+                    itemCount: topics.length,
+                    itemBuilder: (context, index) {
+                      return GestureDetector(
+                        onTap: () => _handleTopicTap(topics, data, index),
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 12.0),
+                          child: TopicCard(
+                            title: topics[index]['title'] == "Action verb"
+                                ? "Action Verbs"
+                                : topics[index]['title']!,
+                            image: topics[index]['image']!,
+                            isSelected: selectedIndex == index,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _handleTopicTap(List<Map<String, dynamic>> topics, DragAndLearnLevelModel data, int index) {
+    setState(() => selectedIndex = index);
+
+    context.read<ProgressCubit>().fetchProgress(
+          isFromTopic: false,
+          bookId: widget.topicId,
+          topicId: topics[index]['id'],
+        );
+
+    List<Data>? selectedFiles = data.data
+        ?.where((element) => element.topicId.toString() == topics[index]['id'].toString())
+        .toList();
+
+    if (selectedFiles != null && selectedFiles.isNotEmpty) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => DragLearnPage(
+            title: topics[index]['title'],
+            bookId: widget.topicId,
+            data: selectedFiles.first,
+          ),
+        ),
+      ).then((_) => setState(() => selectedIndex = null));
+    }
+  }
+
+  Widget _buildLoading() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            height: 40,
+            width: 40,
+            child: CircularProgressIndicator(strokeWidth: 3),
+          ),
+          SizedBox(height: 16),
+          Text(
+            'Loading content...',
+            style: TextStyle(
+              fontSize: 14,
+              fontFamily: AppConstants.commonFont,
+              color: Colors.grey[600],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildError(String message, VoidCallback onRetry) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 48, color: Colors.red),
+          SizedBox(height: 16),
+          Text(
+            message,
+            style: TextStyle(fontSize: 16, fontFamily: AppConstants.commonFont),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 8),
+          ElevatedButton(
+            onPressed: onRetry,
+            child: Text('Retry'),
+          ),
+        ],
+      ),
+    );
+  }
 }
+
 class TopicCard extends StatelessWidget {
   final String title;
   final String image;
@@ -181,23 +300,10 @@ class TopicCard extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: CachedNetworkImageWidget(
-              imageUrl: "https://picturoenglish.com/admin/$image",
+              imageUrl: "https://cdn.jsdelivr.net/gh/Mercurysoftech/PicturoEnglish@main/images_app/$image",
               height: 70,
               width: 70,
               fit: BoxFit.cover,
-
-              //     Shimmer.fromColors(
-              //   baseColor: Colors.grey.shade200,
-              //   highlightColor: Colors.grey.shade100,
-              //   child: Container(
-              //     height: 70,
-              //     width: 70,
-              //     decoration: BoxDecoration(
-              //       color: Colors.white,
-              //       borderRadius: BorderRadius.circular(12),
-              //     ),
-              //   ),
-              // ),
             ),
           ),
           const SizedBox(width: 16),
@@ -220,4 +326,3 @@ class TopicCard extends StatelessWidget {
     );
   }
 }
-

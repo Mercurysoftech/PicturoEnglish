@@ -5,6 +5,9 @@ class TopicState extends Equatable {
   List<Object?> get props => [];
 }
 
+// Initial state - no loading shown
+class TopicInitial extends TopicState {}
+
 class TopicLoading extends TopicState {}
 
 class TopicLoaded extends TopicState {

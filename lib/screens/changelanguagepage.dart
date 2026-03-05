@@ -22,16 +22,18 @@ class ChangeLanguagePage extends StatefulWidget {
 
 class _ChangeLanguagePageState extends State<ChangeLanguagePage> {
   String? selectedLanguage;
-  final double _scale = 1.0;  // This controls the scaling effect
-  List<LanguageData> languages = []; // Store fetched languages
+  final double _scale = 1.0;  
+  List<LanguageData> languages = []; 
   UserResponse? userResponse;
   bool loading=false;
+  
   @override
   void initState() {
     super.initState();
     fetchUserDetails();
-    fetchAndDisplayLanguages(); // Fetch languages on screen load
+    fetchAndDisplayLanguages(); 
   }
+  
   Future<void> fetchUserDetails() async {
     try {
       final apiService = await ApiService.create();
@@ -39,7 +41,10 @@ class _ChangeLanguagePageState extends State<ChangeLanguagePage> {
 
       setState(() {
         userResponse=response;
-        selectedLanguage=userResponse?.speakingLanguage??'';
+        // Capitalize the first letter when setting selectedLanguage
+        if (userResponse?.user.speakingLanguage != null) {
+          selectedLanguage = _capitalizeFirstLetter(userResponse!.user.speakingLanguage!);
+        }
       });
     } catch (e) {
       setState(() {
@@ -49,16 +54,55 @@ class _ChangeLanguagePageState extends State<ChangeLanguagePage> {
     }
   }
 
-   Future<void> fetchAndDisplayLanguages() async {
+  // Helper method to capitalize first letter
+  String _capitalizeFirstLetter(String text) {
+    if (text.isEmpty) return text;
+    return text[0].toUpperCase() + text.substring(1);
+  }
+
+  // Helper method to find matching language from API response
+  String? _findMatchingLanguage(String? userLanguage, List<LanguageData> allLanguages) {
+    if (userLanguage == null) return null;
+    
+    // First, try exact match with capitalized version
+    final capitalized = _capitalizeFirstLetter(userLanguage);
+    for (var lang in allLanguages) {
+      if (lang.language == capitalized) {
+        return capitalized;
+      }
+    }
+    
+    // Try case-insensitive match
+    for (var lang in allLanguages) {
+      if (lang.language.toLowerCase() == userLanguage.toLowerCase()) {
+        return lang.language; // Return the API's version
+      }
+    }
+    
+    return null;
+  }
+
+  Future<void> fetchAndDisplayLanguages() async {
     try {
       final apiService = await ApiService.create();
       final LanguageResponse languageResponse = await apiService.fetchLanguages();
 
       // Filter the languages where country_id is 97
-      final filteredLanguages = languageResponse.data.where((language) => language.countryId == 97 &&  ["Tamil", "Telugu", "Hindi", "Malayalam", "English"].contains(language.language)).toList();
+      final filteredLanguages = languageResponse.data.where((language) => 
+        language.countryId == 97 &&  
+        ["Tamil", "Telugu", "Hindi", "Malayalam", "English"].contains(language.language)
+      ).toList();
 
       setState(() {
-        languages = filteredLanguages; // Update the state with filtered languages
+        languages = filteredLanguages;
+        
+        // Update selectedLanguage to match API's capitalization
+        if (userResponse?.user.speakingLanguage != null) {
+          selectedLanguage = _findMatchingLanguage(
+            userResponse!.user.speakingLanguage, 
+            filteredLanguages
+          );
+        }
       });
     } catch (e) {
       print("Error fetching languages: $e");
@@ -68,102 +112,94 @@ class _ChangeLanguagePageState extends State<ChangeLanguagePage> {
   void _showLanguageBottomSheet() {
     if(languages.isNotEmpty) {
       showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (context) {
-      return Container(
-        width: MediaQuery.of(context).size.width,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const Text(
-              "Select a Language",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                fontFamily: AppConstants.commonFont,
-                color: Color(0xFF522B8F),
-              ),
+        builder: (context) {
+          return Container(
+            width: MediaQuery.of(context).size.width,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             ),
-            const SizedBox(height: 20),
-
-            Column(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.center,
-              children: languages.map((language) {
-                bool isSelected = selectedLanguage == language.language;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 5),
-                  child: GestureDetector(
-                    onTap: () async {
+              children: [
+                const Text(
+                  "Select a Language",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: AppConstants.commonFont,
+                    color: Color(0xFF522B8F),
+                  ),
+                ),
+                const SizedBox(height: 20),
 
-                      setState(() {
-                        selectedLanguage = language.language;
-                      });
-                      Fluttertoast.showToast(
-                        msg: "$selectedLanguage is now your native language.",
-                      );
-                      context.read<ProfileProvider>().fetchProfile();
-                      Navigator.pop(context);
-
-                    },
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-                      decoration: BoxDecoration(
-                        color: isSelected ? const Color(0xFF49329A) : Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFF49329A), width: 1),
-                      ),
-                      child: Text(
-                        language.language,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: AppConstants.commonFont,
-                          color: isSelected ? Colors.white : const Color(0xFF49329A),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: languages.map((language) {
+                    bool isSelected = selectedLanguage == language.language;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 5),
+                      child: GestureDetector(
+                        onTap: () async {
+                          setState(() {
+                            selectedLanguage = language.language;
+                          });
+                          Fluttertoast.showToast(
+                            msg: "$selectedLanguage is now your native language.",
+                          );
+                          context.read<ProfileProvider>().fetchProfile();
+                          Navigator.pop(context);
+                        },
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                          decoration: BoxDecoration(
+                            color: isSelected ? const Color(0xFF49329A) : Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFF49329A), width: 1),
+                          ),
+                          child: Text(
+                            language.language,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: AppConstants.commonFont,
+                              color: isSelected ? Colors.white : const Color(0xFF49329A),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                );
-              }).toList(),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 30),
+              ],
             ),
-            const SizedBox(height: 30),
-          ],
-        ),
+          );
+        },
       );
-    },
-  );
     }
-}
-
-
-
-
-
+  }
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(80), // Increased app bar height
+        preferredSize: Size.fromHeight(80), 
         child: AppBar(
           backgroundColor: Color(0xFF49329A),
           leading: Padding(
-            padding: const EdgeInsets.only(top: 15.0, left: 24.0), // Adjust top padding
+            padding: const EdgeInsets.only(top: 15.0, left: 24.0), 
             child: IconButton(
               icon: Icon(Icons.arrow_back_ios, color: Colors.white, size: 26),
               onPressed: () {
@@ -172,7 +208,7 @@ class _ChangeLanguagePageState extends State<ChangeLanguagePage> {
             ),
           ),
           title: Padding(
-            padding: const EdgeInsets.only(top: 15.0), // Adjust top padding
+            padding: const EdgeInsets.only(top: 15.0), 
             child: Row(
               children: [
                 Text(
@@ -215,137 +251,145 @@ class _ChangeLanguagePageState extends State<ChangeLanguagePage> {
           const Icon(Icons.arrow_downward, color: Color(0xFF49329A), size: 30),
           const SizedBox(height: 15),
 
-
           // You're Learning - TextField with Bottom Sheet
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Positioned label similar to languageSelectionTile
-              const SizedBox(height: 5),
-              (languages.isEmpty)?SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(strokeWidth: 0.9,),
-              ):GestureDetector(
-                onTap:_showLanguageBottomSheet,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 15),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: const Color(0xFF49329A), width: 1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        textAlign: TextAlign.center,
-                        selectedLanguage ?? "Select a language",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: AppConstants.commonFont,
-                          color: selectedLanguage != null ? Color(0xFF49329A) : Colors.grey,
-                        ),
-                      ),
-                    ),
-                    // Positioned label inside the text field
-                    Positioned(
-                      left: 12,
-                      top: -10, // Adjusted for perfect alignment
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5),
-                        color: Colors.white,
-                        child: const Text(
-                          "Native Language",
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'Poppins Regular',
-                            color: Color(0xFF49329A),
-                            backgroundColor: Colors.white, // Ensures clarity
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Positioned label similar to languageSelectionTile
+                const SizedBox(height: 5),
+                (languages.isEmpty)
+                  ? SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 0.9),
+                    )
+                  : GestureDetector(
+                      onTap: _showLanguageBottomSheet,
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 15),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: const Color(0xFF49329A), width: 1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              textAlign: TextAlign.center,
+                              selectedLanguage != null 
+                                ? _capitalizeFirstLetter(selectedLanguage!) // Always capitalize when displaying
+                                : "Select a language",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: AppConstants.commonFont,
+                                color: selectedLanguage != null ? Color(0xFF49329A) : Colors.grey,
+                              ),
+                            ),
                           ),
-                        ),
+                          // Positioned label inside the text field
+                          Positioned(
+                            left: 12,
+                            top: -10,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5),
+                              color: Colors.white,
+                              child: const Text(
+                                "Native Language",
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Poppins Regular',
+                                  color: Color(0xFF49329A),
+                                  backgroundColor: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
           const Spacer(),
 
           // Done Button
           Padding(
-  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-  child: ElevatedButton(
-    onPressed: (loading)?(){}:() async{
-
-      if(selectedLanguage!=null){
-        setState(() {
-          loading=true;
-        });
-        final apiService = await ApiService.create();
-        final bool languageResponse = await apiService.setUserNativeLanguage(selectedLanguage??'');
-        print("sdlkslkdcmsc ${languageResponse}");
-        if(languageResponse){
-
-          SharedPreferences prefs = await SharedPreferences.getInstance();
-          await prefs.setString('selectedLanguage', selectedLanguage??'');
-          Navigator.pop(context);
-        }
-        setState(() {
-          loading=false;
-        });
-      }else{
-        Fluttertoast.showToast(msg: "Please Choose any Languages");
-      }
-
-
-    },
-    style: ElevatedButton.styleFrom(
-      backgroundColor: const Color(0xFF49329A),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-      ),
-      minimumSize: const Size(double.infinity, 55),
-      elevation: 5, // Default elevation
-      splashFactory: InkRipple.splashFactory, // Enable ripple effect
-      // Adjust elevation when the button is pressed for a 'pressed' effect
-      shadowColor: Colors.purple.withOpacity(0.5),
-    ),
-    child: (loading)?SizedBox(
-      height: 18,
-      width: 18,
-      child: CircularProgressIndicator(
-        strokeWidth: 0.8,
-      ),
-    ):const Text(
-      "Done",
-      style: TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-        fontFamily: AppConstants.commonFont,
-        color: Colors.white,
-      ),
-    ),
-  ),
-)
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            child: ElevatedButton(
+              onPressed: loading 
+                ? null
+                : () async {
+                    if(selectedLanguage != null) {
+                      setState(() {
+                        loading = true;
+                      });
+                      
+                      final apiService = await ApiService.create();
+                      // Send the capitalized version to API
+                      final bool languageResponse = await apiService.setUserNativeLanguage(
+                        _capitalizeFirstLetter(selectedLanguage!)
+                      );
+                      
+                      print("Language update response: ${languageResponse}");
+                      
+                      if(languageResponse) {
+                        SharedPreferences prefs = await SharedPreferences.getInstance();
+                        await prefs.setString('selectedLanguage', _capitalizeFirstLetter(selectedLanguage!));
+                        Navigator.pop(context);
+                      }
+                      
+                      setState(() {
+                        loading = false;
+                      });
+                    } else {
+                      Fluttertoast.showToast(msg: "Please Choose any Languages");
+                    }
+                  },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF49329A),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                minimumSize: const Size(double.infinity, 55),
+                elevation: 5,
+                splashFactory: InkRipple.splashFactory,
+                shadowColor: Colors.purple.withOpacity(0.5),
+              ),
+              child: loading
+                ? SizedBox(
+                    height: 18,
+                    width: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 0.8,
+                    ),
+                  )
+                : const Text(
+                    "Done",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: AppConstants.commonFont,
+                      color: Colors.white,
+                    ),
+                  ),
+            ),
+          )
         ],
       ),
     );
   }
 
-Widget languageSelectionTile(String title, String language) {
+  Widget languageSelectionTile(String title, String language) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Stack(
-        clipBehavior: Clip.none, // Allows text to be placed outside the box
+        clipBehavior: Clip.none,
         children: [
-          // Border Box
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
@@ -365,14 +409,12 @@ Widget languageSelectionTile(String title, String language) {
               ),
             ),
           ),
-
-          // Properly Aligned Floating Label
           Positioned(
             left: 12,
-            top: -10, // Adjusted for perfect alignment
+            top: -10,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 5),
-              color: Colors.white, // Covers the border
+              color: Colors.white,
               child: Text(
                 title,
                 style: const TextStyle(
@@ -380,7 +422,7 @@ Widget languageSelectionTile(String title, String language) {
                   fontWeight: FontWeight.bold,
                   fontFamily: 'Poppins Regular',
                   color: Color(0xFF7E65D6),
-                  backgroundColor: Colors.white, // Ensures clarity
+                  backgroundColor: Colors.white,
                 ),
               ),
             ),
@@ -389,5 +431,4 @@ Widget languageSelectionTile(String title, String language) {
       ),
     );
   }
-
 }

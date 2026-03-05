@@ -6,6 +6,9 @@ abstract class DragLearnState extends Equatable {
   List<Object> get props => [];
 }
 
+// Initial state - no loading shown
+class DragLearnInitial extends DragLearnState {}
+
 class DragLearnLoading extends DragLearnState {}
 
 class DragLearnLoaded extends DragLearnState {

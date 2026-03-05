@@ -8,17 +8,31 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/notification_model.dart';
 
 part 'get_notification_state.dart';
-// cubits/notification_cubit/notification_cubit.dart
 
 class NotificationCubit extends Cubit<NotificationState> {
   NotificationCubit() : super(NotificationInitial());
+  
+  // Cache the notifications to prevent unnecessary reloading
+  List<NotificationModel> _cachedNotifications = [];
+  bool _isLoading = false;
 
-  Future<void> fetchNotifications() async {
+  Future<void> fetchNotifications({bool forceRefresh = false}) async {
+    // If already loading, don't start another load
+    if (_isLoading) return;
+    
+    // If we have cached data and not forcing refresh, return cached data
+    if (!forceRefresh && _cachedNotifications.isNotEmpty) {
+      emit(NotificationLoaded(_cachedNotifications));
+      return;
+    }
+    
+    _isLoading = true;
     emit(NotificationLoading());
+    
     SharedPreferences prefs = await SharedPreferences.getInstance();
     final token = prefs.getString("auth_token");
 
-    // try {
+    try {
       final response = await http.get(
         Uri.parse('https://picturoenglish.com/api/get_notifications.php'),
         headers: {
@@ -27,43 +41,49 @@ class NotificationCubit extends Cubit<NotificationState> {
         },
       );
 
-
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['status'] == true && data['data'] is List) {
           final allNotifications = (data['data'] as List)
               .map((e) => NotificationModel.fromJson(e))
+              .toList()
+              .reversed // Show newest first
               .toList();
 
-          // Filter today's notifications
-          final now = DateTime.now();
-          final today = DateTime(now.year, now.month, now.day);
+          // Cache the notifications
+          _cachedNotifications = allNotifications;
 
-          final todayNotifications = allNotifications.where((notification) {
-
-            final createdAt = DateTime.tryParse(notification.createdAt ?? '');
-            if (createdAt == null) return false;
-            final createdDate = DateTime(createdAt.year, createdAt.month, createdAt.day);
-            return createdDate == today;
-          }).toList();
-
-          if (todayNotifications.isNotEmpty) {
-            emit(NotificationLoaded(todayNotifications));
+          if (allNotifications.isNotEmpty) {
+            emit(NotificationLoaded(allNotifications));
           } else {
-
             emit(NotificationLoaded([]));
           }
         } else {
-
-          emit(const NotificationError("No notifications found."));
+          // Return empty list on error but don't show error to user
+          emit(NotificationLoaded([]));
         }
       } else {
-
-        emit(NotificationError("Failed with status: ${response.statusCode}"));
+        // Return cached data if available, otherwise empty list
+        if (_cachedNotifications.isNotEmpty) {
+          emit(NotificationLoaded(_cachedNotifications));
+        } else {
+          emit(NotificationLoaded([]));
+        }
       }
-    // } catch (e) {
-    //   emit(NotificationError("Error: $e"));
-    // }
+    } catch (e) {
+      // Return cached data if available, otherwise empty list
+      if (_cachedNotifications.isNotEmpty) {
+        emit(NotificationLoaded(_cachedNotifications));
+      } else {
+        emit(NotificationLoaded([]));
+      }
+    } finally {
+      _isLoading = false;
+    }
   }
-
+  
+  // Clear cache (call on logout)
+  void clearCache() {
+    _cachedNotifications.clear();
+  }
 }

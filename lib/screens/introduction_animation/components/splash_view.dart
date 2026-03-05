@@ -48,14 +48,15 @@ class _SplashViewState extends State<SplashView> {
               child: Center(
                 child: Text(
                   "Welcome to Picturo",
-                  style: TextStyle(fontSize: 25.0, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 25.0, fontWeight: FontWeight.bold,fontFamily: 'Poppins Medium'),
                 ),
               ),
             ),
             Padding(
-              padding: EdgeInsets.only(left: 64, right: 64),
+              padding: EdgeInsets.only(left: 54, right: 54),
               child: Text(
                 "Learn grammar rules through engaging visuals and examples. Make learning easier, faster, and more memorable. Visual stories turn complex rules into simple understanding.",
+                style: TextStyle(fontFamily: 'Poppins Regular'),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -92,6 +93,7 @@ class _SplashViewState extends State<SplashView> {
                       style: TextStyle(
                         fontSize: 18,
                         color: Colors.white,
+                        fontFamily: 'Poppins Medium'
                       ),
                     ),
                   ),

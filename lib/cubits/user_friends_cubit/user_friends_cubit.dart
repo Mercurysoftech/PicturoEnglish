@@ -19,7 +19,7 @@ class UserFriendsCubit extends Cubit<UserFriendsState> {
 
   Future<void> fetchAllUsersAndFriends() async {
     (state is UserFriendsInitial)?emit(UserFriendsLoading()):null;
-    try {
+    //try {
       final apiService = await ApiService.create();
       final usersResponse = await apiService.fetchAllUsers();
       final friendsResponse = await apiService.fetchFriends();
@@ -40,9 +40,9 @@ class UserFriendsCubit extends Cubit<UserFriendsState> {
         allUsersCount: allUsersCount,
         friendsCount: friendsCount,
       ));
-    } catch (e) {
-      emit(UserFriendsError(e.toString()));
-    }
+    // } catch (e) {
+    //   emit(UserFriendsError(e.toString()));
+    // }
   }
   void resetCubit(){
     emit(UserFriendsInitial());
